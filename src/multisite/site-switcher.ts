@@ -16,6 +16,11 @@
  * A modifier or middle click on a segment opens the site in a browser
  * tab instead — the universal "open elsewhere" gesture, and the way to
  * stand two sites side by side. See docs/multisite.md.
+ *
+ * An install that joined from elsewhere (an OpenStation network member,
+ * docs/network.md) is marked as external: a mark before its name, a
+ * line before the first of them, and the segment's tooltip says so. A
+ * user reading the row knows which sites are this network's own.
  */
 
 import type { MultisiteConfig } from '../types';
@@ -39,6 +44,8 @@ export interface SiteSwitcherEntry {
 	label: string;
 	/** That instance's shell screen. */
 	shellUrl: string;
+	/** An install that joined from elsewhere, marked as such in the row. */
+	external: boolean;
 }
 
 /** The direction arg a cross-origin arrival slides in from. Mirrors `OPENSTATION_NETWORK_HOP_FROM_ARG`. */
@@ -87,6 +94,7 @@ export function siteSwitcherEntries(
 			value: 'network',
 			label: __( 'Network Admin' ),
 			shellUrl: multisite.networkAdmin.shellUrl,
+			external: false,
 		} );
 	}
 	for ( const site of multisite.sites ?? [] ) {
@@ -94,9 +102,64 @@ export function siteSwitcherEntries(
 			value: site.id,
 			label: site.name,
 			shellUrl: site.shellUrl,
+			external: site.kind === 'member',
 		} );
 	}
 	return entries;
+}
+
+/** The collaborators a switch takes, both optional. */
+export interface SiteSwitchDeps {
+	/** The navigation; defaults to the same hop every cross-admin click takes. */
+	hop?: ( url: string, event?: MouseEvent ) => void;
+	/** Signs a login token before a hop to another origin; without it the user logs in there themselves. */
+	mint?: HopMinter;
+}
+
+/**
+ * Switch to another instance of the network by its switcher value: the
+ * same hop a pick in the row takes, slide and login token included. The
+ * Network window's Open buttons reach it through the `hop` effect the
+ * shell handles, so an app switches exactly as the row does and never
+ * anywhere the row does not offer. False when the value is unknown, or
+ * is this very shell.
+ */
+export function switchToSite(
+	multisite: MultisiteConfig,
+	value: string,
+	deps: SiteSwitchDeps = {},
+): boolean {
+	const hop = deps.hop ?? hopToAdmin;
+	const entries = siteSwitcherEntries( multisite );
+	const current = multisite.current ?? '';
+	const to = entries.findIndex( ( x ) => x.value === value );
+	if ( to < 0 || value === current ) {
+		return false;
+	}
+	const entry = entries[ to ];
+	// Slide this desk out towards the site picked, then go; the shell
+	// that arrives slides its desk in from the same side. Another origin
+	// gets a login token minted meanwhile, so the user arrives logged
+	// in; a mint that fails hops without one.
+	const from = entries.findIndex( ( x ) => x.value === current );
+	const direction: HopDirection = to > from ? 'next' : 'prev';
+	const plain = shellUrlInOverview( entry.shellUrl, direction );
+	const minted =
+		deps.mint && isOtherOrigin( entry.shellUrl )
+			? deps.mint( entry.shellUrl, direction ).catch( () => null )
+			: Promise.resolve( null );
+	void Promise.all( [ leaveInstance( direction ), minted ] ).then(
+		( [ , url ] ) => hop( url ?? plain ),
+	);
+	return true;
+}
+
+/** The mark an external site wears before its name. */
+function externalMark(): HTMLElement {
+	const mark = document.createElement( 'span' );
+	mark.className = 'dashicons dashicons-external os-site-switcher__mark';
+	mark.setAttribute( 'aria-hidden', 'true' );
+	return mark;
 }
 
 /**
@@ -105,18 +168,11 @@ export function siteSwitcherEntries(
  * user already stands is noise above their desktops.
  *
  * @param multisite The shell's multisite block.
- * @param deps      Collaborators, both optional.
- * @param deps.hop  The navigation; defaults to the same hop every
- *                  cross-admin click takes.
- * @param deps.mint Signs a login token before a hop to another origin;
- *                  without it the user logs in there themselves.
+ * @param deps      Collaborators, both optional; see `SiteSwitchDeps`.
  */
 export function buildSiteSwitcher(
 	multisite: MultisiteConfig,
-	deps: {
-		hop?: ( url: string, event?: MouseEvent ) => void;
-		mint?: HopMinter;
-	} = {},
+	deps: SiteSwitchDeps = {},
 ): HTMLElement | null {
 	const hop = deps.hop ?? hopToAdmin;
 	const entries = siteSwitcherEntries( multisite );
@@ -130,10 +186,30 @@ export function buildSiteSwitcher(
 	group.className = 'os-site-switcher';
 	group.setAttribute( 'label', __( 'Site' ) );
 	group.setAttribute( 'value', current );
+	let divided = false;
 	for ( const entry of entries ) {
+		if ( entry.external && ! divided ) {
+			// One line, before the first external site: the row reads as
+			// this network's sites, then the ones that joined it.
+			divided = true;
+			const divider = document.createElement( 'span' );
+			divider.className = 'os-site-switcher__divider';
+			divider.setAttribute( 'role', 'separator' );
+			divider.setAttribute( 'aria-orientation', 'vertical' );
+			group.appendChild( divider );
+		}
 		const segment = document.createElement( 'os-segment' );
 		segment.setAttribute( 'value', entry.value );
-		segment.textContent = entry.label;
+		if ( entry.external ) {
+			segment.setAttribute( 'data-external', '' );
+			segment.title = __( 'External site' );
+			segment.appendChild( externalMark() );
+			const spoken = document.createElement( 'span' );
+			spoken.className = 'screen-reader-text';
+			spoken.textContent = __( 'External site:' ) + ' ';
+			segment.appendChild( spoken );
+		}
+		segment.appendChild( document.createTextNode( entry.label ) );
 		group.appendChild( segment );
 	}
 
@@ -162,25 +238,9 @@ export function buildSiteSwitcher(
 
 	group.addEventListener( 'os-pick', ( e: Event ) => {
 		const value = ( e as CustomEvent< { value?: string } > ).detail?.value;
-		const entry = value ? byValue.get( value ) : undefined;
-		if ( ! entry || value === current ) {
-			return;
+		if ( value ) {
+			switchToSite( multisite, value, deps );
 		}
-		// Slide this desk out towards the site picked, then go; the
-		// shell that arrives slides its desk in from the same side.
-		// Another origin gets a login token minted meanwhile, so the
-		// user arrives logged in; a mint that fails hops without one.
-		const from = entries.findIndex( ( x ) => x.value === current );
-		const to = entries.findIndex( ( x ) => x.value === value );
-		const direction: HopDirection = to > from ? 'next' : 'prev';
-		const plain = shellUrlInOverview( entry.shellUrl, direction );
-		const minted =
-			deps.mint && isOtherOrigin( entry.shellUrl )
-				? deps.mint( entry.shellUrl, direction ).catch( () => null )
-				: Promise.resolve( null );
-		void Promise.all( [ leaveInstance( direction ), minted ] ).then(
-			( [ , url ] ) => hop( url ?? plain ),
-		);
 	} );
 
 	return group;

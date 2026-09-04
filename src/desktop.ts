@@ -44,7 +44,7 @@ import { OS_SETTINGS_WINDOW_ID } from './settings/constants';
 import { getExitOpenStationTileDef } from './exit-openstation';
 import { getNetworkAdminTileDef } from './multisite/dock-tiles';
 import { createHopMinter, hopToAdmin } from './multisite/hop';
-import { buildSiteSwitcher } from './multisite/site-switcher';
+import { buildSiteSwitcher, switchToSite } from './multisite/site-switcher';
 import { revealInstance, stampArrival } from './multisite/instance-transition';
 import { installOverviewHeader } from './window-manager/overview';
 import { deriveWindowId, urlMatchKey } from './utils';
@@ -2964,6 +2964,16 @@ function init(): void {
 			? buildSiteSwitcher( config.multisite, { mint: hopMinter } )
 			: null,
 	);
+	// An app's `hop` effect — the Network window's Open — takes the same
+	// switch a pick in the row does. A value the switcher does not offer
+	// is ignored, so nothing hops anywhere the row cannot.
+	document.addEventListener( 'os-app-effect', ( e: Event ) => {
+		const effect = ( e as CustomEvent< { effect?: { type?: string; site?: unknown } } > )
+			.detail?.effect;
+		if ( effect?.type === 'hop' && config.multisite && typeof effect.site === 'string' ) {
+			switchToSite( config.multisite, effect.site, { mint: hopMinter } );
+		}
+	} );
 
 	bindAdminLinkDispatch( {
 		adminUrl: config.adminUrl,

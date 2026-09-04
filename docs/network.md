@@ -124,21 +124,26 @@ switch as they always did.
 ## The Network app
 
 `apps/network/network.os.php`, an App Framework window (see
-[app-framework.md](./app-framework.md)). On a multisite it lives in
-the **network admin's shell** and nowhere else, which is what
-`App::admin( 'network' )` declares: a window says which admin offers it
-(`site`, the default and the right one for every site-scoped window;
+[app-framework.md](./app-framework.md)). It is offered on **every
+shell** of the network, the network admin's and each site's, which is
+what `App::admin( 'any' )` declares: a window says which admin offers
+it (`site`, the default and the right one for every site-scoped window;
 `network`; or `any`), and the native-window payload keeps the ones that
 belong instead of leaving the network admin empty
-(`openstation_native_window_offered_here()`). On a single site it lives
-in the site's shell. The gate is `manage_network` on a multisite and
-`manage_options` elsewhere.
+(`openstation_native_window_offered_here()`). The gate is
+`manage_network` on a multisite and `manage_options` elsewhere, so on a
+multisite only a super admin sees it, wherever they stand.
 
 Three faces: the **hub's** (every site with its status, Check sites,
-Add site); a **member's** (the network it belongs to, the list as last
-synced, Sync now, Leave); and a site in **neither role**, which is
-offered both doors. Adding, removing, joining and leaving take effect in
-the switcher on the next shell load.
+Add external site); a **member's** (the network it belongs to, the list
+as last synced, Sync now, Leave); and a site in **neither role**, which
+is offered both doors. Adding, removing, joining and leaving take effect
+in the switcher on the next shell load. Every row but this shell's own
+carries **Open**, which switches to that site exactly as a pick in the
+switcher does, slide and login token included: the action queues a
+`hop` effect naming the switcher entry (`$os->effects->add( 'hop',
+array( 'site' => $id ) )`) and the shell runs `switchToSite()` for it,
+ignoring any value the row does not offer.
 
 ## Developer surface
 

@@ -1896,8 +1896,18 @@ export interface MultisiteConfig {
 	} | null;
 	/** Which instance this shell is: `network`, or the blog id. */
 	current: string;
-	/** Every site the user belongs to, each with its own shell screen. */
-	sites: Array< { id: string; name: string; shellUrl: string } >;
+	/**
+	 * Every site the user belongs to, each with its own shell screen.
+	 * `kind` is `local` for a site of this WordPress network (or the
+	 * hub itself) and `member` for an install that joined from
+	 * elsewhere, which the switcher marks as external.
+	 */
+	sites: Array< {
+		id: string;
+		name: string;
+		shellUrl: string;
+		kind?: 'local' | 'member';
+	} >;
 	/**
 	 * The route that mints a hop token towards a site on another origin,
 	 * so the switch logs the user in there. Absent on a shell with nowhere

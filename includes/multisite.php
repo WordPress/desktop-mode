@@ -165,6 +165,7 @@ function openstation_multisite_sites() {
 			'id'       => (string) $blog_id,
 			'name'     => $name,
 			'shellUrl' => esc_url_raw( get_admin_url( $blog_id, 'admin.php?page=' . OPENSTATION_SHELL_PAGE_SLUG ) ),
+			'kind'     => 'local',
 		);
 	}
 	foreach ( openstation_network_member_entries() as $member ) {
@@ -172,6 +173,7 @@ function openstation_multisite_sites() {
 			'id'       => $member['id'],
 			'name'     => $member['name'],
 			'shellUrl' => $member['shellUrl'],
+			'kind'     => 'member',
 		);
 	}
 
@@ -182,7 +184,9 @@ function openstation_multisite_sites() {
 	 * a different set. A site dropped here is not offered, though the
 	 * admin bar still reaches it.
 	 *
-	 * @param array[] $sites Each `id` (blog id as a string, or `member:<id>`), `name`, `shellUrl`.
+	 * @param array[] $sites Each `id` (blog id as a string, or `member:<id>`), `name`, `shellUrl`,
+	 *                       `kind` (`local` for a site of this network, `member` for an install
+	 *                       that joined from elsewhere, which the switcher marks as external).
 	 */
 	return apply_filters( 'openstation_multisite_sites', $sites );
 }

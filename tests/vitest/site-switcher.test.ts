@@ -11,6 +11,7 @@ import {
 	isOtherOrigin,
 	shellUrlInOverview,
 	siteSwitcherEntries,
+	switchToSite,
 } from '../../src/multisite/site-switcher';
 import { createHopMinter } from '../../src/multisite/hop';
 import { shellUrlWithoutBootArgs } from '../../src/shell-url';
@@ -52,6 +53,48 @@ describe( 'the site switcher', () => {
 			[ '1', 'Main' ],
 			[ '2', 'Shop' ],
 		] );
+	} );
+
+	test( 'an install that joined from elsewhere is marked as external, after a line', () => {
+		const el = buildSiteSwitcher(
+			config( {
+				sites: [
+					{ id: '1', name: 'Main', shellUrl: MAIN_SHELL, kind: 'local' },
+					{ id: 'member:abc', name: 'Studio', shellUrl: 'https://studio.test/wp-admin/admin.php?page=openstation', kind: 'member' },
+					{ id: 'member:def', name: 'Shop', shellUrl: 'https://shop.test/wp-admin/admin.php?page=openstation', kind: 'member' },
+				],
+			} ),
+		);
+		const children = Array.from( el?.children ?? [] ).map( ( c ) => c.tagName.toLowerCase() + ( c.hasAttribute( 'data-external' ) ? '[external]' : '' ) );
+		// The line once, before the first external site; the network's own sites carry nothing.
+		expect( children ).toEqual( [ 'os-segment', 'os-segment', 'span', 'os-segment[external]', 'os-segment[external]' ] );
+		const divider = el?.querySelector( '.os-site-switcher__divider' );
+		expect( divider?.getAttribute( 'role' ) ).toBe( 'separator' );
+
+		const studio = el?.querySelector( 'os-segment[value="member:abc"]' ) as HTMLElement;
+		expect( studio.title ).toBe( 'External site' );
+		expect( studio.querySelector( '.os-site-switcher__mark' )?.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		// The name stays the visible label; the mark and the spoken prefix ride before it.
+		expect( studio.textContent ).toBe( 'External site: Studio' );
+		expect( ( el?.querySelector( 'os-segment[value="1"]' ) as HTMLElement ).title ).toBe( '' );
+		expect( siteSwitcherEntries( config() ).map( ( e ) => e.external ) ).toEqual( [ false, false, false ] );
+	} );
+
+	test( 'switchToSite takes the same hop a pick does, for a value the row offers and nowhere else', async () => {
+		const hop = vi.fn();
+		const settle = () => new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		expect( switchToSite( config(), '2', { hop } ) ).toBe( true );
+		await settle();
+		expect( hop ).toHaveBeenCalledWith( SHOP_SHELL + '&openstation_overview=1&openstation_hop_from=next' );
+		expect( sessionStorage.getItem( 'openstation-hop-direction' ) ).toBe( 'next' );
+
+		hop.mockClear();
+		// This very shell, and a value the switcher never offered: no hop.
+		expect( switchToSite( config(), '1', { hop } ) ).toBe( false );
+		expect( switchToSite( config(), 'member:nope', { hop } ) ).toBe( false );
+		await settle();
+		expect( hop ).not.toHaveBeenCalled();
 	} );
 
 	test( 'a lone instance gets no row', () => {

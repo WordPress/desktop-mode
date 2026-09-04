@@ -54,8 +54,16 @@ the user's own sites (`get_blogs_of_user()`, minus the archived, spam and
 deleted) and, for a super admin, who can reach every site whether or not
 they are a member, the network's sites by path up to the first 20, all
 through the `openstation_multisite_sites` filter, which is where a large
-network picks its own set. Pinned by `tests/vitest/site-switcher.test.ts`
-and `Tests_OpenStation_Multisite`.
+network picks its own set. An install that joined from elsewhere through
+an OpenStation network (`kind: 'member'` on its entry) is marked as
+**external**: a mark before its name, one line before the first of them,
+and a tooltip that says so, so the row reads as this network's own sites
+and then the ones that joined it. `switchToSite( multisite, value )` in
+the same module is the switch itself, the one a pick takes, and the shell
+also runs it for an app's `hop` effect (`$os->effects->add( 'hop',
+array( 'site' => $id ) )`, which is how the Network window's Open buttons
+switch); a value the row does not offer is ignored. Pinned by
+`tests/vitest/site-switcher.test.ts` and `Tests_OpenStation_Multisite`.
 
 **Every cross-admin click takes the same hop.** The Network Admin tile
 and its flyout rows, a site's "Dashboard" link in the network Sites list

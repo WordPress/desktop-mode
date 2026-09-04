@@ -242,6 +242,7 @@ function openstation_network_member_payload() {
 			'id'       => $site['id'],
 			'name'     => $site['name'],
 			'shellUrl' => $site['shellUrl'],
+			'kind'     => $site['kind'],
 		);
 	}
 	if ( '' === $current ) {
@@ -251,6 +252,7 @@ function openstation_network_member_payload() {
 			'id'       => $current,
 			'name'     => (string) get_bloginfo( 'name' ),
 			'shellUrl' => esc_url_raw( admin_url( 'admin.php?page=' . OPENSTATION_SHELL_PAGE_SLUG ) ),
+			'kind'     => 'member',
 		);
 	}
 	$admin = $hub['list']['networkAdmin'];

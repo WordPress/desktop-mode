@@ -10,8 +10,8 @@
  * network the site belongs to, shows the list as last fetched, and
  * leaves. A site in neither role is offered both doors. The switcher
  * above the overview's desktop tiles is the everyday face of all this;
- * the window is the one-time admin task behind it. See
- * docs/network.md.
+ * the window is the one-time admin task behind it, and every row of it
+ * opens its site, the same hop the switcher takes. See docs/network.md.
  *
  * @package OpenStation
  */
@@ -99,12 +99,24 @@ function status_badge( $status ) {
 }
 
 /**
+ * Which switcher entry this shell is (`network`, a blog id, `hub` or
+ * `member:<id>`), so that row offers no Open: the user is already here.
+ *
+ * @return string
+ */
+function current_instance() {
+	$block = \openstation_multisite_payload();
+	return is_array( $block ) && isset( $block['current'] ) ? (string) $block['current'] : '';
+}
+
+/**
  * One site row.
  *
  * @param array<string,mixed> $site    `id`, `name`, `url`, `shellUrl`, `kind`, `status`, `error`.
  * @param bool                $can_remove Whether a Remove button is offered.
+ * @param string              $current    The switcher entry this shell is; see `current_instance()`.
  */
-function site_row( array $site, $can_remove ) {
+function site_row( array $site, $can_remove, $current ) {
 	$is_member = 'member' === $site['kind'];
 	?>
 	<li class="os-network__site" os-key="<?php echo esc( $site['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc() escapes. ?>">
@@ -121,6 +133,19 @@ function site_row( array $site, $can_remove ) {
 				echo status_badge( $site['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by tag(), which escapes every attribute; the label is esc()'d.
 			} else {
 				echo tag( 'os-badge', array( 'tone' => 'neutral' ), esc( __( 'This network', 'desktop-mode' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by tag(); see above.
+			}
+			if ( $site['id'] !== $current ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by tag(); see above.
+				echo tag(
+					'os-button',
+					array(
+						'variant'   => 'ghost',
+						'os-action' => 'open',
+						'os-arg-id' => $site['id'],
+						'title'     => __( 'Switch to this site', 'desktop-mode' ),
+					),
+					esc( __( 'Open', 'desktop-mode' ) )
+				);
 			}
 			if ( $is_member && $can_remove ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by tag(); see above.
@@ -191,6 +216,7 @@ function hub_view( State $state, Os $os ) {
 	$identity = \openstation_network_identity();
 	$sites    = array_merge( \openstation_network_local_entries(), \openstation_network_member_entries() );
 	$members  = \openstation_network_members();
+	$current  = current_instance();
 	?>
 	<section class="os-network__section">
 		<header class="os-network__header">
@@ -222,19 +248,20 @@ function hub_view( State $state, Os $os ) {
 						'status' => $site['status'],
 						'error'  => $member ? $member['error'] : '',
 					),
-					true
+					true,
+					$current
 				);
 			}
 			?>
 		</ul>
 	</section>
 	<section class="os-network__section">
-		<h3 class="os-network__subtitle"><?php esc_html_e( 'Add a site', 'desktop-mode' ); ?></h3>
+		<h3 class="os-network__subtitle"><?php esc_html_e( 'Add an external site', 'desktop-mode' ); ?></h3>
 		<p class="os-network__lede">
 			<?php esc_html_e( 'An install anywhere, with OpenStation active and reachable over HTTPS. Its key is pinned when it is added; on that site, open Network and enter this address to finish pairing:', 'desktop-mode' ); ?>
 			<code class="os-network__code"><?php echo esc( $identity['url'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc() escapes. ?></code>
 		</p>
-		<?php address_form( $state, __( 'Site address', 'desktop-mode' ), 'add', __( 'Add site', 'desktop-mode' ) ); ?>
+		<?php address_form( $state, __( 'Site address', 'desktop-mode' ), 'add', __( 'Add external site', 'desktop-mode' ) ); ?>
 	</section>
 	<?php
 }
@@ -246,7 +273,8 @@ function hub_view( State $state, Os $os ) {
  * @param Os    $os    Host.
  */
 function member_view( State $state, Os $os ) {
-	$hub = \openstation_network_hub();
+	$hub     = \openstation_network_hub();
+	$current = current_instance();
 	?>
 	<section class="os-network__section">
 		<header class="os-network__header">
@@ -299,7 +327,8 @@ function member_view( State $state, Os $os ) {
 							'status' => 'paired',
 							'error'  => '',
 						),
-						false
+						false,
+						$current
 					);
 				}
 				?>
@@ -328,8 +357,8 @@ function unpaired_view( State $state, Os $os ) {
 	</section>
 	<section class="os-network__section">
 		<h3 class="os-network__subtitle"><?php esc_html_e( 'Or start one here', 'desktop-mode' ); ?></h3>
-		<p class="os-network__lede"><?php esc_html_e( 'Add the first site and this site becomes the hub: every site added here shows the same site switcher.', 'desktop-mode' ); ?></p>
-		<?php address_form( $state, __( 'Site address', 'desktop-mode' ), 'add', __( 'Add site', 'desktop-mode' ) ); ?>
+		<p class="os-network__lede"><?php esc_html_e( 'Add the first external site and this site becomes the hub: every site added here shows the same site switcher.', 'desktop-mode' ); ?></p>
+		<?php address_form( $state, __( 'Site address', 'desktop-mode' ), 'add', __( 'Add external site', 'desktop-mode' ) ); ?>
 	</section>
 	<?php
 }
@@ -359,9 +388,10 @@ return App::define( APP_ID )
 	->icon( ICON )
 	->size( 760, 560 )
 	->min_size( 520, 400 )
-	// A multisite manages its network from the network admin's shell;
-	// a single site, from its own.
-	->admin( function_exists( 'is_multisite' ) && is_multisite() ? 'network' : 'site' )
+	// Every shell of the network offers it: managing the network is the
+	// super admin's job wherever they stand, and each row is a way to
+	// another site.
+	->admin( 'any' )
 	->can( __NAMESPACE__ . '\\can_use' )
 	->state(
 		array(
@@ -402,6 +432,17 @@ return App::define( APP_ID )
 				\openstation_network_remove_member( $id ) ? true : new \WP_Error( 'openstation_network_unknown', __( 'That site is not in the network.', 'desktop-mode' ) ),
 				__( 'Removed from the network.', 'desktop-mode' )
 			);
+		}
+	)
+	->action(
+		'open',
+		static function ( State $state, Os $os, array $args ) {
+			$id = isset( $args['id'] ) && is_scalar( $args['id'] ) ? sanitize_text_field( (string) $args['id'] ) : '';
+			if ( '' !== $id ) {
+				// The shell takes it from here: the same hop a pick in
+				// the switcher takes, slide and login token included.
+				$os->effects->add( 'hop', array( 'site' => $id ) );
+			}
 		}
 	)
 	->action(

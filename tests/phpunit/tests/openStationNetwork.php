@@ -526,11 +526,11 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$this->assertFalse( openstation_native_window_offered_here( array() ), 'And a site window stays off the network admin.' );
 	}
 
-	public function test_network_app_is_gated_and_scoped_to_its_admin() {
+	public function test_network_app_is_gated_and_offered_on_every_shell() {
 		$registry = openstation_apps_registry();
 		$app      = $registry->get( 'openstation-network' );
 		$this->assertNotNull( $app );
-		$this->assertSame( is_multisite() ? 'network' : 'site', $app->manifest()['admin'] );
+		$this->assertSame( 'any', $app->manifest()['admin'] );
 
 		wp_set_current_user( self::$editor_id );
 		$this->assertFalse( $app->allows( openstation_apps_os() ) );
@@ -548,7 +548,7 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		};
 		if ( is_multisite() ) {
 			$this->assertContains( 'openstation-network', $ids_on( 'sites-network' ), 'Offered in the network admin.' );
-			$this->assertNotContains( 'openstation-network', $ids_on( 'dashboard' ), 'And not on a site shell.' );
+			$this->assertContains( 'openstation-network', $ids_on( 'dashboard' ), 'And on every site shell: the network is managed from wherever the super admin stands.' );
 			$this->assertNotContains( 'openstation-code-blue', $ids_on( 'sites-network' ), 'A site-scoped app stays off the network admin.' );
 		} else {
 			$this->assertContains( 'openstation-network', $ids_on( 'dashboard' ) );
@@ -565,5 +565,38 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		);
 		$html = is_array( $response ) && isset( $response['html'] ) ? $response['html'] : wp_json_encode( $response );
 		$this->assertStringContainsString( is_multisite() ? 'Sites in this network' : 'Join a network', $html );
+		$this->assertStringContainsString( 'Add external site', $html, 'The door is named for what goes through it.' );
+
+		// Open on a row hands the shell the switcher entry to hop to, as
+		// a `hop` effect; the shell takes the same switch a pick does.
+		$response = openstation_apps_runtime()->dispatch(
+			'openstation-network',
+			array(
+				'action' => 'open',
+				'state'  => array(),
+				'args'   => array( 'id' => 'member:abc' ),
+			),
+			openstation_apps_os()
+		);
+		$this->assertSame( array( array( 'type' => 'hop', 'site' => 'member:abc' ) ), $response['effects'] );
+	}
+
+	public function test_every_switcher_row_says_which_kind_of_site_it_is() {
+		$remote = self::remote_keypair();
+		$this->remote = static function () use ( $remote ) {
+			return self::json_response( self::member_identity( $remote['public'] ) );
+		};
+		$member = openstation_network_add_member( 'https://member.test' );
+		$this->assertIsArray( $member );
+
+		wp_set_current_user( self::$admin_id );
+		$block = openstation_multisite_payload();
+		$kinds = array();
+		foreach ( $block['sites'] as $site ) {
+			$kinds[ $site['id'] ] = $site['kind'];
+		}
+		$this->assertSame( 'member', $kinds[ 'member:' . $member['id'] ], 'An install that joined from elsewhere.' );
+		$this->assertSame( 'local', $kinds[ is_multisite() ? '1' : 'hub' ], "This network's own site." );
+		$this->assertCount( 0, array_diff( $kinds, array( 'local', 'member' ) ), 'Nothing else.' );
 	}
 }

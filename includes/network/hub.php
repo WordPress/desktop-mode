@@ -172,6 +172,7 @@ function openstation_network_hub_payload() {
 			'id'       => $entry['id'],
 			'name'     => $entry['name'],
 			'shellUrl' => $entry['shellUrl'],
+			'kind'     => $entry['kind'],
 		);
 	}
 	return array(

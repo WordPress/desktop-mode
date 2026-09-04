@@ -360,6 +360,29 @@
 	overflow-x: auto;
 }
 
+/* An install that joined from elsewhere wears a mark before its name,
+ * and one line stands before the first of them, so the row says which
+ * sites are this network's own and which are external. Both are light
+ * DOM the switcher writes into the segment; its button is out of
+ * reach behind the shadow root. */
+.os-site-switcher__divider {
+	flex: none;
+	align-self: stretch;
+	width: 1px;
+	margin: 5px 3px;
+	background-color: var( --os-ui-border-strong, #c3c4c7 );
+}
+
+.os-site-switcher__mark.dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	line-height: 14px;
+	margin-right: 5px;
+	vertical-align: -2px;
+	opacity: 0.75;
+}
+
 .os-area--overview .os-overview-top-bar {
 	opacity: 1;
 	pointer-events: auto;
