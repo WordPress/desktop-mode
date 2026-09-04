@@ -137,8 +137,11 @@ multisite only a super admin sees it, wherever they stand.
 Three faces: the **hub's** (every site with its status, Check sites,
 Add external site); a **member's** (the network it belongs to, the list
 as last synced, Sync now, Leave); and a site in **neither role**, which
-is offered both doors. Adding, removing, joining and leaving take effect
-in the switcher on the next shell load. Every row but this shell's own
+is offered both doors. Adding, removing, joining, leaving and syncing take
+effect in the switcher at once: the action spends `$os->refresh_menu()`,
+the menu payload carries the multisite block (`multisite`, the same
+block the shell boots with), and overview, when open, rebuilds the row
+above its tiles on the spot. Every row but this shell's own
 carries **Open**, which switches to that site exactly as a pick in the
 switcher does, slide and login token included: the action queues a
 `hop` effect naming the switcher entry (`$os->effects->add( 'hop',

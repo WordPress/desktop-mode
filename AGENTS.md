@@ -250,7 +250,7 @@ Payload shape (`openstation_build_menu_payload()` in `includes/core/payload.php`
   serverWindowSlotScripts, serverWindowSlots,
   serverWindowChromeScripts, serverWindowChromes,
   serverWindowNotices, serverGames, serverDesktopThemes,
-  desktopIcons, updateCounts }
+  desktopIcons, updateCounts, multisite }
 ```
 
 - **PHP-declared** things are in the payload: dock, native windows, widgets, wallpapers. The shell diffs them and fires `registry.subscribe` listeners → UI repaints. No F5.

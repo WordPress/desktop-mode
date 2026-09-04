@@ -43,10 +43,10 @@ import { OsSettings } from './settings';
 import { OS_SETTINGS_WINDOW_ID } from './settings/constants';
 import { getExitOpenStationTileDef } from './exit-openstation';
 import { getNetworkAdminTileDef } from './multisite/dock-tiles';
-import { createHopMinter, hopToAdmin } from './multisite/hop';
+import { createHopMinter, hopToAdmin, type HopMinter } from './multisite/hop';
 import { buildSiteSwitcher, switchToSite } from './multisite/site-switcher';
 import { revealInstance, stampArrival } from './multisite/instance-transition';
-import { installOverviewHeader } from './window-manager/overview';
+import { installOverviewHeader, refreshOverviewTopBar } from './window-manager/overview';
 import { deriveWindowId, urlMatchKey } from './utils';
 import { shellUrlWithoutBootArgs } from './shell-url';
 import {
@@ -2953,12 +2953,14 @@ function init(): void {
 	// The site switcher above the overview's desktop tiles, on a network.
 	// A switch to another origin mints a login token first, when the
 	// shell has the route for it (a network with somewhere to hop to).
-	const hopMinter = config.multisite?.hopUrl
-		? createHopMinter( {
-			hopUrl: config.multisite.hopUrl,
-			restNonce: config.restNonce,
-		} )
-		: undefined;
+	// Read at mint time, not boot: a site that joins a network from its
+	// Network window gets the route on the refresh that follows.
+	const hopMinter: HopMinter = ( target, direction ) => {
+		const hopUrl = config.multisite?.hopUrl;
+		return hopUrl
+			? createHopMinter( { hopUrl, restNonce: config.restNonce } )( target, direction )
+			: Promise.resolve( null );
+	};
 	installOverviewHeader( () =>
 		config.multisite
 			? buildSiteSwitcher( config.multisite, { mint: hopMinter } )
@@ -4590,6 +4592,19 @@ function init(): void {
 		layoutDispatcher,
 		desktopArea,
 		config,
+		// The site switcher's rows follow the network registry: a
+		// Network app action spends a refresh whose payload carries the
+		// multisite block, and overview, when open, rebuilds its top bar
+		// on the spot. Which instance this shell IS cannot change without
+		// a navigation, so `current` and the admin it stands in are kept.
+		applyMultisite: ( block ) => {
+			const was = config.multisite;
+			config.multisite =
+				block && was
+					? { ...block, current: was.current, isNetworkAdmin: was.isNetworkAdmin }
+					: block;
+			refreshOverviewTopBar( manager );
+		},
 		syncNativeWindows,
 		syncServerWidgets,
 		syncServerWallpapers,

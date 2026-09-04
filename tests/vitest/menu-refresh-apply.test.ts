@@ -237,6 +237,37 @@ describe( 'menu-refresh-apply.createApplyPayload', () => {
 		expect( config.serverGames ).toEqual( games );
 	} );
 
+	// The site switcher's rows ride on the same payload, so a Network
+	// app action (add, remove, join, leave, sync) reaches the row above
+	// overview's desktop tiles through one refresh, no reload.
+	describe( 'the multisite block', () => {
+		const block = {
+			isNetworkAdmin: false,
+			networkAdmin: null,
+			current: '1',
+			sites: [ { id: '1', name: 'Main', shellUrl: 'http://example.test/wp-admin/admin.php?page=openstation', kind: 'local' as const } ],
+		};
+
+		test( 'a payload carrying it hands it on; null says the shell has no network', () => {
+			const applyMultisite = vi.fn();
+			const { deps } = makeDeps( { applyMultisite } );
+			const apply = createApplyPayload( deps );
+
+			apply( { dockItems: [ ...MIN_DOCK ], multisite: block } );
+			expect( applyMultisite ).toHaveBeenCalledWith( block );
+
+			apply( { dockItems: [ ...MIN_DOCK ], multisite: null } );
+			expect( applyMultisite ).toHaveBeenLastCalledWith( null );
+		} );
+
+		test( 'an older payload without the key means no change', () => {
+			const applyMultisite = vi.fn();
+			const { deps } = makeDeps( { applyMultisite } );
+			createApplyPayload( deps )( { dockItems: [ ...MIN_DOCK ] } );
+			expect( applyMultisite ).not.toHaveBeenCalled();
+		} );
+	} );
+
 	// THE PRIMARY REGRESSION GUARD.
 	//
 	// `desktopIcons` is in the PHP payload (`openstation_build_menu_payload`)

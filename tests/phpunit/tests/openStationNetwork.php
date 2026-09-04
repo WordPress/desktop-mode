@@ -581,6 +581,48 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$this->assertSame( array( array( 'type' => 'hop', 'site' => 'member:abc' ) ), $response['effects'] );
 	}
 
+	public function test_the_menu_payload_carries_the_switcher_rows_and_the_app_spends_a_refresh() {
+		$remote = self::remote_keypair();
+		$this->remote = static function () use ( $remote ) {
+			return self::json_response( self::member_identity( $remote['public'] ) );
+		};
+		$member = openstation_network_add_member( 'https://member.test' );
+		$this->assertIsArray( $member );
+		wp_set_current_user( self::$admin_id );
+
+		// A single-site hub whose last member left has no network, and
+		// the block is null: that is how the switcher goes away.
+		$rows = static function () {
+			$block = openstation_build_menu_payload()['multisite'];
+			return is_array( $block ) ? wp_list_pluck( $block['sites'], 'id' ) : array();
+		};
+		$this->assertContains( 'member:' . $member['id'], $rows(), 'The payload a refresh applies carries the switcher rows.' );
+		$this->assertSame( openstation_multisite_payload(), openstation_build_menu_payload()['multisite'], 'The same block the shell boots with.' );
+
+		$response = openstation_apps_runtime()->dispatch(
+			'openstation-network',
+			array(
+				'action' => 'remove',
+				'state'  => array(),
+				'args'   => array( 'id' => $member['id'] ),
+			),
+			openstation_apps_os()
+		);
+		$this->assertContains( array( 'type' => 'refresh_menu' ), $response['effects'], 'Removing a site spends the refresh that repaints the row.' );
+		$this->assertNotContains( 'member:' . $member['id'], $rows(), 'And the next payload no longer lists it.' );
+
+		$response = openstation_apps_runtime()->dispatch(
+			'openstation-network',
+			array(
+				'action' => 'remove',
+				'state'  => array(),
+				'args'   => array( 'id' => 'nobody' ),
+			),
+			openstation_apps_os()
+		);
+		$this->assertNotContains( array( 'type' => 'refresh_menu' ), $response['effects'], 'Nothing changed, nothing to refresh.' );
+	}
+
 	public function test_every_switcher_row_says_which_kind_of_site_it_is() {
 		$remote = self::remote_keypair();
 		$this->remote = static function () use ( $remote ) {

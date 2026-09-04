@@ -1663,6 +1663,13 @@ function openstation_build_menu_payload() {
 		);
 	}
 
+	// The site switcher's rows: on a network, the instances this shell
+	// may switch to (`openstation_multisite_payload()`), null elsewhere.
+	// The Network app spends a menu refresh after every action that
+	// changes them (add, remove, join, leave, sync), so the row above
+	// overview's desktop tiles follows the registry without a reload.
+	$payload['multisite'] = openstation_multisite_payload();
+
 	// A cheap structural fingerprint of the admin menu the shell uses to
 	// decide whether a live refresh is warranted. Shipped in every full
 	// payload so the shell can seed / update its last-known signature

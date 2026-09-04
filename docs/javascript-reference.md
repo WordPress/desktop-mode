@@ -4717,6 +4717,7 @@ The bridge posts this message (and `os-menu-signature`) to the **top** window ra
         nativeWindows: unknown[];
         /* … */
         updateCounts?: { total: number; formatted: string; text: string; url: string };
+        multisite: MultisiteConfig | null; // the site switcher's rows on a network; overview rebuilds its row
         menuSig: string;
     };
 }

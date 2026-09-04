@@ -408,7 +408,7 @@ return App::define( APP_ID )
 	)
 	->action(
 		'add',
-		static function ( State $state ) {
+		static function ( State $state, Os $os ) {
 			$member = \openstation_network_add_member( (string) $state->get( 'url' ) );
 			outcome(
 				$state,
@@ -416,22 +416,30 @@ return App::define( APP_ID )
 				is_wp_error( $member )
 					? ''
 					/* translators: %s: site name. */
-					: sprintf( __( '%s is in the network. It appears in the site switcher on the next load, and on that site once it joins from its Network window.', 'desktop-mode' ), $member['name'] )
+					: sprintf( __( '%s is in the network. It is in the site switcher now, and on that site once it joins from its Network window.', 'desktop-mode' ), $member['name'] )
 			);
 			if ( ! is_wp_error( $member ) ) {
 				$state->set( 'url', '' );
+				// The switcher's rows come from the menu payload; a
+				// refresh is how they follow the registry without a
+				// reload. Same after every action below that changes them.
+				$os->refresh_menu();
 			}
 		}
 	)
 	->action(
 		'remove',
 		static function ( State $state, Os $os, array $args ) {
-			$id = isset( $args['id'] ) ? sanitize_key( (string) $args['id'] ) : '';
+			$id      = isset( $args['id'] ) ? sanitize_key( (string) $args['id'] ) : '';
+			$removed = \openstation_network_remove_member( $id );
 			outcome(
 				$state,
-				\openstation_network_remove_member( $id ) ? true : new \WP_Error( 'openstation_network_unknown', __( 'That site is not in the network.', 'desktop-mode' ) ),
+				$removed ? true : new \WP_Error( 'openstation_network_unknown', __( 'That site is not in the network.', 'desktop-mode' ) ),
 				__( 'Removed from the network.', 'desktop-mode' )
 			);
+			if ( $removed ) {
+				$os->refresh_menu();
+			}
 		}
 	)
 	->action(
@@ -454,7 +462,7 @@ return App::define( APP_ID )
 	)
 	->action(
 		'join',
-		static function ( State $state ) {
+		static function ( State $state, Os $os ) {
 			$hub = \openstation_network_join( (string) $state->get( 'url' ) );
 			outcome(
 				$state,
@@ -463,27 +471,32 @@ return App::define( APP_ID )
 					? ''
 					: ( '' === $hub['error']
 						/* translators: %s: network name. */
-						? sprintf( __( 'This site belongs to %s. The site switcher shows the network on the next load.', 'desktop-mode' ), $hub['name'] )
+						? sprintf( __( 'This site belongs to %s. The site switcher shows the network now.', 'desktop-mode' ), $hub['name'] )
 						/* translators: %s: network name. */
 						: sprintf( __( 'Pinned %s. It has not added this site yet; sync once it has.', 'desktop-mode' ), $hub['name'] ) )
 			);
 			if ( ! is_wp_error( $hub ) ) {
 				$state->set( 'url', '' );
+				$os->refresh_menu();
 			}
 		}
 	)
 	->action(
 		'leave',
-		static function ( State $state ) {
+		static function ( State $state, Os $os ) {
 			\openstation_network_leave();
 			outcome( $state, true, __( 'Left the network.', 'desktop-mode' ) );
+			$os->refresh_menu();
 		}
 	)
 	->action(
 		'sync',
-		static function ( State $state ) {
+		static function ( State $state, Os $os ) {
 			$list = \openstation_network_refresh_list();
-			outcome( $state, $list, __( 'Site list synced. The switcher shows it on the next load.', 'desktop-mode' ) );
+			outcome( $state, $list, __( 'Site list synced.', 'desktop-mode' ) );
+			if ( ! is_wp_error( $list ) ) {
+				$os->refresh_menu();
+			}
 		}
 	)
 	->view( __NAMESPACE__ . '\\render' );
