@@ -604,7 +604,7 @@ describe( 'view', () => {
 				}
 				seen.push( args[ 0 ] );
 				const { build } = args[ 1 ] as {
-					build: ( it: Record< string, unknown > ) => HTMLElement;
+					build: ( row: Record< string, unknown > ) => HTMLElement;
 					cell: HTMLElement;
 					event: MouseEvent;
 				};
