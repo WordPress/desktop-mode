@@ -565,8 +565,8 @@ true (the current user has `edit_posts`):
 One companion CustomEvent (document-level):
 
 ```javascript
-// A note was created outside the layer (the widget's keyboard
-// "Pin to desktop" path POSTs from its own bundle) — the layer
+// A note was created outside the layer (the widget's Ctrl+Enter
+// keyboard path POSTs from its own bundle) — the layer
 // listens and pins it with the insertion animation.
 document.addEventListener( 'os-note-created', ( e ) => {
     // e.detail.note — the REST `Note` shape from /desktop-mode/v1/notes.

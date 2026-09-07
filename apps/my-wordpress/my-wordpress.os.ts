@@ -53,7 +53,7 @@ import {
 	renderRoot,
 	renderZoom,
 } from './parts/list-views';
-import { renderDetail, renderFolder, renderSub } from './parts/dossier-views';
+import { renderDetail, renderFolder, renderSub, splitView } from './parts/dossier-views';
 import { hiddenStatus, renderColumnsMenu, sortStatus } from './parts/list-table';
 import { footprintStatus, renderFootprint } from './parts/footprint';
 import { agentDefaultRole, emptyCast, newSeed } from './parts/agents';
@@ -136,18 +136,14 @@ function renderBody(
 	if ( ctx.state.item > 0 && isMobileStamped() ) {
 		return html`<div class="os-mywp__detail-page">${ renderDetail( ctx, section ) }</div>`;
 	}
-	// The preview pane stays in both views — the list's columns
-	// scroll sideways inside their own pane rather than push it out.
-	return html`
-		<div class="os-mywp__split">
-			<div class="os-mywp__list-pane">${ renderList( ctx, section, items ) }</div>
-			<aside class="os-mywp__detail-pane">
-				${ ctx.state.item > 0
-					? renderDetail( ctx, section )
-					: html`<p class="os-mywp__pane-empty">${ __( 'Select an entry to preview it here.' ) }</p>` }
-			</aside>
-		</div>
-	`;
+	// The preview pane appears beside the list once an entry is open,
+	// in both views — the list's columns scroll sideways inside their
+	// own pane rather than push it out. Until then the list has the
+	// whole window.
+	return splitView(
+		renderList( ctx, section, items ),
+		ctx.state.item > 0 ? renderDetail( ctx, section ) : null,
+	);
 }
 
 /** The icons / list switch — instant locally, remembered by the server. */

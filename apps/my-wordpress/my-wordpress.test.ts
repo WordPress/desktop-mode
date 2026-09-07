@@ -279,13 +279,14 @@ describe( 'view', () => {
 		expect( root.querySelector( '.os-mywp__bulk' ) ).toBeNull();
 	} );
 
-	it( 'keeps the preview pane present, empty until an entry is selected', () => {
+	it( 'paints no preview pane until an entry is open — the list has the whole window', () => {
 		const empty = mount(
 			state( { section: 'posts' } ),
 			data( { list: page( [ item( { id: 1 } ) ] ) } ),
 		);
-		expect( empty.querySelector( '.os-mywp__detail-pane' ) ).not.toBeNull();
-		expect( empty.textContent ).toContain( 'Select an entry to preview it here.' );
+		expect( empty.querySelector( '.os-mywp__detail-pane' ) ).toBeNull();
+		expect( empty.querySelector( '.os-mywp__split' )?.classList.contains( 'os-mywp__split--solo' ) ).toBe( true );
+		expect( empty.textContent ).not.toContain( 'Select an entry to preview it here.' );
 
 		const open = mount(
 			state( { section: 'posts', item: 1 } ),
@@ -303,6 +304,8 @@ describe( 'view', () => {
 			} ),
 		);
 		expect( open.querySelector( '.os-mywp__tiles' ) ).not.toBeNull();
+		expect( open.querySelector( '.os-mywp__detail-pane' ) ).not.toBeNull();
+		expect( open.querySelector( '.os-mywp__split--solo' ) ).toBeNull();
 		expect( open.textContent ).toContain( 'Status' );
 		expect( open.querySelector( '[os-action="trash"]' ) ).not.toBeNull();
 		// The pane carries WP Explorer's full verb row: the door into

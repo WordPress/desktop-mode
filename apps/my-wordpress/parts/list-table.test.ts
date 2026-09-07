@@ -257,10 +257,10 @@ describe( 'the table', () => {
 		expect( root.querySelector( '.os-mywp__canvas[data-mywp-list]' ) ).not.toBeNull();
 	} );
 
-	it( 'keeps the preview pane beside the table, empty until a row is picked', () => {
+	it( 'paints no preview pane beside the table until a row is picked', () => {
 		const idle = mount( state(), data() );
-		expect( idle.root.querySelector( '.os-mywp__detail-pane' ) ).not.toBeNull();
-		expect( idle.root.textContent ).toContain( 'Select an entry to preview it here.' );
+		expect( idle.root.querySelector( '.os-mywp__detail-pane' ) ).toBeNull();
+		expect( idle.root.querySelector( '.os-mywp__split--solo' ) ).not.toBeNull();
 		const picked = mount(
 			state( { item: 1 } ),
 			data( { detail: { kind: 'post', id: 1, title: 'Alpha', facts: [], canEdit: true, canDelete: true, content: '' } } ),

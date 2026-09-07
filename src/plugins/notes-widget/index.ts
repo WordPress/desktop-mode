@@ -14,9 +14,11 @@
  *     of the pad and drop it on the wallpaper — a `'note-draft'`
  *     DragManager payload the notes layer (main bundle) turns into a
  *     POST + the pin-insertion thunk.
- *   - Or press the "Pin to desktop" button / Ctrl+Enter in the
- *     textarea — this bundle POSTs directly and hands the note to
- *     the layer via the `os-note-created` CustomEvent.
+ *   - Or press Ctrl/Cmd+Enter in the textarea — this bundle POSTs
+ *     directly and hands the note to the layer via the
+ *     `os-note-created` CustomEvent. The keyboard is the only
+ *     drag-free path on purpose: a button under the pad duplicated
+ *     the tear-off gesture the pad exists to teach.
  *
  * Cross-bundle rules honored here: only plain data crosses to the
  * main bundle (payload / CustomEvent detail); the REST client copy
@@ -149,16 +151,7 @@ const mount = (
 		swatches.appendChild( dot );
 	}
 
-	const pinButton = document.createElement( 'button' );
-	pinButton.type = 'button';
-	pinButton.className = 'dm-notes-pad__pin-btn';
-	pinButton.textContent = __( 'Pin to desktop', 'desktop-mode' );
-	pinButton.title = __(
-		'Pin the note without dragging (Ctrl+Enter)',
-		'desktop-mode',
-	);
-
-	footer.append( swatches, pinButton );
+	footer.append( swatches );
 	root.append( stack, footer );
 	container.appendChild( root );
 
@@ -381,11 +374,14 @@ const mount = (
 	};
 
 	// ------------------------------------------------------------------
-	// Keyboard / button pin path
+	// Keyboard pin path
 	// ------------------------------------------------------------------
 
+	// One POST at a time: a held Ctrl+Enter must not pin the same
+	// draft twice.
+	let pinning = false;
 	async function pinWithoutDrag(): Promise< void > {
-		if ( destroyed || ! canCreate ) {
+		if ( destroyed || ! canCreate || pinning ) {
 			return;
 		}
 		if ( ! text.trim() ) {
@@ -393,7 +389,7 @@ const mount = (
 			editor.focusInput?.();
 			return;
 		}
-		pinButton.disabled = true;
+		pinning = true;
 		try {
 			// A gentle cascade keeps repeated keyboard pins from
 			// stacking exactly on top of each other.
@@ -440,25 +436,19 @@ const mount = (
 				duration: 5000,
 			} );
 		} finally {
-			pinButton.disabled = false;
+			pinning = false;
 		}
 	}
-	const onPinButton = (): void => {
-		void pinWithoutDrag();
-	};
-	pinButton.addEventListener( 'click', onPinButton );
 
 	if ( ! canCreate ) {
 		root.classList.add( 'dm-notes-pad--unavailable' );
 		editor.setAttribute( 'disabled', '' );
-		pinButton.disabled = true;
 	}
 
 	return () => {
 		destroyed = true;
 		sheet.removeEventListener( 'pointerdown', onSheetPointerDown );
 		corner.removeEventListener( 'click', onCornerClick );
-		pinButton.removeEventListener( 'click', onPinButton );
 	};
 };
 

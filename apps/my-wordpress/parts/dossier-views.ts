@@ -194,6 +194,24 @@ function userPreviewActions(
  * the morph's hands off whatever a plugin appended; the class names
  * are WP Explorer's, so plugin CSS written for its slots applies.
  */
+/**
+ * The two-pane frame: the list, and beside it the preview of what is
+ * open. With nothing open there is no pane at all — an empty aside
+ * telling the reader to pick something was a 40% column of nothing,
+ * so the list takes the whole window until a click needs the pane.
+ */
+export function splitView(
+	list: TemplateResult,
+	detail: TemplateResult | null,
+): TemplateResult {
+	return html`
+		<div class="os-mywp__split ${ detail ? '' : 'os-mywp__split--solo' }">
+			<div class="os-mywp__list-pane">${ list }</div>
+			${ detail ? html`<aside class="os-mywp__detail-pane">${ detail }</aside>` : '' }
+		</div>
+	`;
+}
+
 function extrasSlot( slot: 'header' | 'meta' | 'footer', itemId: number ): TemplateResult {
 	return html`<div
 		class="os-my-wordpress__article-slot os-my-wordpress__article-slot--${ slot }"
@@ -483,10 +501,10 @@ function dossierFacts( detail: DetailFacts ): TemplateResult {
 }
 
 /** The right pane behind a selected sub-list row, per relation kind. */
-function renderSubDetail( ctx: Ctx ): TemplateResult {
+function renderSubDetail( ctx: Ctx ): TemplateResult | null {
 	const picked = ctx.data.subDetail;
 	if ( ! picked ) {
-		return html`<p class="os-mywp__pane-empty">${ __( 'Select an entry to preview it here.' ) }</p>`;
+		return null;
 	}
 	if ( picked.kind === 'term' ) {
 		const stats = picked.stats;
@@ -601,9 +619,8 @@ export function renderSub( ctx: Ctx ): TemplateResult {
 	if ( ! sub ) {
 		return html`<os-empty-state>${ __( 'This item no longer exists.' ) }</os-empty-state>`;
 	}
-	return html`
-		<div class="os-mywp__split">
-			<div class="os-mywp__list-pane">
+	return splitView(
+		html`
 				${ sub.rows.length === 0
 					? html`<os-empty-state>${ __( 'Nothing here yet.' ) }</os-empty-state>`
 					: html`
@@ -640,8 +657,7 @@ export function renderSub( ctx: Ctx ): TemplateResult {
 							` ) }
 						</div>
 					` }
-			</div>
-			<aside class="os-mywp__detail-pane">${ renderSubDetail( ctx ) }</aside>
-		</div>
-	`;
+		`,
+		renderSubDetail( ctx ),
+	);
 }
