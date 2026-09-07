@@ -32,56 +32,17 @@
  * is set on the FilesLayer host (desktop area or folder window
  * body) while a shortcut payload is being dragged over it.
  *
- * Marching-ants animation makes the affordance unmissable even
- * against the busiest wallpaper, and the soft inner glow draws
- * the eye when the user is "shopping" for a drop target. Both
- * effects respect prefers-reduced-motion below.
- *
- * @since 0.18.0; visuals strengthened in 0.20.0.
+ * A quiet inner glow only. This used to be a dashed, animated
+ * marching-ants frame around the whole wallpaper, and on a full
+ * desktop that read as a large moving grid behind the tile in hand
+ * — loud, and design asked for it to go. The ghost's accept /
+ * reject chip and the per-cell drop preview already say where the
+ * tile will land; the glow just confirms the surface is listening.
  */
-@keyframes os-drop-marching-ants {
-	to {
-		background-position: 24px 0, -24px 0, 0 24px, 0 -24px;
-	}
-}
-
 [ data-files-drop-active ] {
 	position: relative;
-	outline: 3px dashed var( --wp-admin-theme-color, #2271b1 );
-	outline-offset: -8px;
-	background-image:
-		linear-gradient(
-			90deg,
-			rgba( 34, 113, 177, 0.45 ) 50%,
-			transparent 0
-		),
-		linear-gradient(
-			90deg,
-			rgba( 34, 113, 177, 0.45 ) 50%,
-			transparent 0
-		),
-		linear-gradient(
-			0deg,
-			rgba( 34, 113, 177, 0.45 ) 50%,
-			transparent 0
-		),
-		linear-gradient(
-			0deg,
-			rgba( 34, 113, 177, 0.45 ) 50%,
-			transparent 0
-		);
-	background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-	background-size: 12px 3px, 12px 3px, 3px 12px, 3px 12px;
-	background-position: 0 6px, 0 calc( 100% - 6px ), 6px 0, calc( 100% - 6px ) 0;
 	box-shadow: inset 0 0 32px 4px rgba( 34, 113, 177, 0.12 );
-	animation: os-drop-marching-ants 0.6s linear infinite;
 	transition: box-shadow 0.18s ease-out;
-}
-
-@media ( prefers-reduced-motion: reduce ) {
-	[ data-files-drop-active ] {
-		animation: none;
-	}
 }
 
 .os-files-layer {
