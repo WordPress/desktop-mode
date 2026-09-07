@@ -217,10 +217,12 @@ body.os-active #wpadminbar .ab-top-menu > li {
  * own token, so the parked offset follows the 46px mobile bar as well.
  */
 body.os-active.os-admin-bar-dynamic #wpadminbar {
+	/* One number for the slide; the reveal zone below waits on it. */
+	--os-admin-bar-slide: 180ms;
 	inset-block-start: calc(
 		var(--os-admin-bar-peek, 4px) - var(--wp-admin--admin-bar--height, 32px)
 	) !important;
-	transition: inset-block-start 180ms ease;
+	transition: inset-block-start var(--os-admin-bar-slide, 180ms) ease;
 }
 
 body.os-active.os-admin-bar-dynamic #wpadminbar:hover,
@@ -256,6 +258,23 @@ body.os-active.os-admin-bar-dynamic #wpadminbar::after {
 	inset-inline: 0;
 	inset-block-start: 100%;
 	height: var(--os-admin-bar-reveal-zone, 16px);
+	/*
+	 * The zone changes size only once the bar has come to rest — a
+	 * step, not a slide, held back for the length of the bar's own
+	 * slide. That delay is what keeps the reveal stable. Collapsed the
+	 * instant hover began, the zone was gone while the bar was still
+	 * on its way down: a pointer resting in the band the zone had
+	 * covered was outside the bar's box for the rest of the slide, so
+	 * hover dropped, the bar turned back, the zone returned under the
+	 * pointer, hover resumed — the bar flickered up and down for as
+	 * long as the pointer stayed near the edge. Held for the slide,
+	 * the zone still hangs off the moving bar and the two together
+	 * always cover the pointer that tripped it; by the time the zone
+	 * goes, the bar's own box is over that pointer. The same delay on
+	 * the way back keeps the zone from reappearing under a pointer
+	 * that just left the bar while the bar is still retracting.
+	 */
+	transition: height 0s linear var(--os-admin-bar-slide, 180ms);
 }
 
 /*
@@ -265,7 +284,8 @@ body.os-active.os-admin-bar-dynamic #wpadminbar::after {
  *
  * Collapsing it is also what keeps the reveal stable: the pointer
  * that tripped the zone is, post-reveal, inside the bar's real box,
- * so `:hover` holds without the zone's help.
+ * so `:hover` holds without the zone's help — and it collapses only
+ * once the bar is there (the transition above).
  */
 body.os-active.os-admin-bar-dynamic #wpadminbar:hover::after,
 body.os-active.os-admin-bar-dynamic #wpadminbar:focus-within::after,
@@ -287,7 +307,9 @@ body.os-active.os-admin-bar-dynamic #wpadminbar:active::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	body.os-active.os-admin-bar-dynamic #wpadminbar {
+	body.os-active.os-admin-bar-dynamic #wpadminbar,
+	body.os-active.os-admin-bar-dynamic #wpadminbar::after {
+		/* The bar jumps, so the zone has nothing to wait for. */
 		transition: none;
 	}
 }
