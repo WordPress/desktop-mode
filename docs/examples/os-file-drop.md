@@ -220,8 +220,8 @@ drop (the earlier, unconfirmed batch is discarded — one dialog,
 never stacked modals, never mixed batches). Both sinks fire the same
 `os.drop.*` chain — your subscribers keep working
 unchanged; the `after-upload` payload's `result` is
-`{ placement, storedFileId }` for the desktop sink instead of the
-attachment shape. See
+`{ placement, storedFileId, createdFolders }` for the desktop sink
+instead of the attachment shape. See
 [files-on-desktop.md → Real file storage](../files-on-desktop.md#real-file-storage-upload--experimental).
 
 ## Hooks reference

@@ -22,7 +22,7 @@
  */
 
 import { createSharedStore, type SharedStore } from '../shared-store';
-import type { RestFolderShape, RestPlacementShape } from './rest';
+import type { RestCreatedFolderShape, RestFolderShape, RestPlacementShape } from './rest';
 
 export interface FilesState {
 	placementsByFolder: Map< number, RestPlacementShape[] >;
@@ -160,6 +160,31 @@ export function upsertFolder( folder: RestFolderShape, source: 'local' | 'remote
 	store.state = { ...store.state, folders: next };
 	store.notify();
 	fireChanged( { kind: 'folder-upserted', folderRowId: folder.id, source } );
+}
+
+/**
+ * Ingest the folders a request created mkdir-p style (upload and
+ * `ensureUploadPath()` responses). Folder row first, then its
+ * placement, so a tile never paints for a folder the store cannot
+ * name. Malformed entries are skipped — the end-of-batch resync
+ * still covers them.
+ */
+export function ingestCreatedFolders(
+	created: RestCreatedFolderShape[] | undefined | null,
+	source: 'local' | 'remote' = 'local',
+): void {
+	if ( ! Array.isArray( created ) ) {
+		return;
+	}
+	for ( const entry of created ) {
+		if ( ! entry || ! entry.folder || typeof entry.folder.id !== 'number' ) {
+			continue;
+		}
+		upsertFolder( entry.folder, source );
+		if ( entry.placement ) {
+			upsertPlacement( entry.placement, source );
+		}
+	}
 }
 
 /** Remove a folder + clear its placements bucket. */

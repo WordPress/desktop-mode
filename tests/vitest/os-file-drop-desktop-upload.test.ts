@@ -147,6 +147,80 @@ describe( 'uploadFileToDesktop', () => {
 		expect( rows.some( ( r ) => r.id === 4242 ) ).toBe( true );
 	} );
 
+	test( 'createdFolders from a tree upload are ingested before the file placement', async () => {
+		const mod = await load();
+		const store = await import( '../../src/desktop-files/store' );
+		store.__resetFilesStoreForTests();
+
+		const promise = mod.uploadFileToDesktop( { ...baseArgs(), relativePath: 'docs/a.txt' } );
+		const folderPlacement = {
+			id: 900,
+			parentId: 0,
+			x: 16,
+			y: 16,
+			sortOrder: 0,
+			updatedAtMs: 5,
+			meta: null,
+			file: { type: 'folder', ref: '3', title: 'docs', icon: 'dashicons-portfolio', previewUrl: '', exists: true },
+		};
+		const filePlacement = {
+			id: 901,
+			parentId: 3,
+			x: 16,
+			y: 16,
+			sortOrder: 0,
+			updatedAtMs: 5,
+			meta: null,
+			file: { type: 'upload', ref: '77', title: 'a.txt', icon: 'dashicons-media-text', previewUrl: '', exists: true },
+		};
+		FakeXhr.last!.respond(
+			201,
+			JSON.stringify( {
+				placement: filePlacement,
+				storedFileId: 77,
+				createdFolders: [
+					{
+						folder: { id: 3, ownerId: 1, name: 'docs', shareMode: 'private', shareMeta: null, updatedAtMs: 5 },
+						placement: folderPlacement,
+					},
+				],
+			} ),
+		);
+		const result = await promise;
+		expect( result.createdFolders ).toHaveLength( 1 );
+		expect( result.createdFolders[ 0 ].folder.name ).toBe( 'docs' );
+
+		// The wallpaper tile is in the store the moment the first file
+		// of the tree lands — no end-of-batch resync, no heartbeat.
+		const state = store.getFilesState();
+		expect( state.folders.get( 3 )?.name ).toBe( 'docs' );
+		expect( ( state.placementsByFolder.get( 0 ) ?? [] ).some( ( p ) => p.id === 900 ) ).toBe( true );
+		expect( ( state.placementsByFolder.get( 3 ) ?? [] ).some( ( p ) => p.id === 901 ) ).toBe( true );
+	} );
+
+	test( 'a response without createdFolders yields an empty list', async () => {
+		const mod = await load();
+		const promise = mod.uploadFileToDesktop( baseArgs() );
+		FakeXhr.last!.respond(
+			201,
+			JSON.stringify( {
+				placement: {
+					id: 4243,
+					parentId: 0,
+					x: 0,
+					y: 0,
+					sortOrder: 0,
+					updatedAtMs: 5,
+					meta: null,
+					file: { type: 'upload', ref: '78', title: 'a.txt', icon: 'dashicons-media-text', previewUrl: '', exists: true },
+				},
+				storedFileId: 78,
+			} ),
+		);
+		const result = await promise;
+		expect( result.createdFolders ).toEqual( [] );
+	} );
+
 	test( 'coords ride along only when provided', async () => {
 		const mod = await load();
 		const args = { ...baseArgs(), coords: { x: 112, y: 126 } };

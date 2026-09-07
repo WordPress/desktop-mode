@@ -20,8 +20,8 @@
 import { applyFilters, doAction } from '../hooks';
 import { FILE_DROP_HOOKS } from './hooks';
 import { UploadAbortedError, UploadCancelledError } from './upload';
-import { upsertPlacement } from '../desktop-files/store';
-import type { RestPlacementShape } from '../desktop-files/rest';
+import { ingestCreatedFolders, upsertPlacement } from '../desktop-files/store';
+import type { RestCreatedFolderShape, RestPlacementShape } from '../desktop-files/rest';
 import type { DropContext, DropDialogFields } from './types';
 
 interface DesktopUploadArgs {
@@ -46,6 +46,12 @@ interface DesktopUploadArgs {
 export interface DesktopUploadResult {
 	placement: RestPlacementShape;
 	storedFileId: number;
+	/**
+	 * Folders this request created from `relativePath` (outermost
+	 * first), each with its placement in the parent. Empty for flat
+	 * uploads and for path segments that already existed.
+	 */
+	createdFolders: RestCreatedFolderShape[];
 }
 
 export async function uploadFileToDesktop(
@@ -142,7 +148,11 @@ export async function uploadFileToDesktop(
 				fail( new Error( extractMessage( xhr, filtered.file.name ) ) );
 				return;
 			}
-			let data: { placement?: RestPlacementShape; storedFileId?: number };
+			let data: {
+				placement?: RestPlacementShape;
+				storedFileId?: number;
+				createdFolders?: RestCreatedFolderShape[];
+			};
 			try {
 				data = JSON.parse( xhr.responseText ) as typeof data;
 			} catch {
@@ -153,11 +163,19 @@ export async function uploadFileToDesktop(
 				fail( new Error( 'Unexpected server response.' ) );
 				return;
 			}
-			// Paint the tile now — no heartbeat wait.
+			const createdFolders = Array.isArray( data.createdFolders )
+				? data.createdFolders
+				: [];
+			// Paint the tiles now — no heartbeat wait. Folders first:
+			// a tree drop's file lands INSIDE the folder this same
+			// request created, and only the folder is visible from
+			// the surface the user dropped on.
+			ingestCreatedFolders( createdFolders, 'local' );
 			upsertPlacement( data.placement, 'local' );
 			const result: DesktopUploadResult = {
 				placement: data.placement,
 				storedFileId: data.storedFileId,
+				createdFolders,
 			};
 			doAction( FILE_DROP_HOOKS.AFTER_UPLOAD, {
 				file: filtered.file,

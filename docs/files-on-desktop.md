@@ -923,8 +923,20 @@ All under `/wp-json/desktop-mode/v1/files`, cookie + nonce auth:
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/uploads` | Multipart intake, ONE file per request: `file` + `parentId` + optional `relativePath` (`a/b/c.ext` — directory segments are created mkdir-p style, deduped) + optional `x`/`y` (omit both → next free grid slot). Returns `{ placement, storedFileId }`. |
-| `POST` | `/uploads/paths` | mkdir-p a directory path with no file (`parentId`, `relativePath`). Preserves empty directories from tree drops. |
+| `POST` | `/uploads` | Multipart intake, ONE file per request: `file` + `parentId` + optional `relativePath` (`a/b/c.ext` — directory segments are created mkdir-p style, deduped, each placed at the next free grid slot of its parent) + optional `x`/`y` (omit both → next free grid slot). Returns `{ placement, storedFileId, createdFolders }`. |
+| `POST` | `/uploads/paths` | mkdir-p a directory path with no file (`parentId`, `relativePath`). Preserves empty directories from tree drops. Returns `{ folderId, createdFolders }`. |
+
+`createdFolders` lists the folders **this request** created from
+`relativePath`, outermost first, as `{ folder, placement }` pairs —
+the folder row plus the placement that shows it in its parent.
+Segments that already existed are not listed, so it is `[]` for flat
+uploads and for every file after the first in a tree. The client
+ingests it on receipt (`ingestCreatedFolders()` in
+`src/desktop-files/store.ts`): the `placement` in the same response
+describes the file *inside* the leaf folder, so without this the
+wallpaper tile for a dropped folder only appeared after the whole
+batch had uploaded and the dialog re-pulled the parent — or, if that
+resync failed, on the next Heartbeat delta.
 | `PATCH` | `/uploads/<id>` | Rename the display name (owner only). |
 | `GET` | `/uploads/<id>/download` | Stream the bytes, unmodified. `_wpnonce` accepted as a query param so plain `<a>` navigations work. |
 | `GET` | `/folders/<id>/download` | On-demand `.zip` of the folder's stored files (reference-type placements are skipped; empty sub-folders round-trip). Requires the PHP zip extension — 501 + a hidden affordance otherwise. Caps filterable via `openstation_stored_files_zip_caps` (default 1000 entries / 500 MB input). |

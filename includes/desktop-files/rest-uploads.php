@@ -214,15 +214,22 @@ function openstation_files_rest_ensure_upload_path( WP_REST_Request $req ) {
 	if ( '/' !== substr( $rel, -1 ) ) {
 		$rel .= '/'; // Whole string is a directory path.
 	}
+	$created   = array();
 	$folder_id = openstation_files_resolve_relative_path(
 		get_current_user_id(),
 		(int) $req->get_param( 'parentId' ),
-		$rel
+		$rel,
+		$created
 	);
 	if ( is_wp_error( $folder_id ) ) {
 		return $folder_id;
 	}
-	return rest_ensure_response( array( 'folderId' => (int) $folder_id ) );
+	return rest_ensure_response(
+		array(
+			'folderId'       => (int) $folder_id,
+			'createdFolders' => openstation_files_shape_created_folders( $created ),
+		)
+	);
 }
 
 /**
@@ -324,10 +331,45 @@ function openstation_files_rest_upload( WP_REST_Request $req ) {
 	$row = openstation_files_get_placement( $registered['placement_id'] );
 	return rest_ensure_response(
 		array(
-			'placement'    => openstation_files_shape_placement( $row ),
-			'storedFileId' => (int) $registered['file_id'],
+			'placement'      => openstation_files_shape_placement( $row ),
+			'storedFileId'   => (int) $registered['file_id'],
+			'createdFolders' => openstation_files_shape_created_folders( $registered['created_folders'] ),
 		)
 	);
+}
+
+/**
+ * Shape the folders a request created mkdir-p style so the client
+ * can paint their tiles the moment they exist. Each entry carries
+ * the folder row AND its placement in the parent the client is
+ * looking at — the per-file `placement` in the same response only
+ * describes the file inside the leaf folder, which is why the
+ * wallpaper tile used to wait for the end-of-batch resync (or the
+ * next Heartbeat delta) after a folder-tree drop.
+ *
+ * @internal
+ *
+ * @param array $created `{ folder_id, placement_id }` rows from
+ *                       `openstation_files_resolve_relative_path()`.
+ * @return array<int,array{folder:array,placement:array}>
+ */
+function openstation_files_shape_created_folders( $created ) {
+	$out = array();
+	foreach ( (array) $created as $entry ) {
+		if ( empty( $entry['folder_id'] ) || empty( $entry['placement_id'] ) ) {
+			continue;
+		}
+		$folder    = openstation_files_get_folder( (int) $entry['folder_id'] );
+		$placement = openstation_files_get_placement( (int) $entry['placement_id'] );
+		if ( ! $folder || ! $placement ) {
+			continue;
+		}
+		$out[] = array(
+			'folder'    => openstation_files_shape_folder( $folder ),
+			'placement' => openstation_files_shape_placement( $placement ),
+		);
+	}
+	return $out;
 }
 
 /**
@@ -477,13 +519,18 @@ function openstation_files_upload_receive( $file, $user_id ) {
  *                                  segments are resolved under `$parent_id`.
  * @param array|null $coords        `x`, `y` for the placement, or null
  *                                  to auto-place at the next free slot.
- * @return array|WP_Error `{ file_id, placement_id }`.
+ * @return array|WP_Error `{ file_id, placement_id, created_folders }` —
+ *                        `created_folders` lists the `{ folder_id,
+ *                        placement_id }` pairs the relative path
+ *                        created (empty for flat uploads and for
+ *                        segments that already existed).
  */
 function openstation_files_upload_register( $user_id, $received, $parent_id, $relative_path = '', $coords = null ) {
 	$parent_id = max( 0, (int) $parent_id );
+	$created   = array();
 
 	if ( '' !== (string) $relative_path ) {
-		$resolved = openstation_files_resolve_relative_path( (int) $user_id, $parent_id, (string) $relative_path );
+		$resolved = openstation_files_resolve_relative_path( (int) $user_id, $parent_id, (string) $relative_path, $created );
 		if ( is_wp_error( $resolved ) ) {
 			return $resolved;
 		}
@@ -545,8 +592,9 @@ function openstation_files_upload_register( $user_id, $received, $parent_id, $re
 	do_action( 'openstation_stored_file_uploaded', (int) $file_id, (int) $placement_id, (int) $user_id );
 
 	return array(
-		'file_id'      => (int) $file_id,
-		'placement_id' => (int) $placement_id,
+		'file_id'         => (int) $file_id,
+		'placement_id'    => (int) $placement_id,
+		'created_folders' => $created,
 	);
 }
 
@@ -564,9 +612,16 @@ function openstation_files_upload_register( $user_id, $received, $parent_id, $re
  * @param string $relative_path  `a/b/c.ext` or `a/b/` (trailing
  *                               slash = pure directory path, e.g.
  *                               an empty folder from a drag).
+ * @param array  $created        Optional, by reference. Receives one
+ *                               `{ folder_id, placement_id }` entry per
+ *                               folder this call created, outermost
+ *                               first, so the caller can hand the new
+ *                               tiles to the client in the same
+ *                               response. Reused segments are not
+ *                               listed.
  * @return int|WP_Error Folder id to place the file in.
  */
-function openstation_files_resolve_relative_path( $user_id, $base_parent_id, $relative_path ) {
+function openstation_files_resolve_relative_path( $user_id, $base_parent_id, $relative_path, &$created = null ) {
 	global $wpdb;
 	$user_id   = (int) $user_id;
 	$parent_id = max( 0, (int) $base_parent_id );
@@ -628,9 +683,19 @@ function openstation_files_resolve_relative_path( $user_id, $base_parent_id, $re
 		if ( is_wp_error( $folder_id ) ) {
 			return $folder_id;
 		}
-		$placement = openstation_files_place( $user_id, $parent_id, 'folder', (string) $folder_id );
+		// Next free slot, same as the file placements below: a bare
+		// `openstation_files_place()` pins the tile at 0,0, which the
+		// layer only displaces client-side — the stored coordinates
+		// stay wrong and the tile jumps on the next repaint.
+		$placement = openstation_files_place_at_next_free_slot( $user_id, $parent_id, 'folder', (string) $folder_id );
 		if ( is_wp_error( $placement ) ) {
 			return $placement;
+		}
+		if ( is_array( $created ) ) {
+			$created[] = array(
+				'folder_id'    => (int) $folder_id,
+				'placement_id' => (int) $placement,
+			);
 		}
 		$parent_id = (int) $folder_id;
 	}

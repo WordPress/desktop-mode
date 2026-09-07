@@ -29,7 +29,11 @@ import {
 	listFolders,
 	listPlacements,
 } from '../desktop-files/rest';
-import { setFolderPlacements, setFolders } from '../desktop-files/store';
+import {
+	ingestCreatedFolders,
+	setFolderPlacements,
+	setFolders,
+} from '../desktop-files/store';
 import type {
 	DesktopStorageConfig,
 	DropContext,
@@ -421,7 +425,10 @@ export async function openUploadDialog( args: OpenDialogArgs ): Promise< void > 
 		if ( destination === 'desktop' && args.emptyDirs?.length ) {
 			for ( const dir of args.emptyDirs ) {
 				try {
-					await ensureUploadPath( parentId, dir );
+					const res = await ensureUploadPath( parentId, dir );
+					// Same immediacy as the file responses: the new
+					// folder tile paints as soon as it exists.
+					ingestCreatedFolders( res.createdFolders, 'local' );
 				} catch {
 					// Non-fatal: the tree's files made it; an empty
 					// stub folder failing is cosmetic.

@@ -6499,8 +6499,11 @@ interface DesktopStorageConfig {
 does (`files-detected`, `dialog-fields`, `before-upload`,
 `upload-started`, `upload-progress`, `after-upload`,
 `upload-failed`) — subscribers don't branch on the destination. The
-`AFTER_UPLOAD` payload's `result` is `{ placement, storedFileId }`
-for the desktop sink (vs. the attachment shape for media). The
+`AFTER_UPLOAD` payload's `result` is `{ placement, storedFileId,
+createdFolders }` for the desktop sink (vs. the attachment shape for
+media); `createdFolders` is the `{ folder, placement }` list of
+directories that upload created from its `relativePath`, already
+ingested into the files store by the time the action fires. The
 upload dialog's destination default follows the drop's intent:
 folder-targeted drops and the desktop pickers → Desktop; WordPress
 admin windows → Media Library; flat desk drops → Media Library when

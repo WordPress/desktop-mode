@@ -252,6 +252,64 @@ class Tests_OpenStation_RestUploads extends WP_UnitTestCase {
 		$p2 = $res2->get_data()['placement']['parentId'];
 		$this->assertSame( $p1, $p2 );
 		$this->assertGreaterThan( 0, $p1 );
+
+		// The first request reports the folders it created, outermost
+		// first, each with the placement that shows it in its parent —
+		// the client paints the `docs` tile from this, without waiting
+		// for the end-of-batch resync.
+		$created = $res1->get_data()['createdFolders'];
+		$this->assertCount( 2, $created );
+		$this->assertSame( 'docs', $created[0]['folder']['name'] );
+		$this->assertSame( 0, $created[0]['placement']['parentId'] );
+		$this->assertSame( 'folder', $created[0]['placement']['file']['type'] );
+		$this->assertSame( (string) $created[0]['folder']['id'], $created[0]['placement']['file']['ref'] );
+		$this->assertSame( 'reports', $created[1]['folder']['name'] );
+		$this->assertSame( $created[0]['folder']['id'], $created[1]['placement']['parentId'] );
+		$this->assertSame( $created[1]['folder']['id'], $p1 );
+
+		// Reused segments are not reported again.
+		$this->assertSame( array(), $res2->get_data()['createdFolders'] );
+	}
+
+	public function test_flat_upload_reports_no_created_folders() {
+		$res = openstation_files_rest_upload( $this->upload_request( 'flat.pdf', '%PDF-1.4 fake' ) );
+		$this->assertNotWPError( $res );
+		$this->assertSame( array(), $res->get_data()['createdFolders'] );
+	}
+
+	public function test_created_folders_take_distinct_grid_slots() {
+		// A bare `openstation_files_place()` pinned every mkdir-p
+		// folder at 0,0; sibling trees must land on different cells.
+		$res_a = openstation_files_rest_upload( $this->upload_request( 'a.pdf', '%PDF-1.4 fake', array( 'relativePath' => 'alpha/a.pdf' ) ) );
+		$res_b = openstation_files_rest_upload( $this->upload_request( 'b.pdf', '%PDF-1.4 fake', array( 'relativePath' => 'beta/b.pdf' ) ) );
+		$this->assertNotWPError( $res_a );
+		$this->assertNotWPError( $res_b );
+		$slot_a = $res_a->get_data()['createdFolders'][0]['placement'];
+		$slot_b = $res_b->get_data()['createdFolders'][0]['placement'];
+		$this->assertNotSame(
+			array( $slot_a['x'], $slot_a['y'] ),
+			array( $slot_b['x'], $slot_b['y'] ),
+			'sibling folders must not stack on the same cell'
+		);
+	}
+
+	public function test_ensure_upload_path_reports_created_folders() {
+		$req = new WP_REST_Request( 'POST', '/desktop-mode/v1/files/uploads/paths' );
+		$req->set_param( 'parentId', 0 );
+		$req->set_param( 'relativePath', 'empty/nested' );
+		$res = openstation_files_rest_ensure_upload_path( $req );
+		$this->assertNotWPError( $res );
+		$data = $res->get_data();
+		$this->assertCount( 2, $data['createdFolders'] );
+		$this->assertSame( 'empty', $data['createdFolders'][0]['folder']['name'] );
+		$this->assertSame( 'nested', $data['createdFolders'][1]['folder']['name'] );
+		$this->assertSame( $data['createdFolders'][1]['folder']['id'], $data['folderId'] );
+
+		// Second call: everything exists, nothing reported.
+		$again = openstation_files_rest_ensure_upload_path( $req );
+		$this->assertNotWPError( $again );
+		$this->assertSame( $data['folderId'], $again->get_data()['folderId'] );
+		$this->assertSame( array(), $again->get_data()['createdFolders'] );
 	}
 
 	public function test_relative_path_rejects_dot_segments() {

@@ -115,6 +115,65 @@ describe( 'desktop-files store', () => {
 	} );
 } );
 
+describe( 'ingestCreatedFolders', () => {
+	beforeEach( () => {
+		installHooksStub();
+	} );
+	afterEach( () => {
+		clearHooksStub();
+	} );
+
+	const folderRow = ( id: number, name: string ) => ( {
+		id,
+		ownerId: 1,
+		name,
+		shareMode: 'private',
+		shareMeta: null,
+		updatedAtMs: 1,
+	} );
+
+	test( 'registers each folder row and its placement, outermost first', async () => {
+		const store = await loadStore();
+		store.__resetFilesStoreForTests();
+		store.ingestCreatedFolders( [
+			{
+				folder: folderRow( 10, 'docs' ),
+				placement: samplePlacement( {
+					id: 100,
+					parentId: 0,
+					file: { type: 'folder', ref: '10', title: 'docs', icon: 'dashicons-portfolio', previewUrl: '', exists: true },
+				} ),
+			},
+			{
+				folder: folderRow( 11, 'reports' ),
+				placement: samplePlacement( {
+					id: 101,
+					parentId: 10,
+					file: { type: 'folder', ref: '11', title: 'reports', icon: 'dashicons-portfolio', previewUrl: '', exists: true },
+				} ),
+			},
+		] );
+		const state = store.getFilesState();
+		expect( state.folders.get( 10 )?.name ).toBe( 'docs' );
+		expect( state.folders.get( 11 )?.name ).toBe( 'reports' );
+		expect( ( state.placementsByFolder.get( 0 ) ?? [] ).some( ( p ) => p.id === 100 ) ).toBe( true );
+		expect( ( state.placementsByFolder.get( 10 ) ?? [] ).some( ( p ) => p.id === 101 ) ).toBe( true );
+	} );
+
+	test( 'tolerates a missing list and skips malformed entries', async () => {
+		const store = await loadStore();
+		store.__resetFilesStoreForTests();
+		expect( () => store.ingestCreatedFolders( undefined ) ).not.toThrow();
+		store.ingestCreatedFolders( [
+			null as unknown as import( '../../src/desktop-files/rest' ).RestCreatedFolderShape,
+			{ folder: folderRow( 12, 'ok' ), placement: null as unknown as import( '../../src/desktop-files/rest' ).RestPlacementShape },
+		] );
+		const state = store.getFilesState();
+		expect( state.folders.get( 12 )?.name ).toBe( 'ok' );
+		expect( state.placementsByFolder.size ).toBe( 0 );
+	} );
+} );
+
 describe( 'desktop-files REST client', () => {
 	beforeEach( () => {
 		installHooksStub();

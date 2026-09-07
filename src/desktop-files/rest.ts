@@ -563,18 +563,34 @@ export function renameUpload(
 }
 
 /**
+ * A folder a request created mkdir-p style, with the placement that
+ * shows it in the parent the client is looking at. Carried by the
+ * upload and `ensureUploadPath()` responses so the tile can be
+ * ingested the moment the folder exists, instead of waiting for the
+ * end-of-batch resync (or a Heartbeat delta) after a tree drop.
+ */
+export interface RestCreatedFolderShape {
+	folder: RestFolderShape;
+	placement: RestPlacementShape;
+}
+
+/**
  * Ensure a directory path exists under `parentId` (mkdir-p) and
  * return the leaf folder id. Used by tree drops to preserve empty
- * directories.
+ * directories. `createdFolders` lists the segments this call
+ * created (outermost first); reused segments are not listed.
  */
 export function ensureUploadPath(
 	parentId: number,
 	relativePath: string,
-): Promise< { folderId: number } > {
-	return call< { folderId: number } >( '/uploads/paths', {
-		method: 'POST',
-		body: JSON.stringify( { parentId, relativePath } ),
-	} );
+): Promise< { folderId: number; createdFolders?: RestCreatedFolderShape[] } > {
+	return call< { folderId: number; createdFolders?: RestCreatedFolderShape[] } >(
+		'/uploads/paths',
+		{
+			method: 'POST',
+			body: JSON.stringify( { parentId, relativePath } ),
+		},
+	);
 }
 
 /**
