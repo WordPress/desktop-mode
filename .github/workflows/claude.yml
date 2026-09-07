@@ -73,6 +73,39 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Collect the trusted agent guide
+        id: guide
+        if: steps.origin.outputs.fork == 'true'
+        # On a fork pull request Claude runs with project memory OFF
+        # (`--setting-sources user`, below). The action restores `CLAUDE.md`
+        # from the base branch, but ours is an `@AGENTS.md` include, and the
+        # included file is not on the action's restore list — so with memory
+        # on, the fork would write the instruction layer. Build the guide
+        # from the default branch ourselves instead, resolving the includes,
+        # and hand it to Claude as an appended system prompt. `origin` is
+        # this repository, never the fork, so what `FETCH_HEAD` holds is
+        # ours whatever the checkout above landed on.
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --depth 1 --no-recurse-submodules origin "$DEFAULT_BRANCH"
+          out="$RUNNER_TEMP/claude-trusted-guide.md"
+          {
+            echo "# Repository guide"
+            echo
+            echo "Project memory is not loaded for this run because the checkout is a pull request from a fork. This is the guide from the trusted \`${DEFAULT_BRANCH}\` branch instead; follow it as you would CLAUDE.md."
+            echo
+            git show "FETCH_HEAD:CLAUDE.md" | while IFS= read -r line || [ -n "$line" ]; do
+              case "$line" in
+                @*) git show "FETCH_HEAD:${line#@}" ;;
+                *)  printf '%s\n' "$line" ;;
+              esac
+            done
+          } > "$out"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+          echo "Wrote $(wc -c < "$out") bytes of trusted guide to $out"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@a874e9ecd7bb36efdad65429c6b35815f5a08f10 # v1.0.210
@@ -107,11 +140,14 @@ jobs:
             { "disableSkillShellExecution": true }
 
           # On a fork pull request, also turn skills and slash commands off
-          # altogether: nothing in that checkout is ours to trust, and the
-          # OAuth token for Claude itself is in the subprocess environment
-          # whatever GitHub token the run holds. Same-repository branches and
-          # plain issues keep the project skills (`@claude /pixijs …`).
-          claude_args: ${{ steps.origin.outputs.fork == 'true' && '--disable-slash-commands' || '' }}
+          # altogether, and load no project memory or settings from the
+          # checkout at all: nothing in it is ours to trust, and the OAuth
+          # token for Claude itself is in the subprocess environment whatever
+          # GitHub token the run holds. The repository guide still reaches
+          # Claude — as the file the step above built from the default
+          # branch. Same-repository branches and plain issues keep the
+          # project skills (`@claude /pixijs …`) and memory as usual.
+          claude_args: ${{ steps.origin.outputs.fork == 'true' && format('--disable-slash-commands --setting-sources user --append-system-prompt-file {0}', steps.guide.outputs.path) || '' }}
 
           # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
           # prompt: 'Update the pull request description to include a summary of changes.'

@@ -20,7 +20,12 @@
  *      before the model sees the prompt, with the skill's own
  *      `allowed-tools` frontmatter widening the workflow's tool list.
  *   2. The workflow disables that expansion for every skill source, and
- *      turns skills and slash commands off entirely on a fork.
+ *      on a fork turns skills and slash commands off entirely and loads
+ *      no project memory from the checkout. `CLAUDE.md` is restored, but
+ *      it is an `@AGENTS.md` include and the included file is not, so
+ *      with memory on the fork would write the instruction layer. The
+ *      guide comes back in as a file the workflow builds from the
+ *      default branch.
  *   3. A fork never gets a write-capable token: the job's own `contents`
  *      permission is read-only, and the action is handed that job token
  *      instead of minting a GitHub App one.
@@ -90,14 +95,48 @@ describe( 'claude.yml keeps a fork checkout from executing anything', () => {
 		expect( settings.disableSkillShellExecution ).toBe( true );
 	} );
 
-	test( 'skills and slash commands are off on a fork pull request', () => {
-		// The flag has to sit on the TRUE side of the fork test — the
+	test( 'skills, slash commands and project memory are off on a fork pull request', () => {
+		// The flags have to sit on the TRUE side of the fork test — the
 		// expression `a && b || c` yields b when a holds — not merely
 		// appear somewhere in the same string.
 		const args = withInput( 'claude_args' );
-		expect( args ).toMatch(
-			/steps\.origin\.outputs\.fork == 'true' && '--disable-slash-commands'/
-		);
+		const onFork = args.match( /steps\.origin\.outputs\.fork == 'true' && (.*) \|\|/ );
+		expect( onFork, 'claude_args is gated on the fork test' ).not.toBeNull();
+		const flags = ( onFork as RegExpMatchArray )[ 1 ];
+		expect( flags ).toContain( '--disable-slash-commands' );
+		// No `project` source: that is what keeps CLAUDE.md (and anything
+		// it `@`-includes from the checkout) out of the prompt.
+		expect( flags ).toMatch( /--setting-sources user\b/ );
+		expect( flags ).not.toMatch( /--setting-sources [^ ']*project/ );
+		// The trusted guide comes back in as a file the workflow built.
+		expect( flags ).toContain( '--append-system-prompt-file' );
+		expect( flags ).toContain( 'steps.guide.outputs.path' );
+	} );
+
+	test( 'the guide a fork run gets is built from the default branch', () => {
+		const step = WORKFLOW.match( /- name: Collect the trusted agent guide\n([\s\S]*?)\n\n\s+- name:/ );
+		expect( step, 'claude.yml has the guide step' ).not.toBeNull();
+		const body = ( step as RegExpMatchArray )[ 1 ];
+		expect( body ).toMatch( /^\s+id: guide$/m );
+		expect( body ).toMatch( /^\s+if: steps\.origin\.outputs\.fork == 'true'$/m );
+		// `origin` is this repository; the fork's refs never live there.
+		expect( body ).toContain( 'git fetch --depth 1 --no-recurse-submodules origin "$DEFAULT_BRANCH"' );
+		expect( body ).toContain( 'git show "FETCH_HEAD:CLAUDE.md"' );
+		// Every `@path` include in CLAUDE.md is read from the same ref, so
+		// the layout on trunk (`CLAUDE.md` is just `@AGENTS.md`) is served
+		// whole, and a new include needs no workflow change.
+		expect( body ).toContain( 'git show "FETCH_HEAD:${line#@}"' );
+		expect( body ).toContain( 'set -euo pipefail' );
+		expect( body ).toMatch( /echo "path=\$out" >> "\$GITHUB_OUTPUT"/ );
+		// Every include on trunk today is a plain `@path` line, the only
+		// shape the step resolves. If that changes, teach the step first.
+		const includes = readFileSync( resolve( ROOT, 'CLAUDE.md' ), 'utf8' )
+			.split( '\n' )
+			.filter( ( l ) => l.startsWith( '@' ) );
+		expect( includes.length ).toBeGreaterThan( 0 );
+		for ( const inc of includes ) {
+			expect( inc ).toMatch( /^@[\w./-]+$/ );
+		}
 	} );
 
 	test( 'a fork pull request never sees a write-capable GitHub token', () => {
