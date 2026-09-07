@@ -235,6 +235,7 @@ import {
 	type MioApi,
 } from './mio/controller';
 import { mountNotch } from './notch';
+import { installAdminBarHeight } from './admin-bar-height';
 import { installDockBehavior } from './dock-behavior';
 import {
 	installWorkArea,
@@ -3161,6 +3162,14 @@ function init(): void {
 			config.desktopIcons,
 			initialPlacement,
 		);
+		// The admin bar's real bottom edge, published as
+		// `--os-admin-bar-height` so the shell starts where the bar
+		// actually ends rather than at Core's 32px promise — a host
+		// that makes the bar taller or pushes it down (WordPress.com's
+		// staff debug chrome) otherwise paints it over every title bar.
+		// Before the work area, so its first measure sees the shell
+		// where it will be.
+		installAdminBarHeight();
 		// The work area — measured AFTER the dispatcher has built the
 		// rails so the first snapshot already knows the pill. From here
 		// on it follows the rails itself (ResizeObserver per dock,

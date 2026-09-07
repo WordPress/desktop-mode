@@ -143,7 +143,7 @@ function ensureHost(): HTMLElement {
 	// toast container. Host is click-transparent; the card opts back in.
 	el.style.cssText =
 		'position:fixed;' +
-		'top:calc(var(--wp-admin--admin-bar--height,32px) + 16px);' +
+		'top:calc(var(--os-admin-bar-height,var(--wp-admin--admin-bar--height,32px)) + 16px);' +
 		'inset-inline-end:16px;' +
 		'z-index:calc(var(--os-z-fullscreen,99999) + 10);' +
 		'pointer-events:none;';

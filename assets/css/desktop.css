@@ -354,10 +354,24 @@ body.os-active #wpcontent {
  * Desktop shell — fills the viewport below the admin bar.
  * Uses position: fixed so it's unaffected by any containing-block
  * quirks in #wpwrap/#wpcontent.
+ *
+ * The inset is the bar's MEASURED bottom edge, `--os-admin-bar-height`
+ * (written on <html> by `src/admin-bar-height.ts`), with Core's own
+ * token behind it for the first paint. Core's token is Core's promise
+ * about Core's bar; a host can make the bar taller, give it a border
+ * or push it down under a strip of its own — WordPress.com's staff
+ * debug chrome does — and the shell then started under the bar by
+ * exactly the difference. The measured token is absent whenever the
+ * bar has no box at the top edge (hidden, mobile, solo, fullscreen,
+ * parked in the dynamic mode), so every mode that rebinds Core's
+ * token below still resolves through it.
  */
 .os-shell {
 	position: fixed;
-	inset-block-start: var(--wp-admin--admin-bar--height, 32px);
+	inset-block-start: var(
+		--os-admin-bar-height,
+		var(--wp-admin--admin-bar--height, 32px)
+	);
 	inset-inline-start: 0;
 	inset-inline-end: 0;
 	inset-block-end: 0;
@@ -574,7 +588,10 @@ body.os-active #wpcontent {
 /* Below 783px WP collapses the admin bar to 46px. */
 @media screen and (max-width: 782px) {
 	.os-shell {
-		inset-block-start: var(--wp-admin--admin-bar--height, 46px);
+		inset-block-start: var(
+			--os-admin-bar-height,
+			var(--wp-admin--admin-bar--height, 46px)
+		);
 	}
 }
 
