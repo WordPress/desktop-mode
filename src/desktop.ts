@@ -14,6 +14,7 @@
 
 import { WindowManager } from './window-manager';
 import { installWindowSwitcherShortcut } from './window-manager/switcher';
+import { installTextEntryGuard } from './text-entry-guard';
 import { installDesktopArrowShortcuts } from './window-manager/desktop-shortcuts';
 import { installCloseAllShortcut } from './window-manager/close-all-shortcut';
 import {
@@ -2498,6 +2499,10 @@ function init(): void {
 		close: () => aiAssistant.close(),
 		isOpen: () => aiAssistant.isOpen,
 	} );
+	// Ahead of every shell shortcut: keeps a printable key typed into an
+	// `<os-*>` field from reaching document-level listeners that would
+	// mistake the shadow host for "not an input". See the module.
+	installTextEntryGuard();
 	installPaletteShortcut();
 	installWindowSwitcherShortcut( manager );
 	installDesktopArrowShortcuts( manager );

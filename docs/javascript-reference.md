@@ -1806,6 +1806,19 @@ The confirmation carries a **"Don't ask again"** checkbox. Ticking it writes `co
 
 `Cmd/Ctrl+Shift+W` is deliberately not the binding — the browser owns it and a page can't take it back.
 
+#### The text-entry guard — what a `document` keydown listener sees — Stable
+
+Every `<os-*>` text control keeps its real `<input>` / `<textarea>` in a shadow root, and a keydown typed into one reaches `document` with `event.target` **retargeted to the host element** (`OS-TEXT-FIELD`, not `INPUT`). A script that guards a bare-letter shortcut with `e.target.tagName === 'INPUT'` — the WordPress.com notifications panel's `n`, for one — therefore fires while the user is typing, and steals focus mid-word.
+
+The shell closes that gap structurally in `src/text-entry-guard.ts`: one capture-phase listener on `window` calls `stopPropagation()` on a keydown that is **printable and unmodified** (`key.length === 1`, no Ctrl/Alt/Meta) and whose real target — the head of `composedPath()` — is a text-entry element **inside a shadow root**. The default action is untouched, so the character is still inserted. Consequences for anything listening on `document` or below:
+
+- A bare printable key typed into an `<os-*>` field is **never delivered** to a listener on `document`, `body`, or the shell — in either phase. Escape, Enter, Tab, the arrows, function keys and every chord are delivered exactly as before, so a dialog's Enter / Escape handling, `dismissable`, the window switcher and the palette shortcut are unaffected.
+- A light-DOM `<input>` is not covered — its keystrokes already read as `INPUT` to every tag-name guard, and the guard changes nothing for them.
+- A listener on `window` sees everything: `stopPropagation()` does not stop siblings on the same target. That is where the presence probe counts typing as activity, and where a plugin that needs raw keystrokes regardless of focus should listen — behind its own text-entry check, `composedPath()[ 0 ]` being the element to test.
+- The stop happens **before the event reaches the input itself**, so a component cannot read characters off `keydown` on a shadow input; it reads them off `input` / `beforeinput` (see [`components-reference.md`](./components-reference.md#read-characters-off-input-not-keydown)).
+
+`tests/vitest/text-entry-guard.test.ts` pins the policy; `isShadowTextEntryKeydown( e )` exported from the module *is* the policy, for anything that needs to agree with it.
+
 ---
 
 ### `dock` — Stable

@@ -168,7 +168,12 @@ export function bootPresenceProbe(): void {
 		capture: true,
 		passive: true,
 	} );
-	document.addEventListener( 'keydown', noteUserActivity, {
+	// On `window`, not `document`: the text-entry guard
+	// (`src/text-entry-guard.ts`) stops a printable key typed into an
+	// `<os-*>` field at the window's capture phase, and a listener on
+	// `document` would then never see the user's typing. Siblings on
+	// the same target still run, so this one always does.
+	window.addEventListener( 'keydown', noteUserActivity, {
 		capture: true,
 		passive: true,
 	} );

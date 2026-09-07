@@ -4,8 +4,8 @@
  * The pick reaches CSS as a `os-admin-bar-<mode>` body
  * class, and it has to be the ONLY one of the three on the body —
  * `desktop.css` gives `hidden` a `display: none !important` and
- * `dynamic` a transform, so two classes at once is a bar that is
- * simultaneously gone and sliding.
+ * `dynamic` an off-screen inset, so two classes at once is a bar that
+ * is simultaneously gone and sliding.
  *
  * PHP writes the same class on `admin_body_class` for the first
  * paint; these tests cover the half that makes a change take effect

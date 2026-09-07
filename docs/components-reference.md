@@ -144,6 +144,31 @@ wash over a dark row.
 If your surface is dark, you own every token that names a surface or a
 wash on one — not just the text.
 
+### Read characters off `input`, not `keydown`
+
+Shadow DOM has a second consequence, and the shell leans on it. A
+keydown typed into a component's inner `<input>` reaches `document`
+with its target retargeted to the host — `OS-TEXT-FIELD`, not
+`INPUT` — so any third-party script guarding a bare-letter shortcut
+with `e.target.tagName === 'INPUT'` fires while the user is typing.
+The shell's **text-entry guard** (`src/text-entry-guard.ts`, documented
+in [`javascript-reference.md`](javascript-reference.md#the-text-entry-guard--what-a-document-keydown-listener-sees--stable))
+stops a printable, unmodified keydown aimed at a text-entry element in
+a shadow root at `window`'s capture phase — before it reaches the
+input.
+
+For a component that means: **characters arrive through `input` /
+`beforeinput`; `keydown` carries everything else.** Enter for
+`os-submit`, Escape to close a popup, the arrows for a listbox,
+Backspace on an empty tag field, Tab — all of those still reach the
+input's listeners, because none of them is a single printable key
+without a modifier. A type-ahead on a **button** or listbox trigger
+(`<os-select>`) is untouched too; the guard only covers inputs,
+textareas and `contenteditable`. What will not work is a text field
+that watches `keydown` for the letter itself — `e.key === ','` to
+split a tag, say. Do that on `input`, where the character is already
+in the value, or on `beforeinput`, where it can still be refused.
+
 ## Buttons & actions
 
 | Tag | Class | Source | Purpose |

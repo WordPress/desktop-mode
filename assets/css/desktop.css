@@ -167,24 +167,41 @@ body.os-active #wpadminbar {
  * the shell's way, so the shell reclaims the full viewport in each.
  *
  * Every selector here carries two body classes, so it outranks the
- * one-class pin rule above without needing to escalate anything.
+ * one-class pin rule above on specificity; the one property the pin
+ * marks `!important` (`inset-block-start`) is re-declared `!important`
+ * where a mode moves the bar, and wins the same way.
  */
 
 /*
  * Dynamic — the bar parks off the top edge leaving a peek strip, and
  * slides back in when the pointer reaches the top of the viewport or
  * something inside it takes keyboard focus. The classic Windows
- * auto-hide taskbar, and the reason `transform` is the right tool: a
- * transformed element keeps hit-testing at its PAINTED position, so
- * the parked remainder stops catching the pointer the moment it goes
- * off-screen. What DOES catch it is the peek strip plus the reveal
- * zone added below.
+ * auto-hide taskbar.
+ *
+ * It parks by moving its `inset-block-start`, NOT by a `transform`,
+ * and that is load-bearing. A transformed element becomes the
+ * containing block for every `position: fixed` descendant, and the
+ * bar has descendants like that which it does not own: the
+ * WordPress.com notifications panel is `position: fixed; top: 32px;
+ * bottom: 0` inside `#wp-admin-bar-notes`. Measured against a
+ * transformed 32px bar instead of the viewport, that panel computes to
+ * zero height — the button "did nothing" in this mode and worked in
+ * `static`. `translate`, `filter`, `perspective`, `contain` and
+ * `will-change: transform` all create the same containing block;
+ * `tests/vitest/admin-bar-dynamic.test.ts` keeps every one of them off
+ * this rule. Moving `inset-block-start` hit-tests the same way — the
+ * part above the viewport is simply outside it — so what catches the
+ * pointer is still only the peek strip plus the reveal zone below.
+ *
+ * The pin above sets `inset-block-start: 0 !important`; these carry
+ * `!important` too and win on specificity. The bar's height is Core's
+ * own token, so the parked offset follows the 46px mobile bar as well.
  */
 body.os-active.os-admin-bar-dynamic #wpadminbar {
-	transform: translateY(
-		calc(-100% + var(--os-admin-bar-peek, 4px))
-	);
-	transition: transform 180ms ease;
+	inset-block-start: calc(
+		var(--os-admin-bar-peek, 4px) - var(--wp-admin--admin-bar--height, 32px)
+	) !important;
+	transition: inset-block-start 180ms ease;
 }
 
 body.os-active.os-admin-bar-dynamic #wpadminbar:hover,
@@ -198,7 +215,7 @@ body.os-active.os-admin-bar-dynamic #wpadminbar:active,
  */
 body.os-active.os-admin-bar-dynamic:has( .os-notch:hover ) #wpadminbar,
 body.os-active.os-admin-bar-dynamic:has( .os-notch:focus-visible ) #wpadminbar {
-	transform: translateY(0);
+	inset-block-start: 0 !important;
 }
 
 /*

@@ -120,6 +120,20 @@ export function isTextEntryFocus( doc: Document ): boolean {
 	while ( el && el.shadowRoot && el.shadowRoot.activeElement ) {
 		el = el.shadowRoot.activeElement;
 	}
+	return isTextEntryElement( el );
+}
+
+/**
+ * True when the given element consumes bare keystrokes as text — the
+ * element-level half of {@link isTextEntryFocus}, for callers that
+ * already hold the real leaf (the head of a keydown's `composedPath()`,
+ * say) rather than asking the document who has focus.
+ *
+ * `src/text-entry-guard.ts` is the other consumer: it has to agree
+ * with the switcher about what "typing" means, so the definition
+ * lives once.
+ */
+export function isTextEntryElement( el: Element | null ): boolean {
 	if ( ! el ) {
 		return false;
 	}
