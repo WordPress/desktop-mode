@@ -157,6 +157,25 @@ body.os-active #wpadminbar {
 }
 
 /*
+ * No top-level item may be taller than the bar.
+ *
+ * Core lays the two item groups out as floats, and a float that
+ * overflows the 32px bar overflows invisibly. A host may lay a group
+ * out as a flex row instead — WordPress.com's Debug Bar does, to
+ * order its own item first — and then every item stretches to the
+ * tallest one and the group's background paints the difference under
+ * the windows' title bars. Our own items were that tallest one once
+ * (an `inline-flex` item on a 32px line box grew to 37px; fixed at
+ * the source in `includes/admin-bar.php`), but any item from any
+ * plugin can be, so the cap lives here: the bar's own height token,
+ * which is also the 46px mobile bar. Submenus are absolutely
+ * positioned and unaffected.
+ */
+body.os-active #wpadminbar .ab-top-menu > li {
+	max-height: var(--wp-admin--admin-bar--height, 32px);
+}
+
+/*
  * Admin-bar presentation modes — OS Settings → Appearance → Admin bar,
  * persisted as `adminBarMode` and emitted as a
  * `os-admin-bar-<mode>` body class by PHP on first paint and

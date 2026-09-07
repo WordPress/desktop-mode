@@ -304,13 +304,25 @@ function openstation_enqueue_toggle_assets() {
 		return;
 	}
 
+	// The items are `display: flex`, never `inline-flex`. An
+	// inline-level box sits on a line box the <li> lays out at its
+	// 32px line-height and aligns on the baseline, so the line grows
+	// by the descender: the item became 37px inside a 32px bar. Under
+	// Core's float layout that overflow was invisible. On a host that
+	// lays the secondary group out as a flex row (WordPress.com's Debug
+	// Bar does, to order its own item first) every sibling stretched
+	// to the tallest one and the group's background painted 5px into
+	// the shell, under the windows' title bars. Block-level, the item
+	// is exactly the bar. `Tests_OpenStation_AdminBarDesktopToggle`
+	// pins it; `desktop.css` caps the group as well, for items we do
+	// not own.
 	$css = '
 		#wpadminbar #wp-admin-bar-os-toggle > .ab-item,
 		#wpadminbar #wp-admin-bar-desktop-layout-menu > .ab-item,
 		#wpadminbar #wp-admin-bar-desktop-fullscreen > .ab-item,
 		#wpadminbar #wp-admin-bar-desktop-bug-report > .ab-item,
 		#wpadminbar #wp-admin-bar-desktop-help > .ab-item {
-			display: inline-flex;
+			display: flex;
 			align-items: center;
 			gap: 6px;
 		}

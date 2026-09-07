@@ -203,6 +203,20 @@ describe( 'every consumer reads the measured edge with Core’s token behind it'
 		expect( ( notch.match( new RegExp( CHAIN.source, 'g' ) ) ?? [] ).length ).toBe( 2 );
 	} );
 
+	test( 'no top-level admin-bar item may be taller than the bar', () => {
+		// A host that lays a group out as a flex row (WordPress.com's
+		// Debug Bar) stretches every item to the tallest one and paints
+		// the group's background under the title bars; the cap is the
+		// bar's own height token so the 46px mobile bar keeps it too.
+		const rule = css( 'desktop.css' ).match(
+			/body\.os-active #wpadminbar \.ab-top-menu > li\s*\{([^}]*)\}/,
+		);
+		expect( rule ).toBeTruthy();
+		expect( rule![ 1 ] ).toMatch(
+			/max-height:\s*var\(\s*--wp-admin--admin-bar--height\s*,\s*32px\s*\)/,
+		);
+	} );
+
 	test( 'the toast container hangs off the measured edge', () => {
 		expect( containerStyles.cssText ).toMatch( CHAIN );
 	} );
