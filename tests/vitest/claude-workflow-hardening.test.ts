@@ -91,9 +91,13 @@ describe( 'claude.yml keeps a fork checkout from executing anything', () => {
 	} );
 
 	test( 'skills and slash commands are off on a fork pull request', () => {
+		// The flag has to sit on the TRUE side of the fork test — the
+		// expression `a && b || c` yields b when a holds — not merely
+		// appear somewhere in the same string.
 		const args = withInput( 'claude_args' );
-		expect( args ).toContain( '--disable-slash-commands' );
-		expect( args ).toContain( "steps.origin.outputs.fork == 'true'" );
+		expect( args ).toMatch(
+			/steps\.origin\.outputs\.fork == 'true' && '--disable-slash-commands'/
+		);
 	} );
 
 	test( 'a fork pull request never sees a write-capable GitHub token', () => {
@@ -102,8 +106,9 @@ describe( 'claude.yml keeps a fork checkout from executing anything', () => {
 		expect( WORKFLOW ).toMatch( /^\s+contents: read\s*$/m );
 		expect( WORKFLOW ).not.toMatch( /^\s+contents: write/m );
 		const token = withInput( 'github_token' );
-		expect( token ).toContain( "steps.origin.outputs.fork == 'true'" );
-		expect( token ).toContain( 'github.token' );
+		expect( token ).toMatch(
+			/steps\.origin\.outputs\.fork == 'true' && github\.token/
+		);
 		// And the origin step that decides "fork" fails closed.
 		expect( WORKFLOW ).toContain( 'set -euo pipefail' );
 	} );
