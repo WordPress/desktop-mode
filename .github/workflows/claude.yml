@@ -94,10 +94,28 @@ jobs:
           additional_permissions: |
             actions: read
 
+          # A skill or custom slash command can carry a `!` shell expansion
+          # in its body, and Claude Code runs that expansion while building
+          # the prompt — BEFORE the model sees anything, and with the skill's
+          # own `allowed-tools` frontmatter widening this workflow's tool
+          # list. The action restores `.claude/` from the base branch, but a
+          # skill can be reached from other places in a checkout, so a
+          # public fork gets to author one. This setting merges into the
+          # runner's user settings and replaces every such expansion with a
+          # "disabled by policy" marker, for every skill source.
+          settings: |
+            { "disableSkillShellExecution": true }
+
+          # On a fork pull request, also turn skills and slash commands off
+          # altogether: nothing in that checkout is ours to trust, and the
+          # OAuth token for Claude itself is in the subprocess environment
+          # whatever GitHub token the run holds. Same-repository branches and
+          # plain issues keep the project skills (`@claude /pixijs …`).
+          claude_args: ${{ steps.origin.outputs.fork == 'true' && '--disable-slash-commands' || '' }}
+
           # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
           # prompt: 'Update the pull request description to include a summary of changes.'
 
-          # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr *)'
+          # or https://code.claude.com/docs/en/cli-reference for the other
+          # options `claude_args` accepts (e.g. '--allowed-tools Bash(gh pr *)').

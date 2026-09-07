@@ -47,11 +47,20 @@
 # this on demand from sensible defaults, so tracking it just creates churn.
 /.phpactor.json
 
-# `.claude/` is gitignored in the user's global gitignore. Re-include the
-# `skills/` symlink so Claude Code's skill loader (which only scans
-# `.claude/skills/`, not `.agents/skills/`) can find the shared skill
-# library checked into `.agents/skills/`. Everything else under `.claude/`
-# (local settings, transient state) stays ignored.
+# `.claude/` is gitignored in the user's global gitignore. Re-include
+# `skills/`, the project skill library Claude Code loads, as REGULAR
+# tracked files. Everything else under `.claude/` (local settings,
+# transient state) stays ignored.
+#
+# Never make anything under `.claude/` a symlink that points outside it.
+# The `@claude` workflow (`.github/workflows/claude.yml`) treats `.claude/`
+# as trusted configuration: on a pull request it deletes the checked-out
+# copy and restores the directory from the base branch. A link to a path
+# outside `.claude/` (an earlier layout kept the skills in `.agents/skills/`
+# and linked to them from here) is restored as a link — its TARGET is not —
+# so it resolves straight into the pull request's files, and a public fork
+# gets to author a "trusted" project skill. `tests/vitest/claude-workflow-
+# hardening.test.ts` pins this.
 !/.claude/
 /.claude/*
 !/.claude/skills
