@@ -15,6 +15,12 @@ jobs:
     # Only run for repo owners, org members, and collaborators — the
     # privileged (secret-bearing) job must not even start for outside
     # commenters, as defense-in-depth on top of the action's own gate.
+    #
+    # This gate vouches for the person who mentioned @claude, never for the
+    # code Claude is about to check out: every event here is raised on the
+    # base repository, so a maintainer can invoke it on a pull request from a
+    # public fork. The "Resolve pull request origin" step below is what keeps
+    # a write-capable credential away from that fork's working tree.
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)) ||
@@ -26,12 +32,42 @@ jobs:
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     permissions:
+      # `contents` stays read-only on purpose: on a fork pull request the
+      # action runs with this workflow token (see below), and that is what
+      # makes a push from an untrusted working tree impossible. Pull-request
+      # and issue writes let Claude keep posting its tracking comment there.
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
+      - name: Resolve pull request origin
+        id: origin
+        # Decide whether the event points at a pull request whose head lives
+        # outside this repository. The events we listen to carry the PR
+        # number but not its head repository, so ask the API. Any failure
+        # here fails the job, so an unknown origin never reaches Claude with
+        # an App token; a deleted head repository counts as a fork.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          is_pr="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${NUMBER}" --jq 'has("pull_request")')"
+          if [ "$is_pr" != "true" ]; then
+            # A plain issue: Claude works on the default branch, trusted content.
+            echo "fork=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          head_repo="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${NUMBER}" --jq '.head.repo.full_name // ""')"
+          if [ "$head_repo" = "$GITHUB_REPOSITORY" ]; then
+            echo "fork=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Pull request #${NUMBER} comes from '${head_repo:-<deleted repository>}'; running without a write-capable token."
+            echo "fork=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +78,17 @@ jobs:
         uses: anthropics/claude-code-action@a874e9ecd7bb36efdad65429c6b35815f5a08f10 # v1.0.210
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # On a pull request from a fork, hand the action the workflow's own
+          # token instead of letting it exchange the OIDC token for a GitHub
+          # App token. The App token carries `contents: write` for this
+          # repository and the action writes it into `.git/config` for the
+          # whole run — inside a working tree the fork's author controls. The
+          # workflow token is scoped to the job's `permissions` (`contents:
+          # read`) and expires with the job, so nothing that runs against a
+          # fork's files can push to this repository. Claude can still review
+          # and comment there; it could never push to a fork's branch anyway.
+          github_token: ${{ steps.origin.outputs.fork == 'true' && github.token || '' }}
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
@@ -54,4 +101,3 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr *)'
-
