@@ -24,7 +24,6 @@
  * `window.openStationConfig`.
  */
 import './styles.css';
-import '../../ui/components/os-checkbox-label/os-checkbox-label';
 import '../../ui/components/os-textarea/os-textarea';
 import { __ } from '../../i18n';
 import type { DragManagerApi } from '../../drag';
@@ -83,7 +82,10 @@ const mount = (
 	let color = normalizeNoteColor(
 		ctx.storage.get< string >( 'color' ) ?? NOTE_COLORS[ 0 ],
 	);
-	let isPublic = ctx.storage.get< boolean >( 'public' ) ?? false;
+	// A fresh note is always private. Visibility is the pinned note's
+	// own decision — the lock/globe button on its paper — so the pad
+	// carries no second control for it.
+	const isPublic = false;
 	let text = '';
 
 	// ------------------------------------------------------------------
@@ -147,21 +149,6 @@ const mount = (
 		swatches.appendChild( dot );
 	}
 
-	const publicToggle = document.createElement( 'os-checkbox-label' );
-	publicToggle.className = 'dm-notes-pad__public';
-	publicToggle.setAttribute(
-		'label',
-		__( 'Public — visible to other desktop users', 'desktop-mode' ),
-	);
-	if ( isPublic ) {
-		publicToggle.setAttribute( 'checked', '' );
-	}
-	publicToggle.addEventListener( 'os-checkbox-change', ( ev ) => {
-		isPublic =
-			( ev as CustomEvent< { checked: boolean } > ).detail.checked;
-		ctx.storage.set( 'public', isPublic );
-	} );
-
 	const pinButton = document.createElement( 'button' );
 	pinButton.type = 'button';
 	pinButton.className = 'dm-notes-pad__pin-btn';
@@ -171,7 +158,7 @@ const mount = (
 		'desktop-mode',
 	);
 
-	footer.append( swatches, publicToggle, pinButton );
+	footer.append( swatches, pinButton );
 	root.append( stack, footer );
 	container.appendChild( root );
 

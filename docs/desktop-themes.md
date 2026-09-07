@@ -789,10 +789,13 @@ object and has its own family, below.
 
 #### The WP Explorer hover card
 
-Hovering a tile in WP Explorer summons a card with a title, a featured
-image and an excerpt. It is window furniture rather than a chip: it
-**follows the theme that paints the window it was summoned from**, and
-you get that for free.
+WP Explorer can float a card with a title, a featured image and an
+excerpt beside the pointer over a tile. It is off by default — a
+plugin summons it through the
+[`os.my-wordpress.hover-card`](javascript-reference.md#filter--osmy-wordpresshover-card)
+filter — but when it appears it is window furniture rather than a
+chip: it **follows the theme that paints the window it was summoned
+from**, and you get that for free.
 
 | Token | Role | Derived from |
 |---|---|---|

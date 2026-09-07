@@ -6626,8 +6626,8 @@ sections) renders inside it, the activity footprint included.
 The app fires the `os.my-wordpress.*` hooks documented below over its
 DOM — `preview-extras` (the `header`/`meta`/`footer` slots),
 `list-tile`, `list-bands`, `tile-context-menu`, `preview-actions`,
-`group-extras`, `user-activate`, `user-preview-actions` and
-`user-dossier-sections` — and its rows carry the REST-visible fields
+`group-extras`, `hover-card`, `user-activate`, `user-preview-actions`
+and `user-dossier-sections` — and its rows carry the REST-visible fields
 subscribers read (`meta`, per-taxonomy term ids, `openstation_woo`;
 the Customers section's rows carry `openstation_woo_customer` — the
 built-in Users folder deliberately ships no money on its rows, and
@@ -6807,6 +6807,64 @@ read as the answer. Drop what doesn't apply.
 The filter does not fire for the author / contributor sub-folders
 inside a post's detail view — those have no section context and always
 render every block.
+
+### Filter — `os.my-wordpress.hover-card`
+
+Paint a card that follows the pointer over a tile. **OpenStation
+paints nothing here by default** — a card that inflates every
+thumbnail the pointer crosses gets in the way of a marquee, a bulk
+pick and a drag-out, so the stock card is opt-in. The filter runs
+once per tile the pointer enters (grid, folder and canvas views; the
+list view never asks, its rows already say what a card would) and
+receives `null`. Return an `HTMLElement` and the app owns it from
+there: appended to `document.body`, kept beside the pointer, clamped
+to the viewport, and removed on leave, press, right-click or unmount.
+Return anything else and nothing is painted.
+
+```ts
+// Bring back the stock card — title, lock banner, thumbnail, excerpt.
+wp.hooks.addFilter(
+    'os.my-wordpress.hover-card',
+    'my-plugin/hover-card',
+    ( card, item, ctx ) => ctx.build( item ),
+);
+
+// Or paint your own, only for media.
+wp.hooks.addFilter(
+    'os.my-wordpress.hover-card',
+    'my-plugin/media-peek',
+    ( card, item ) => {
+        if ( ! item.thumb ) {
+            return card;
+        }
+        const img = document.createElement( 'img' );
+        img.className = 'my-plugin-peek';
+        img.src = item.thumb;
+        img.alt = '';
+        return img;
+    },
+);
+```
+
+Arguments after the value:
+
+```ts
+/** The row under the pointer — title, thumb, excerpt, subtitle, lockedBy, … */
+item: Record< string, unknown >;
+ctx: {
+    /** The stock card for this row, built on demand. Themed by the `--os-my-wordpress-card-*` tokens. */
+    build: ( item ) => HTMLElement;
+    /** The tile element the pointer entered. */
+    cell: HTMLElement;
+    /** The `mouseover` that asked. */
+    event: MouseEvent;
+}
+```
+
+The element you return is positioned with `left` / `top` in viewport
+pixels, so give it `position: fixed` and a `z-index` above the
+windows; the stock card's class, `os-my-wordpress__tooltip`, already
+carries both.
 
 ### Filter — `os.my-wordpress.user-activate`
 
