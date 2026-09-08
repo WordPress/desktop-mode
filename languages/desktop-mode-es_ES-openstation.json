@@ -58,17 +58,16 @@
                 ""
             ],
             "%d min": [
-                "Navegación del administrador"
+                ""
             ],
             "%d notification": [
                 ""
             ],
             "%d open": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "%d open window": [
-                "Abrir en una nueva pestaña del navegador",
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "%d open window on this desktop will be closed.": [
                 ""
@@ -78,16 +77,16 @@
                 "%d actualizaciones"
             ],
             "%dd ago": [
-                "Navegación del administrador"
+                ""
             ],
             "%dh ago": [
-                "Navegación del administrador"
+                ""
             ],
             "%dm": [
                 ""
             ],
             "%dm ago": [
-                "Navegación del administrador"
+                ""
             ],
             "%ds": [
                 ""
@@ -108,7 +107,7 @@
                 ""
             ],
             "%s sections": [
-                "Acciones de ventana"
+                ""
             ],
             "%s sub-pages": [
                 "Subpáginas de %s"
@@ -126,7 +125,7 @@
                 ""
             ],
             "(opens in a new tab)": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "+ New chat": [
                 ""
@@ -180,7 +179,7 @@
                 ""
             ],
             "Accent": [
-                "Color de acento"
+                ""
             ],
             "Accept & Play": [
                 ""
@@ -195,10 +194,10 @@
                 "Añadir %s"
             ],
             "Add a minute": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Add a window": [
-                "Organizar todas las ventanas en mosaico"
+                ""
             ],
             "Add new desktop": [
                 "Añadir nuevo escritorio"
@@ -219,10 +218,10 @@
                 ""
             ],
             "Also show on %s": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Also show on desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Always visible": [
                 ""
@@ -243,7 +242,7 @@
                 ""
             ],
             "Arrangement": [
-                "Organizar"
+                ""
             ],
             "Ask AI": [
                 ""
@@ -273,13 +272,13 @@
                 ""
             ],
             "Beat %1$s: %2$s": [
-                "Error al subir."
+                ""
             ],
             "Big": [
                 ""
             ],
             "Blank desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Blank, or set up for a job — the wizard asks.": [
                 ""
@@ -291,7 +290,7 @@
                 ""
             ],
             "Board size": [
-                "Tamaño del dock"
+                ""
             ],
             "Body": [
                 ""
@@ -339,7 +338,7 @@
                 ""
             ],
             "Card saved as an image.": [
-                "Ese archivo no es una imagen."
+                ""
             ],
             "Cascade": [
                 "Cascada"
@@ -402,32 +401,31 @@
                 "Cerrar %s"
             ],
             "Close all": [
-                "Cerrar pestaña"
+                ""
             ],
             "Close all apps?": [
-                "Cerrar pestaña"
+                ""
             ],
             "Close all windows?": [
-                "Organizar todas las ventanas en mosaico"
+                ""
             ],
             "Close app": [
-                "Cerrar pestaña"
+                ""
             ],
             "Close panel": [
-                "Cerrar pestaña"
+                ""
             ],
             "Close tab": [
                 "Cerrar pestaña"
             ],
             "Close the switcher": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Close window": [
-                "Organizar ventanas"
+                ""
             ],
             "Closed %d window.": [
-                "Organizar ventanas",
-                "Organizar ventanas"
+                ""
             ],
             "Cloud": [
                 ""
@@ -442,7 +440,7 @@
                 ""
             ],
             "Command /%1$s failed: %2$s": [
-                "Error al subir."
+                ""
             ],
             "Command /%s was cancelled.": [
                 ""
@@ -454,7 +452,7 @@
                 ""
             ],
             "Comment on “%s”": [
-                "Buscar medios"
+                ""
             ],
             "Comments": [
                 ""
@@ -466,7 +464,7 @@
                 ""
             ],
             "Commerce": [
-                "Buscar medios"
+                ""
             ],
             "Contributor": [
                 ""
@@ -487,58 +485,58 @@
                 ""
             ],
             "Could not accept the challenge.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not apply the suggestion.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not convert the note to a post.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not deactivate %s.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not decline the challenge.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not get suggestions.": [
-                "No se pudieron cargar tus medios."
+                ""
             ],
             "Could not initialise the graph renderer.": [
                 ""
             ],
             "Could not load drafts.": [
-                "No se pudieron cargar tus medios."
+                ""
             ],
             "Could not load post #%d.": [
-                "No se pudieron cargar tus medios."
+                ""
             ],
             "Could not load that desktop theme — the previous one is still showing.": [
                 ""
             ],
             "Could not move the draft to Trash.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not move the note to the Trash.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Could not pin the note. Please try again.": [
                 ""
             ],
             "Could not send the challenge.": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Couldn't save your latest changes — the preview shows the last saved version.": [
                 ""
             ],
             "Create desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Create from template": [
-                "Predeterminada"
+                ""
             ],
             "Create workspace": [
-                "Ese archivo no es una imagen."
+                ""
             ],
             "Curtain": [
                 ""
@@ -553,10 +551,10 @@
                 "Imagen personalizada"
             ],
             "Customize": [
-                "Imagen personalizada"
+                ""
             ],
             "Cycle the colours": [
-                "Color de acento"
+                ""
             ],
             "Daily": [
                 ""
@@ -568,10 +566,10 @@
                 ""
             ],
             "Deactivate %s?": [
-                "Error al subir."
+                ""
             ],
             "Deactivate %s…": [
-                "Subiendo…"
+                ""
             ],
             "Decline": [
                 ""
@@ -583,10 +581,10 @@
                 ""
             ],
             "Delete conversation?": [
-                "Error al subir."
+                ""
             ],
             "Delete workspace": [
-                "Error al subir."
+                ""
             ],
             "Describe the issue or the feature you have in mind.": [
                 ""
@@ -598,10 +596,10 @@
                 "Escritorio %d"
             ],
             "Desktop Mode is now OpenStation": [
-                "Escritorio %d"
+                ""
             ],
             "Desktop icons": [
-                "Escritorio 1"
+                ""
             ],
             "Diagonal": [
                 ""
@@ -625,7 +623,7 @@
                 ""
             ],
             "Dock": [
-                "Tamaño del dock"
+                ""
             ],
             "Dock %s back to widget column": [
                 ""
@@ -670,7 +668,7 @@
                 ""
             ],
             "Drop on the desktop to pin": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Easy": [
                 ""
@@ -709,7 +707,7 @@
                 ""
             ],
             "Excerpt updated.": [
-                "%d actualización"
+                ""
             ],
             "Exit OpenStation": [
                 ""
@@ -721,10 +719,10 @@
                 ""
             ],
             "Eye colour": [
-                "Color de acento"
+                ""
             ],
             "Eye size": [
-                "Tamaño del dock"
+                ""
             ],
             "Eyes": [
                 ""
@@ -760,19 +758,19 @@
                 ""
             ],
             "Flake size": [
-                "Tamaño del dock"
+                ""
             ],
             "Flower": [
                 ""
             ],
             "Focus": [
-                "Subiendo…"
+                ""
             ],
             "Focus timer cancelled — the linked window was closed.": [
                 ""
             ],
             "Focusing…": [
-                "Subiendo…"
+                ""
             ],
             "Folds away until reached for": [
                 ""
@@ -820,7 +818,7 @@
                 ""
             ],
             "Gradient": [
-                "Gradiente personalizado"
+                ""
             ],
             "Gradient angle": [
                 ""
@@ -859,10 +857,10 @@
                 ""
             ],
             "Hide from %s": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Hide from desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Hologram": [
                 ""
@@ -925,10 +923,10 @@
                 ""
             ],
             "Keep in %s": [
-                "Abrir nueva ventana de %s"
+                ""
             ],
             "Keep this desk": [
-                "Abrir nueva ventana de %s"
+                ""
             ],
             "Last published": [
                 ""
@@ -949,22 +947,22 @@
                 ""
             ],
             "Linked to “%s”": [
-                "Añadir %s"
+                ""
             ],
             "Loading details…": [
-                "Subiendo…"
+                ""
             ],
             "Loading graph…": [
-                "Subiendo…"
+                ""
             ],
             "Loading the notebook…": [
-                "Subiendo…"
+                ""
             ],
             "Loading window content": [
                 ""
             ],
             "Loading…": [
-                "Subiendo…"
+                ""
             ],
             "Local time and date, refreshed every second.": [
                 "Hora y fecha locales, se actualiza cada segundo."
@@ -1000,7 +998,7 @@
                 "Minimizar"
             ],
             "Minimized": [
-                "Minimizar"
+                ""
             ],
             "Mix your own two-colour gradient and set the angle — your desk, your palette.": [
                 ""
@@ -1018,7 +1016,7 @@
                 ""
             ],
             "Move note to the Trash?": [
-                "No se pudieron cargar tus medios: %s"
+                ""
             ],
             "Move note. Drag the pin, or press Enter then use the arrow keys.": [
                 ""
@@ -1066,19 +1064,19 @@
                 ""
             ],
             "New desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "New desktop…": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "New draft": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "New name": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "New note": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Newest first": [
                 ""
@@ -1096,7 +1094,7 @@
                 ""
             ],
             "No colour": [
-                "Color de acento"
+                ""
             ],
             "No commands matching %s.": [
                 ""
@@ -1123,7 +1121,7 @@
                 ""
             ],
             "No revisions are available for this content.": [
-                "Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
+                ""
             ],
             "No scores yet — be the first to play!": [
                 ""
@@ -1132,16 +1130,16 @@
                 ""
             ],
             "No threads yet": [
-                "Subiendo…"
+                ""
             ],
             "No widgets are registered on this site yet.": [
-                "Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
+                ""
             ],
             "No widgets available. Activate a plugin that registers one, or see the docs for the registerWidget API.": [
                 "No hay widgets disponibles. Activa un plugin que registre alguno, o consulta la documentación de la API registerWidget."
             ],
             "No window linked": [
-                "Acciones de ventana"
+                ""
             ],
             "No window — just alarm": [
                 ""
@@ -1174,7 +1172,7 @@
                 ""
             ],
             "Note placed.": [
-                "Error al subir."
+                ""
             ],
             "Note text": [
                 ""
@@ -1231,16 +1229,16 @@
                 "Abrir otra ventana de %s"
             ],
             "Open apps": [
-                "Abrir nueva ventana de %s"
+                ""
             ],
             "Open apps (%d)": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "Open comment in desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Open in %s": [
-                "Abrir nueva ventana de %s"
+                ""
             ],
             "Open in WordPress": [
                 ""
@@ -1249,13 +1247,13 @@
                 "Abrir en una nueva pestaña del navegador"
             ],
             "Open in browser tab": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "Open in editor": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "Open in new window": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "Open issue on GitHub": [
                 ""
@@ -1264,16 +1262,16 @@
                 "Abrir al iniciar"
             ],
             "Open page in desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Open post in desktop": [
-                "Añadir nuevo escritorio"
+                ""
             ],
             "Open revision in WordPress": [
                 ""
             ],
             "Open the %1$s \"%2$s\"": [
-                "Error al subir."
+                ""
             ],
             "Open the agent in WP Explorer": [
                 ""
@@ -1282,7 +1280,7 @@
                 ""
             ],
             "Open windows": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "OpenStation is no longer active. Returning to the WordPress dashboard…": [
                 ""
@@ -1291,13 +1289,13 @@
                 ""
             ],
             "Opened \"%s\" in a new browser tab — this site doesn't allow embedding.": [
-                "Se ha abierto «%s» en una nueva pestaña del navegador — este sitio no permite incrustarse."
+                ""
             ],
             "Opens with": [
-                "Abrir en una nueva pestaña del navegador"
+                ""
             ],
             "Or any colour": [
-                "Color de acento"
+                ""
             ],
             "Page": [
                 ""
@@ -1306,7 +1304,7 @@
                 ""
             ],
             "Paper color": [
-                "Color de acento"
+                ""
             ],
             "Parent": [
                 ""
@@ -1378,10 +1376,10 @@
                 ""
             ],
             "Preview": [
-                "Vista general"
+                ""
             ],
             "Preview: %s": [
-                "Vista general"
+                ""
             ],
             "Previous": [
                 ""
@@ -1420,7 +1418,7 @@
                 "Eliminar %s"
             ],
             "Rename %s": [
-                "Eliminar %s"
+                ""
             ],
             "Replay anyway": [
                 ""
@@ -1438,10 +1436,10 @@
                 ""
             ],
             "Request failed (HTTP %s).": [
-                "Error al subir."
+                ""
             ],
             "Request failed.": [
-                "Error al subir."
+                ""
             ],
             "Reset": [
                 ""
@@ -1474,7 +1472,7 @@
                 ""
             ],
             "Revisions: %s": [
-                "Vista general"
+                ""
             ],
             "Ring": [
                 ""
@@ -1486,7 +1484,7 @@
                 ""
             ],
             "Rotation": [
-                "Navegación del administrador"
+                ""
             ],
             "Running /%s…": [
                 ""
@@ -1504,7 +1502,7 @@
                 ""
             ],
             "Saving your score…": [
-                "Subiendo…"
+                ""
             ],
             "Score": [
                 ""
@@ -1516,7 +1514,7 @@
                 ""
             ],
             "Score %s": [
-                "Cerrar %s"
+                ""
             ],
             "Score saved to the scoreboard.": [
                 ""
@@ -1525,10 +1523,10 @@
                 ""
             ],
             "Search apps": [
-                "Buscar medios"
+                ""
             ],
             "Search commands…": [
-                "Buscar medios"
+                ""
             ],
             "Search nodes…": [
                 ""
@@ -1561,7 +1559,7 @@
                 ""
             ],
             "Shaking “%s”": [
-                "Añadir %s"
+                ""
             ],
             "Shape": [
                 ""
@@ -1585,7 +1583,7 @@
                 ""
             ],
             "Show pins": [
-                "Mostrando %d"
+                ""
             ],
             "Show remaining time while running": [
                 ""
@@ -1630,7 +1628,7 @@
                 ""
             ],
             "Spin the gradient": [
-                "Gradiente personalizado"
+                ""
             ],
             "Splines": [
                 ""
@@ -1648,7 +1646,7 @@
                 ""
             ],
             "Starting the command palette…": [
-                "Buscar medios"
+                ""
             ],
             "Status": [
                 ""
@@ -1687,7 +1685,7 @@
                 ""
             ],
             "System": [
-                "Predeterminada"
+                ""
             ],
             "System Preferences": [
                 ""
@@ -1756,7 +1754,7 @@
                 ""
             ],
             "The window could not update: %s": [
-                "%d actualización"
+                ""
             ],
             "The windows this desk opens the first time you enter it, and how they are arranged.": [
                 ""
@@ -1768,7 +1766,7 @@
                 ""
             ],
             "Thinking…": [
-                "Subiendo…"
+                ""
             ],
             "This note was changed in another session — showing the latest version.": [
                 ""
@@ -1804,7 +1802,7 @@
                 ""
             ],
             "Title updated.": [
-                "%d actualización"
+                ""
             ],
             "Tool calls": [
                 ""
@@ -1840,7 +1838,7 @@
                 ""
             ],
             "Undated": [
-                "Añadir %s"
+                ""
             ],
             "Undo": [
                 ""
@@ -1864,16 +1862,16 @@
                 ""
             ],
             "Untitled": [
-                "Organizar ventanas"
+                ""
             ],
             "Untitled window": [
-                "Organizar ventanas"
+                ""
             ],
             "Update now": [
-                "Añadir %s"
+                ""
             ],
             "Uploaded file": [
-                "Error al subir."
+                ""
             ],
             "Use the look I have now": [
                 ""
@@ -1888,7 +1886,7 @@
                 ""
             ],
             "View revisions": [
-                "Acciones de ventana"
+                ""
             ],
             "View revisions (%d)": [
                 ""
@@ -1912,7 +1910,7 @@
                 ""
             ],
             "Wave %s": [
-                "Eliminar %s"
+                ""
             ],
             "Website": [
                 ""
@@ -1930,7 +1928,7 @@
                 ""
             ],
             "Where can I see categories?": [
-                "No se pudieron cargar tus medios."
+                ""
             ],
             "Which apps show here?": [
                 ""
@@ -1951,7 +1949,7 @@
                 "Acciones de ventana"
             ],
             "Windows": [
-                "Acciones de ventana"
+                ""
             ],
             "Wobble speed": [
                 ""
@@ -1963,25 +1961,25 @@
                 ""
             ],
             "WordPress": [
-                "Azul WordPress"
+                ""
             ],
             "WordPress %1$s \"%2$s\" is available.": [
                 ""
             ],
             "WordPress %s is available.": [
-                "Azul WordPress"
+                ""
             ],
             "WordPress OpenStation": [
-                "Azul WordPress"
+                ""
             ],
             "WordPress Updates": [
-                "Azul WordPress"
+                ""
             ],
             "Words": [
                 ""
             ],
             "Working…": [
-                "Subiendo…"
+                ""
             ],
             "Workspace": [
                 ""
@@ -2008,7 +2006,7 @@
                 ""
             ],
             "You can restore it from the Trash later.": [
-                "Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
+                ""
             ],
             "You declined %1$s’s %2$s challenge.": [
                 ""
@@ -2038,7 +2036,7 @@
                 ""
             ],
             "fallback name for the post a comment was left on\u0004post": [
-                "Acciones de ventana"
+                ""
             ],
             "just now": [
                 ""

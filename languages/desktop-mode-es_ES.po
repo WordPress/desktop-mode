@@ -25,14 +25,12 @@ msgstr ""
 
 #. 1: entity kind (Post, Media, …), 2: entity title.
 #: src/agent-run-window.ts:206
-#, fuzzy
 msgid "Open the %1$s \"%2$s\""
-msgstr "Error al subir."
+msgstr ""
 
 #: src/agent-run-window.ts:304
-#, fuzzy
 msgid "Delete conversation?"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/agent-run-window.ts:305
 msgid "Cannot be undone."
@@ -108,9 +106,8 @@ msgid ""
 msgstr ""
 
 #: src/agents-dispatch.ts:288
-#, fuzzy
 msgid "Working…"
-msgstr "Subiendo…"
+msgstr ""
 
 #: src/agents-dispatch.ts:324
 msgid ""
@@ -156,9 +153,8 @@ msgid "Find my post about…"
 msgstr ""
 
 #: src/ai-assistant/impl.ts:162
-#, fuzzy
 msgid "Where can I see categories?"
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #: src/ai-assistant/impl.ts:163
 msgid "Do I have any spam comments?"
@@ -173,9 +169,8 @@ msgid "How can I help?"
 msgstr ""
 
 #: src/ai-assistant/impl.ts:480
-#, fuzzy
 msgid "Search commands…"
-msgstr "Buscar medios"
+msgstr ""
 
 #. %s: command slug, without the leading slash.
 #: src/ai-assistant/impl.ts:697 src/ai-assistant/impl.ts:835
@@ -194,15 +189,13 @@ msgstr ""
 
 #. 1: command slug, without the leading slash. 2: error message.
 #: src/ai-assistant/impl.ts:919
-#, fuzzy
 msgid "Command /%1$s failed: %2$s"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/ai-assistant/impl.ts:1030 src/ai-assistant/impl.ts:1619
 #: src/plugins/drafts-widget/index.ts:192
-#, fuzzy
 msgid "Thinking…"
-msgstr "Subiendo…"
+msgstr ""
 
 #. %d: HTTP status code.
 #: src/ai-assistant/impl.ts:1090
@@ -245,30 +238,25 @@ msgid "Open Preferences"
 msgstr ""
 
 #: src/ai-assistant/impl.ts:1763
-#, fuzzy
 msgid "Open page in desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/ai-assistant/impl.ts:1765
-#, fuzzy
 msgid "Open comment in desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/ai-assistant/impl.ts:1767
-#, fuzzy
 msgid "Open post in desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #. %s: title of the post the comment was left on.
 #: src/ai-assistant/impl.ts:1776
-#, fuzzy
 msgid "Comment on “%s”"
-msgstr "Buscar medios"
+msgstr ""
 
 #: src/ai-assistant/impl.ts:1782
-#, fuzzy
 msgid "Untitled"
-msgstr "Organizar ventanas"
+msgstr ""
 
 #: src/ai-assistant/impl.ts:1855 src/ai-assistant/impl.ts:1864
 msgid "Site Assistant"
@@ -300,21 +288,18 @@ msgid "Your assistant to quickly navigate and manage your entire site."
 msgstr ""
 
 #: src/ai-assistant/loading-placeholder.ts:155
-#, fuzzy
 msgid "Starting the command palette…"
-msgstr "Buscar medios"
+msgstr ""
 
 #. %s: error message.
 #: src/app-runtime/session.ts:304
-#, fuzzy
 msgid "The window could not update: %s"
-msgstr "%d actualización"
+msgstr ""
 
 #. %s: HTTP status code, optionally followed by the reason phrase (e.g. "500 Internal Server Error").
 #: src/boot/tracked-fetch.ts:126
-#, fuzzy
 msgid "Request failed (HTTP %s)."
-msgstr "Error al subir."
+msgstr ""
 
 #: src/bug-report/index.ts:59
 msgid ""
@@ -416,9 +401,8 @@ msgid "Switch a type back on in the toolbar to see its posts."
 msgstr ""
 
 #: src/content-graph/board-notice.ts:160
-#, fuzzy
 msgid "No threads yet"
-msgstr "Subiendo…"
+msgstr ""
 
 #: src/content-graph/board-notice.ts:161
 msgid ""
@@ -428,9 +412,8 @@ msgid ""
 msgstr ""
 
 #: src/content-graph/index.ts:111
-#, fuzzy
 msgid "Show pins"
-msgstr "Mostrando %d"
+msgstr ""
 
 #: src/content-graph/index.ts:135
 msgid "Corkboard container missing."
@@ -438,14 +421,12 @@ msgstr ""
 
 #. %d: numeric post id that failed to load.
 #: src/content-graph/index.ts:224
-#, fuzzy
 msgid "Could not load post #%d."
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #: src/content-graph/index.ts:264
-#, fuzzy
 msgid "Loading graph…"
-msgstr "Subiendo…"
+msgstr ""
 
 #. 1: number of nodes (posts/pages) in the graph. 2: number of links between them.
 #: src/content-graph/index.ts:274
@@ -461,9 +442,8 @@ msgid "Could not initialise the graph renderer."
 msgstr ""
 
 #: src/content-graph/panel.ts:165
-#, fuzzy
 msgid "Close panel"
-msgstr "Cerrar pestaña"
+msgstr ""
 
 #: src/content-graph/panel.ts:335
 msgid "Back to post"
@@ -510,14 +490,12 @@ msgstr ""
 
 #. %s is the site title.
 #: src/content-graph/panel.ts:513
-#, fuzzy
 msgid "Open in %s"
-msgstr "Abrir nueva ventana de %s"
+msgstr ""
 
 #: src/content-graph/panel.ts:514 includes/helpers.php:204
-#, fuzzy
 msgid "WordPress"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: src/content-graph/panel.ts:532
 #: src/plugins/my-wordpress-woocommerce/index.ts:754
@@ -657,15 +635,13 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/content-graph/panel.ts:1185
-#, fuzzy
 msgid "Loading details…"
-msgstr "Subiendo…"
+msgstr ""
 
 #: src/content-graph/panel.ts:1245 src/ui/inline-loader.ts:169
 #: src/widgets/layer.ts:522
-#, fuzzy
 msgid "Loading…"
-msgstr "Subiendo…"
+msgstr ""
 
 #. 1: taxonomy label (e.g. Category, Tag). 2: post count for the term.
 #: src/content-graph/satellites.ts:355
@@ -685,9 +661,8 @@ msgid "Unknown author"
 msgstr ""
 
 #: src/content-graph/scene.ts:1368 src/content-graph/scene.ts:1374
-#, fuzzy
 msgid "Undated"
-msgstr "Añadir %s"
+msgstr ""
 
 #: src/content-graph/toolbar.ts:85
 msgid "Search nodes…"
@@ -752,9 +727,8 @@ msgstr ""
 
 #: src/desktop-files/preview.ts:633
 #: includes/desktop-files/built-in-types.php:36
-#, fuzzy
 msgid "Uploaded file"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/desktop-files/preview.ts:652
 msgid "No preview available for this file type."
@@ -818,9 +792,8 @@ msgid ""
 msgstr ""
 
 #: src/desktop-files/preview.ts:276
-#, fuzzy
 msgid "Open in editor"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: src/desktop-files/recycle-bin-targets.ts:140 src/notes/layer.ts:618
 #: src/notes/layer.ts:930 src/plugins/drafts-widget/index.ts:627
@@ -829,9 +802,8 @@ msgid "Move to Trash"
 msgstr ""
 
 #: src/desktop-icons.ts:434
-#, fuzzy
 msgid "Desktop icons"
-msgstr "Escritorio 1"
+msgstr ""
 
 #. %d is the number of pending items in a desktop-icon badge.
 #. %d is the number of pending items in a dock badge.
@@ -866,22 +838,19 @@ msgid "%s menu"
 msgstr ""
 
 #: src/dock-constellation/index.ts:1016
-#, fuzzy
 msgid "Open windows"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #. %d is a count of currently-open windows.
 #: src/dock-constellation/index.ts:1021
-#, fuzzy
 msgid "%d open window"
 msgid_plural "%d open windows"
-msgstr[0] "Abrir en una nueva pestaña del navegador"
-msgstr[1] "Abrir en una nueva pestaña del navegador"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/dock-constellation/index.ts:1051
-#, fuzzy
 msgid "Minimized"
-msgstr "Minimizar"
+msgstr ""
 
 #: src/dock-constellation/index.ts:1051 src/dock-constellation/index.ts:1078
 #: src/plugins/my-wordpress-woocommerce/index.ts:748
@@ -893,9 +862,8 @@ msgid "Open"
 msgstr "Abrir"
 
 #: src/dock-constellation/index.ts:1130
-#, fuzzy
 msgid "(opens in a new tab)"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: src/dock-peek/built-in-renderers.ts:104
 msgid "System Preferences"
@@ -951,9 +919,8 @@ msgid "Drop in a folder"
 msgstr ""
 
 #: src/editor-preview/index.ts:608 src/editor-preview/index.ts:491
-#, fuzzy
 msgid "Preview"
-msgstr "Vista general"
+msgstr ""
 
 #: src/editor-preview/index.ts:622
 msgid "Save the post to enable its preview"
@@ -974,9 +941,8 @@ msgstr ""
 
 #. %s: post title.
 #: src/editor-preview/index.ts:494
-#, fuzzy
 msgid "Preview: %s"
-msgstr "Vista general"
+msgstr ""
 
 #: src/effects/registry.ts:200
 msgid "Darken"
@@ -1049,9 +1015,8 @@ msgstr ""
 
 #. 1: challenger display name, 2: score to beat.
 #: src/games/alphabet-soup/game.ts:247 src/games/inkfall/game.ts:158
-#, fuzzy
 msgid "Beat %1$s: %2$s"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/games/alphabet-soup/game.ts:288
 msgid "Warming up the soup…"
@@ -1059,9 +1024,8 @@ msgstr ""
 
 #. %s: current score.
 #: src/games/alphabet-soup/game.ts:329 src/games/inkfall/game.ts:214
-#, fuzzy
 msgid "Score %s"
-msgstr "Cerrar %s"
+msgstr ""
 
 #. 1: current wave number, 2: mode label.
 #: src/games/alphabet-soup/game.ts:346
@@ -1075,9 +1039,8 @@ msgstr ""
 
 #. %s: wave number.
 #: src/games/alphabet-soup/game.ts:405
-#, fuzzy
 msgid "Wave %s"
-msgstr "Eliminar %s"
+msgstr ""
 
 #: src/games/alphabet-soup/game.ts:426 src/games/alphabet-soup/game.ts:508
 msgid "Soup finished!"
@@ -1140,9 +1103,8 @@ msgid "Wave"
 msgstr ""
 
 #: src/games/alphabet-soup/game.ts:545
-#, fuzzy
 msgid "WordPress OpenStation"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: src/games/alphabet-soup/game.ts:560
 msgid "Share card"
@@ -1157,9 +1119,8 @@ msgid "Card copied to your clipboard."
 msgstr ""
 
 #: src/games/alphabet-soup/game.ts:580
-#, fuzzy
 msgid "Card saved as an image."
-msgstr "Ese archivo no es una imagen."
+msgstr ""
 
 #: src/games/alphabet-soup/game.ts:584
 msgid "The card could not be shared."
@@ -1172,9 +1133,8 @@ msgid ""
 msgstr ""
 
 #: src/games/alphabet-soup/game.ts:602 src/games/inkfall/game.ts:362
-#, fuzzy
 msgid "Saving your score…"
-msgstr "Subiendo…"
+msgstr ""
 
 #: src/games/alphabet-soup/game.ts:606 src/games/inkfall/game.ts:366
 msgid "Score saved to the scoreboard."
@@ -1224,9 +1184,8 @@ msgid "Challenge from %1$s — beat %2$s."
 msgstr ""
 
 #: src/games/alphabet-soup/game.ts:735
-#, fuzzy
 msgid "Board size"
-msgstr "Tamaño del dock"
+msgstr ""
 
 #: src/games/alphabet-soup/game.ts:779
 msgid "Played today — replays aren’t shareable"
@@ -1287,9 +1246,8 @@ msgid "Challenge sent to %s."
 msgstr ""
 
 #: src/games/challenge-dialog.ts:170
-#, fuzzy
 msgid "Could not send the challenge."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #. 1: challenger display name, 2: game title/slug, 3: score.
 #: src/games/challenges-client.ts:70
@@ -1305,9 +1263,8 @@ msgid "Accept & Play"
 msgstr ""
 
 #: src/games/challenges-client.ts:92 src/games/challenges-view.ts:179
-#, fuzzy
 msgid "Could not accept the challenge."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #. 1: recipient display name, 2: their score, 3: the score to beat.
 #: src/games/challenges-client.ts:104
@@ -1378,9 +1335,8 @@ msgid "Decline"
 msgstr ""
 
 #: src/games/challenges-view.ts:199
-#, fuzzy
 msgid "Could not decline the challenge."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/games/challenges-view.ts:235
 msgid "No challenges yet"
@@ -1450,9 +1406,8 @@ msgid "A gentle warm-up that builds."
 msgstr ""
 
 #: src/games/inkfall/game.ts:185
-#, fuzzy
 msgid "Loading the notebook…"
-msgstr "Subiendo…"
+msgstr ""
 
 #. 1: current level number, 2: difficulty label.
 #: src/games/inkfall/game.ts:224
@@ -1557,31 +1512,26 @@ msgstr ""
 
 #. %s: "dock" or "sidebar".
 #: src/item-visibility-menu.ts:179
-#, fuzzy
 msgid "Hide from %s"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #. %s: "dock" or "sidebar".
 #: src/item-visibility-menu.ts:190
-#, fuzzy
 msgid "Keep in %s"
-msgstr "Abrir nueva ventana de %s"
+msgstr ""
 
 #: src/item-visibility-menu.ts:198
-#, fuzzy
 msgid "Also show on desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/item-visibility-menu.ts:206
-#, fuzzy
 msgid "Hide from desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #. %s: "dock" or "sidebar".
 #: src/item-visibility-menu.ts:214
-#, fuzzy
 msgid "Also show on %s"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/item-visibility-menu.ts:226
 msgid "Hide everywhere"
@@ -1593,15 +1543,13 @@ msgstr ""
 
 #. %s is the owning plugin's display name.
 #: src/item-visibility-menu.ts:258
-#, fuzzy
 msgid "Deactivate %s…"
-msgstr "Subiendo…"
+msgstr ""
 
 #. %s: plugin title.
 #: src/item-visibility-menu.ts:407
-#, fuzzy
 msgid "Deactivate %s?"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/item-visibility-menu.ts:408
 msgid ""
@@ -1615,9 +1563,8 @@ msgstr ""
 
 #. %s: plugin title.
 #: src/item-visibility-menu.ts:469
-#, fuzzy
 msgid "Could not deactivate %s."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #. 1: plugin title. 2: number of windows that were closed.
 #: src/item-visibility-menu.ts:493
@@ -1692,9 +1639,8 @@ msgid "Shape strength"
 msgstr ""
 
 #: src/mio/style-panel.ts:360
-#, fuzzy
 msgid "Rotation"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: src/mio/style-panel.ts:369
 msgid "Change shape on its own"
@@ -1758,9 +1704,8 @@ msgid "Glow"
 msgstr ""
 
 #: src/mio/style-panel.ts:532
-#, fuzzy
 msgid "Gradient"
-msgstr "Gradiente personalizado"
+msgstr ""
 
 #: src/mio/style-panel.ts:536
 msgid "Gradient angle"
@@ -1771,14 +1716,12 @@ msgid "Loop the gradient (no seam)"
 msgstr ""
 
 #: src/mio/style-panel.ts:552
-#, fuzzy
 msgid "Spin the gradient"
-msgstr "Gradiente personalizado"
+msgstr ""
 
 #: src/mio/style-panel.ts:563
-#, fuzzy
 msgid "Cycle the colours"
-msgstr "Color de acento"
+msgstr ""
 
 #: src/mio/style-panel.ts:572
 msgid "Hologram"
@@ -1809,14 +1752,12 @@ msgid "Eyes"
 msgstr ""
 
 #: src/mio/style-panel.ts:617
-#, fuzzy
 msgid "Eye colour"
-msgstr "Color de acento"
+msgstr ""
 
 #: src/mio/style-panel.ts:621
-#, fuzzy
 msgid "Eye size"
-msgstr "Tamaño del dock"
+msgstr ""
 
 #: src/mio/style-panel.ts:645
 msgid "Surprise me"
@@ -1835,9 +1776,8 @@ msgid "Home"
 msgstr ""
 
 #: src/mobile/home.ts:125 src/mobile/home.ts:127
-#, fuzzy
 msgid "Search apps"
-msgstr "Buscar medios"
+msgstr ""
 
 #: src/mobile/home.ts:208
 msgid "Results"
@@ -1853,9 +1793,8 @@ msgid "Apps"
 msgstr ""
 
 #: src/mobile/home.ts:220
-#, fuzzy
 msgid "System"
-msgstr "Predeterminada"
+msgstr ""
 
 #: src/mobile/home.ts:230
 msgid "Nothing to show yet."
@@ -1866,9 +1805,8 @@ msgid "App"
 msgstr ""
 
 #: src/mobile/layer.ts:508
-#, fuzzy
 msgid "Close all apps?"
-msgstr "Cerrar pestaña"
+msgstr ""
 
 #: src/mobile/layer.ts:509
 msgid "Anything unsaved in them will ask before it goes."
@@ -1876,20 +1814,17 @@ msgstr ""
 
 #: src/mobile/layer.ts:510 src/mobile/switcher.ts:85
 #: src/window-manager/close-all-shortcut.ts:186
-#, fuzzy
 msgid "Close all"
-msgstr "Cerrar pestaña"
+msgstr ""
 
 #: src/mobile/switcher.ts:55 src/mobile/switcher.ts:69
 #: src/mobile/tab-bar.ts:204
-#, fuzzy
 msgid "Open apps"
-msgstr "Abrir nueva ventana de %s"
+msgstr ""
 
 #: src/mobile/switcher.ts:73
-#, fuzzy
 msgid "Close the switcher"
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/mobile/switcher.ts:135 src/plugins/my-wordpress-woocommerce/index.ts:869
 #: includes/my-wordpress/integrations/woocommerce.php:725
@@ -1912,14 +1847,12 @@ msgstr ""
 
 #. %d: number of open apps.
 #: src/mobile/tab-bar.ts:165
-#, fuzzy
 msgid "Open apps (%d)"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: src/mobile/top-bar.ts:61
-#, fuzzy
 msgid "Close app"
-msgstr "Cerrar pestaña"
+msgstr ""
 
 #: src/multisite/dock-tiles.ts:29 src/multisite/site-switcher.ts:66
 msgid "Network Admin"
@@ -1950,9 +1883,8 @@ msgid "Undo"
 msgstr ""
 
 #: src/notes/convert.ts:120 includes/notes/rest.php:586
-#, fuzzy
 msgid "Could not convert the note to a post."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/notes/layer.ts:309 src/plugins/notes-widget/index.ts:432
 msgid "Could not pin the note. Please try again."
@@ -2010,24 +1942,20 @@ msgid "Note is now private."
 msgstr ""
 
 #: src/notes/layer.ts:928
-#, fuzzy
 msgid "Move note to the Trash?"
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/notes/layer.ts:929
-#, fuzzy
 msgid "You can restore it from the Trash later."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: src/notes/layer.ts:978
 msgid "This note was changed in another session — showing the latest version."
 msgstr ""
 
 #: src/notes/layer.ts:1026 src/plugins/notes-widget/index.ts:333
-#, fuzzy
 msgid "Drop on the desktop to pin"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/notes/layer.ts:1027 src/plugins/notes-widget/index.ts:334
 msgid "Pin here"
@@ -2044,9 +1972,8 @@ msgid ""
 msgstr ""
 
 #: src/notes/layer.ts:1234
-#, fuzzy
 msgid "Note placed."
-msgstr "Error al subir."
+msgstr ""
 
 #: src/notes/layer.ts:1272
 msgid "Move cancelled."
@@ -2058,18 +1985,16 @@ msgstr ""
 
 #: src/notes/sentinel.ts:147 src/notes/wallpaper-menu.ts:33
 #: src/plugins/notes-widget/index.ts:121
-#, fuzzy
 msgid "New note"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/notes/trash.ts:51
 msgid "Note moved to Trash"
 msgstr ""
 
 #: src/notes/trash.ts:76
-#, fuzzy
 msgid "Could not move the note to the Trash."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/os-file-drop/sentinel.ts:96
 msgid "That drop could not be processed — please try again."
@@ -2092,9 +2017,8 @@ msgid "applied"
 msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:288
-#, fuzzy
 msgid "Could not apply the suggestion."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:343
 msgid "Tap a suggestion to apply it to the draft."
@@ -2105,18 +2029,16 @@ msgid "Title ideas"
 msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:366
-#, fuzzy
 msgid "Title updated."
-msgstr "%d actualización"
+msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:372
 msgid "Excerpt"
 msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:379
-#, fuzzy
 msgid "Excerpt updated."
-msgstr "%d actualización"
+msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:384
 #: apps/my-wordpress/parts/dossiers.php:94
@@ -2146,21 +2068,18 @@ msgstr ""
 
 #. %d: whole minutes since the draft was last edited.
 #: src/plugins/drafts-widget/index.ts:448
-#, fuzzy
 msgid "%dm ago"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #. %d: whole hours since the draft was last edited.
 #: src/plugins/drafts-widget/index.ts:455
-#, fuzzy
 msgid "%dh ago"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #. %d: whole days since the draft was last edited.
 #: src/plugins/drafts-widget/index.ts:461
-#, fuzzy
 msgid "%dd ago"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:497
 #: apps/my-wordpress/parts/dossiers.php:114
@@ -2178,9 +2097,8 @@ msgid "Drafts"
 msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:570
-#, fuzzy
 msgid "Could not load drafts."
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:577
 msgid "No drafts — all caught up."
@@ -2191,9 +2109,8 @@ msgid "Suggest title, excerpt & tags"
 msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:232
-#, fuzzy
 msgid "Could not get suggestions."
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:671
 msgid "Move to Trash?"
@@ -2209,27 +2126,24 @@ msgid "Draft moved to Trash."
 msgstr ""
 
 #: src/plugins/drafts-widget/index.ts:695
-#, fuzzy
 msgid "Could not move the draft to Trash."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:91
 msgid "No window — just alarm"
 msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:102
-#, fuzzy
 msgid "Untitled window"
-msgstr "Organizar ventanas"
+msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:131
 msgid "Subtract a minute"
 msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:134
-#, fuzzy
 msgid "Add a minute"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:173
 msgid "Shake this window when done"
@@ -2254,9 +2168,8 @@ msgstr ""
 
 #. %d: minutes.
 #: src/plugins/focus-timer-widget/index.ts:156
-#, fuzzy
 msgid "%d min"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:241
 msgid "Pause"
@@ -2267,26 +2180,22 @@ msgid "Stop alarm"
 msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:288
-#, fuzzy
 msgid "Focusing…"
-msgstr "Subiendo…"
+msgstr ""
 
 #. %s: window title.
 #: src/plugins/focus-timer-widget/index.ts:299
-#, fuzzy
 msgid "Linked to “%s”"
-msgstr "Añadir %s"
+msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:302
-#, fuzzy
 msgid "No window linked"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. %s: window title.
 #: src/plugins/focus-timer-widget/index.ts:305
-#, fuzzy
 msgid "Shaking “%s”"
-msgstr "Añadir %s"
+msgstr ""
 
 #: src/plugins/focus-timer-widget/index.ts:308
 msgid "Press stop to silence."
@@ -2297,15 +2206,13 @@ msgid "Focus timer cancelled — the linked window was closed."
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:614
-#, fuzzy
 msgid "Could not show WooCommerce details."
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #. 1: stock status, 2: units in stock.
 #: src/plugins/my-wordpress-woocommerce/index.ts:689
-#, fuzzy
 msgid "%1$s (%2$d)"
-msgstr "Error al subir."
+msgstr ""
 
 #. 1: average rating, 2: number of reviews.
 #: src/plugins/my-wordpress-woocommerce/index.ts:703
@@ -2347,9 +2254,8 @@ msgid "Rating"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:763
-#, fuzzy
 msgid "View in shop"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. %d: quantity ordered.
 #: src/plugins/my-wordpress-woocommerce/index.ts:788
@@ -2390,15 +2296,13 @@ msgstr ""
 #: includes/my-wordpress/integrations/woocommerce-relations.php:494
 #: includes/my-wordpress/integrations/woocommerce-relations.php:510
 #: includes/my-wordpress/integrations/woocommerce-relations.php:529
-#, fuzzy
 msgid "Customer"
-msgstr "Imagen personalizada"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:826
 #: apps/my-wordpress/parts/woocommerce.php:654
-#, fuzzy
 msgid "Placed"
-msgstr "Error al subir."
+msgstr ""
 
 #. %d: number of line items.
 #: src/plugins/my-wordpress-woocommerce/index.ts:830
@@ -2440,15 +2344,13 @@ msgid "Used"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:879
-#, fuzzy
 msgid "Per customer"
-msgstr "Color de acento"
+msgstr ""
 
 #. %d: per-customer usage limit.
 #: src/plugins/my-wordpress-woocommerce/index.ts:883
-#, fuzzy
 msgid "%d uses"
-msgstr "Añadir %s"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:889
 msgid "Limit to items"
@@ -2479,9 +2381,8 @@ msgid "Maximum spend"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:904
-#, fuzzy
 msgid "Restrictions"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:905
 #: includes/my-wordpress/integrations/woocommerce-relations.php:557
@@ -2506,27 +2407,24 @@ msgstr ""
 
 #. %d: number of days.
 #: src/plugins/my-wordpress-woocommerce/index.ts:935
-#, fuzzy
 msgid "%d day ago"
 msgid_plural "%d days ago"
-msgstr[0] "Navegación del administrador"
-msgstr[1] "Navegación del administrador"
+msgstr[0] ""
+msgstr[1] ""
 
 #. %d: number of months.
 #: src/plugins/my-wordpress-woocommerce/index.ts:943
-#, fuzzy
 msgid "%d month ago"
 msgid_plural "%d months ago"
-msgstr[0] "Navegación del administrador"
-msgstr[1] "Navegación del administrador"
+msgstr[0] ""
+msgstr[1] ""
 
 #. %d: number of years.
 #: src/plugins/my-wordpress-woocommerce/index.ts:950
-#, fuzzy
 msgid "%d year ago"
 msgid_plural "%d years ago"
-msgstr[0] "Navegación del administrador"
-msgstr[1] "Navegación del administrador"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:964
 #: src/plugins/my-wordpress-woocommerce/index.ts:2051
@@ -2586,9 +2484,8 @@ msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1048
 #: src/plugins/my-wordpress-woocommerce/index.ts:2078
-#, fuzzy
 msgid "Location"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1049
 #: apps/my-wordpress/parts/lists.php:450
@@ -2596,9 +2493,8 @@ msgid "Email"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1050
-#, fuzzy
 msgid "Customer since"
-msgstr "Imagen personalizada"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1054
 msgid "All their orders"
@@ -2649,9 +2545,8 @@ msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1537
 #: src/plugins/my-wordpress-woocommerce/index.ts:1939
-#, fuzzy
 msgid "View their orders"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1538
 msgid "Open the orders screen filtered to this customer, in its own window."
@@ -2672,14 +2567,12 @@ msgid "%1$d · %2$d"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1657
-#, fuzzy
 msgid "Revenue this month"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:1661
-#, fuzzy
 msgid "Awaiting action"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. %d: number of orders.
 #: src/plugins/my-wordpress-woocommerce/index.ts:1664
@@ -2706,9 +2599,8 @@ msgstr ""
 #: includes/my-wordpress/integrations/woocommerce-customers.php:1315
 #: includes/my-wordpress/integrations/woocommerce-relations.php:857
 #: includes/my-wordpress/integrations/woocommerce-relations.php:1054
-#, fuzzy
 msgid "Customers"
-msgstr "Imagen personalizada"
+msgstr ""
 
 #. %d: number of customers.
 #: src/plugins/my-wordpress-woocommerce/index.ts:1683
@@ -2741,9 +2633,8 @@ msgstr ""
 
 #. %s: date of the first order.
 #: src/plugins/my-wordpress-woocommerce/index.ts:2066
-#, fuzzy
 msgid "since %s"
-msgstr "Cerrar %s"
+msgstr ""
 
 #. %s: registration date.
 #: src/plugins/my-wordpress-woocommerce/index.ts:2082
@@ -2767,29 +2658,25 @@ msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:2208
 #: includes/my-wordpress/integrations/woocommerce-relations.php:511
-#, fuzzy
 msgid "Edit profile"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:2213
 msgid "Send email"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:316
-#, fuzzy
 msgid "WooCommerce data is unavailable."
-msgstr "Azul WordPress"
+msgstr ""
 
 #. %d: HTTP status code.
 #: src/plugins/my-wordpress-woocommerce/index.ts:341
-#, fuzzy
 msgid "Could not load WooCommerce details (%d)."
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:357
-#, fuzzy
 msgid "Could not load WooCommerce details."
-msgstr "No se pudieron cargar tus medios."
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:2262
 msgid "No customer selected. Open one from the Customers folder."
@@ -2801,9 +2688,8 @@ msgid "×%d bought"
 msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:2316
-#, fuzzy
 msgid "Recent orders"
-msgstr "Cambiar a modo escritorio"
+msgstr ""
 
 #: src/plugins/my-wordpress-woocommerce/index.ts:2317
 msgid "Addresses"
@@ -2818,9 +2704,8 @@ msgid "Write a note…"
 msgstr ""
 
 #: src/plugins/notes-widget/index.ts:140
-#, fuzzy
 msgid "Paper color"
-msgstr "Color de acento"
+msgstr ""
 
 #: src/plugins/notes-widget/index.ts:172
 msgid "Next paper color"
@@ -2835,9 +2720,8 @@ msgid "Snowflakes"
 msgstr ""
 
 #: src/plugins/snow-wallpaper/index.ts:338
-#, fuzzy
 msgid "Flake size"
-msgstr "Tamaño del dock"
+msgstr ""
 
 #: src/plugins/snow-wallpaper/index.ts:346
 msgid "Background color"
@@ -2891,14 +2775,12 @@ msgid ""
 msgstr ""
 
 #: src/rebrand-notice.ts:123
-#, fuzzy
 msgid "New name"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/rebrand-notice.ts:129
-#, fuzzy
 msgid "Desktop Mode is now OpenStation"
-msgstr "Escritorio %d"
+msgstr ""
 
 #: src/rebrand-notice.ts:134
 msgid "The beginning of a new identity."
@@ -2935,9 +2817,8 @@ msgid "Dismiss"
 msgstr ""
 
 #: src/release-card.ts:354 src/update-notice.ts:180
-#, fuzzy
 msgid "Update now"
-msgstr "Añadir %s"
+msgstr ""
 
 #: src/reveals/registry.ts:446
 msgid "Sweep"
@@ -3049,21 +2930,17 @@ msgid "View revisions (%d)"
 msgstr ""
 
 #: src/revisions/index.ts:114
-#, fuzzy
 msgid "View revisions"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: src/revisions/index.ts:193
-#, fuzzy
 msgid "No revisions are available for this content."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #. %s: post title.
 #: src/revisions/index.ts:203
-#, fuzzy
 msgid "Revisions: %s"
-msgstr "Vista general"
+msgstr ""
 
 #. 1: action label, e.g. "Open". 2: number of selected items.
 #: src/selection/actions.ts:102
@@ -3100,14 +2977,12 @@ msgstr ""
 
 #. %s: WordPress version.
 #: src/update-notice.ts:100
-#, fuzzy
 msgid "WordPress %s is available."
-msgstr "Azul WordPress"
+msgstr ""
 
 #: src/update-notice.ts:144 includes/core-notices.php:91
-#, fuzzy
 msgid "WordPress Updates"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: src/widgets/built-in.ts:20
 msgid "Clock"
@@ -3185,20 +3060,17 @@ msgid "Open another %s"
 msgstr "Abrir otra ventana de %s"
 
 #: src/window/dom.ts:519
-#, fuzzy
 msgid "Open in new window"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: src/window/dom.ts:559
-#, fuzzy
 msgid "Open in browser tab"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #. %s is the window's title (e.g., "OpenStation Preferences")
 #: src/window/dom.ts:851
-#, fuzzy
 msgid "%s sections"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. %s is the window's admin-page title (e.g., "Posts")
 #: src/window/dom.ts:854
@@ -3214,14 +3086,12 @@ msgid "You have unsaved changes. Are you sure you want to close this window?"
 msgstr ""
 
 #: src/window/iframe-bridge.ts:285
-#, fuzzy
 msgid "Close window"
-msgstr "Organizar ventanas"
+msgstr ""
 
 #: src/window/iframe-bridge.ts:618
-#, fuzzy
 msgid "Request failed."
-msgstr "Error al subir."
+msgstr ""
 
 #. %d: HTTP status code of the failed request.
 #: src/window/iframe-bridge.ts:621
@@ -3260,9 +3130,8 @@ msgid "Don't ask again"
 msgstr ""
 
 #: src/window-manager/close-all-shortcut.ts:176
-#, fuzzy
 msgid "Close all windows?"
-msgstr "Organizar todas las ventanas en mosaico"
+msgstr ""
 
 #. %d: number of open windows on this desktop.
 #: src/window-manager/close-all-shortcut.ts:179
@@ -3273,11 +3142,10 @@ msgstr[1] ""
 
 #. %d: number of windows closed.
 #: src/window-manager/close-all-shortcut.ts:274
-#, fuzzy
 msgid "Closed %d window."
 msgid_plural "Closed %d windows."
-msgstr[0] "Organizar ventanas"
-msgstr[1] "Organizar ventanas"
+msgstr[0] ""
+msgstr[1] ""
 
 #. %d is the desktop number (e.g., "Desktop 2")
 #: src/window-manager/desktops.ts:129
@@ -3295,9 +3163,8 @@ msgstr "Cambiar a %s"
 
 #. %s is the desktop label
 #: src/window-manager/overview.ts:729
-#, fuzzy
 msgid "Rename %s"
-msgstr "Eliminar %s"
+msgstr ""
 
 #. %s is the workspace name.
 #: src/window-manager/overview.ts:789
@@ -3330,25 +3197,20 @@ msgstr "Cerrar pestaña"
 
 #. %s is the external site's title or URL.
 #: src/window/tabs.ts:491
-#, fuzzy
 msgid "Opened \"%s\" in a new browser tab — this site doesn't allow embedding."
 msgstr ""
-"Se ha abierto «%s» en una nueva pestaña del navegador — este sitio no "
-"permite incrustarse."
 
 #: src/workspaces/command.ts:25
 msgid "Edit this workspace…"
 msgstr ""
 
 #: src/workspaces/command.ts:28
-#, fuzzy
 msgid "New desktop…"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/workspaces/command.ts:39
-#, fuzzy
 msgid "Keep this desk"
-msgstr "Abrir nueva ventana de %s"
+msgstr ""
 
 #: src/workspaces/command.ts:40
 msgid ""
@@ -3362,9 +3224,8 @@ msgstr ""
 
 #. %d is a number of open windows.
 #: src/workspaces/command.ts:77
-#, fuzzy
 msgid "%d open"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: src/workspaces/command.ts:99
 msgid "Blank, or set up for a job — the wizard asks."
@@ -3398,9 +3259,8 @@ msgstr ""
 
 #: src/workspaces/presets.ts:63 src/workspaces/presets.ts:71
 #: includes/workspaces.php:108
-#, fuzzy
 msgid "Commerce"
-msgstr "Buscar medios"
+msgstr ""
 
 #: src/workspaces/presets.ts:64 includes/workspaces.php:109
 msgid ""
@@ -3431,9 +3291,8 @@ msgid ""
 msgstr ""
 
 #: src/workspaces/presets.ts:189
-#, fuzzy
 msgid "New draft"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/workspaces/wizard.ts:191
 msgid "Start"
@@ -3454,9 +3313,8 @@ msgid "Look"
 msgstr ""
 
 #: src/workspaces/wizard.ts:196
-#, fuzzy
 msgid "Windows"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: src/workspaces/wizard.ts:203 includes/admin-bar.php:103
 msgid "Cascade"
@@ -3471,9 +3329,8 @@ msgid "Columns"
 msgstr ""
 
 #: src/workspaces/wizard.ts:209
-#, fuzzy
 msgid "Focus"
-msgstr "Subiendo…"
+msgstr ""
 
 #: src/workspaces/wizard.ts:212
 msgid "Free"
@@ -3506,18 +3363,16 @@ msgid "Edit workspace"
 msgstr ""
 
 #: src/workspaces/wizard.ts:362
-#, fuzzy
 msgid "New desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/workspaces/wizard.ts:431
 msgid "What is this desktop for?"
 msgstr ""
 
 #: src/workspaces/wizard.ts:492
-#, fuzzy
 msgid "Blank desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/workspaces/wizard.ts:493
 msgid "Just a new, empty desk. Turn it into a workspace later if you like."
@@ -3542,14 +3397,12 @@ msgid "Glyph"
 msgstr ""
 
 #: src/workspaces/wizard.ts:573
-#, fuzzy
 msgid "No colour"
-msgstr "Color de acento"
+msgstr ""
 
 #: src/workspaces/wizard.ts:599
-#, fuzzy
 msgid "Or any colour"
-msgstr "Color de acento"
+msgstr ""
 
 #: src/workspaces/wizard.ts:673
 msgid "Which apps show here?"
@@ -3572,10 +3425,8 @@ msgid ""
 msgstr ""
 
 #: src/workspaces/wizard.ts:707
-#, fuzzy
 msgid "No widgets are registered on this site yet."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: src/workspaces/wizard.ts:713
 msgid "Which widgets sit on it?"
@@ -3620,15 +3471,13 @@ msgid "Wallpaper"
 msgstr "Fondo de pantalla"
 
 #: src/workspaces/wizard.ts:810 src/workspaces/wizard.ts:828
-#, fuzzy
 msgid "Accent"
-msgstr "Color de acento"
+msgstr ""
 
 #: src/workspaces/wizard.ts:831 src/workspaces/wizard.ts:849
 #: includes/wp-icon-registry.php:42
-#, fuzzy
 msgid "Dock"
-msgstr "Tamaño del dock"
+msgstr ""
 
 #: src/workspaces/wizard.ts:833
 msgid "Always visible"
@@ -3649,9 +3498,8 @@ msgid ""
 msgstr ""
 
 #: src/workspaces/wizard.ts:877 src/workspaces/wizard.ts:891
-#, fuzzy
 msgid "Arrangement"
-msgstr "Organizar"
+msgstr ""
 
 #: src/workspaces/wizard.ts:907
 msgid "Nothing yet — add an app below, or capture the windows you have open."
@@ -3662,14 +3510,12 @@ msgid "Nothing yet — add an app below."
 msgstr ""
 
 #: src/workspaces/wizard.ts:925
-#, fuzzy
 msgid "Opens with"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: src/workspaces/wizard.ts:934
-#, fuzzy
 msgid "Add a window"
-msgstr "Organizar todas las ventanas en mosaico"
+msgstr ""
 
 #: src/workspaces/wizard.ts:935
 msgid "Choose an app…"
@@ -3680,40 +3526,34 @@ msgid "Use the windows I have open now"
 msgstr ""
 
 #: src/workspaces/wizard.ts:1010
-#, fuzzy
 msgid "Delete workspace"
-msgstr "Error al subir."
+msgstr ""
 
 #: src/workspaces/wizard.ts:1045 apps/station-home/parts/view.php:252
 #: includes/ai-copilot/search.php:123
-#, fuzzy
 msgid "Customize"
-msgstr "Imagen personalizada"
+msgstr ""
 
 #: src/workspaces/wizard.ts:1059
 msgid "Save"
 msgstr ""
 
 #: src/workspaces/wizard.ts:1061
-#, fuzzy
 msgid "Create desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: src/workspaces/wizard.ts:1063
-#, fuzzy
 msgid "Create from template"
-msgstr "Predeterminada"
+msgstr ""
 
 #: src/workspaces/wizard.ts:1065
-#, fuzzy
 msgid "Create workspace"
-msgstr "Ese archivo no es una imagen."
+msgstr ""
 
 #: src/ai-assistant/impl.ts:1779
-#, fuzzy
 msgctxt "fallback name for the post a comment was left on"
 msgid "post"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. Plugin Name of the plugin
 #: desktop-mode.php includes/ai-copilot/abilities.php:39
@@ -3747,9 +3587,8 @@ msgid "https://github.com/allterraindeveloper"
 msgstr ""
 
 #: apps/code-blue/code-blue.os.php:57
-#, fuzzy
 msgid "Code Blue"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: apps/code-blue/code-blue.os.php:79 apps/my-wordpress/my-wordpress.os.php:126
 #: apps/station-home/parts/view.php:211
@@ -3781,9 +3620,8 @@ msgid "Database error"
 msgstr ""
 
 #: apps/code-blue/log-reader.php:328
-#, fuzzy
 msgid "WordPress debug log"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: apps/code-blue/log-reader.php:340
 msgid "PHP error log"
@@ -3806,36 +3644,28 @@ msgid "Environment"
 msgstr ""
 
 #: apps/comments/parts/app.php:419
-#, fuzzy
 msgid "You are not allowed to moderate comments."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/comments/parts/app.php:427
-#, fuzzy
 msgid "Action failed."
-msgstr "Error al subir."
+msgstr ""
 
 #: apps/comments/parts/app.php:450
-#, fuzzy
 msgid "You are not allowed to reply."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/comments/parts/app.php:478
-#, fuzzy
 msgid "You are not allowed to edit this comment."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/comments/parts/app.php:481
 msgid "A comment cannot be empty."
 msgstr ""
 
 #: apps/comments/parts/app.php:485
-#, fuzzy
 msgid "Edit failed."
-msgstr "Error al subir."
+msgstr ""
 
 #: apps/comments/parts/fields.php:90
 msgid "Title of the post the comment is attached to."
@@ -3882,10 +3712,8 @@ msgid "Parent comment not found."
 msgstr ""
 
 #: apps/comments/parts/rest.php:161
-#, fuzzy
 msgid "You are not allowed to reply to comments on this post."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/comments/parts/rest.php:169
 msgid "Reply cannot be empty."
@@ -3905,51 +3733,44 @@ msgid "WP Explorer"
 msgstr ""
 
 #: apps/my-wordpress/parts/actions.php:294
-#, fuzzy
 msgid "Add User"
-msgstr "Añadir %s"
+msgstr ""
 
 #: apps/my-wordpress/parts/actions.php:311
-#, fuzzy
 msgid "You cannot trash this item."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/my-wordpress/parts/actions.php:315
-#, fuzzy
 msgid "Trashing failed."
-msgstr "Error al subir."
+msgstr ""
 
 #: apps/my-wordpress/parts/actions.php:324
-#, fuzzy
 msgid "Moved to the Trash."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: apps/my-wordpress/parts/actions.php:426
-#, fuzzy
 msgid "Nothing could be updated."
-msgstr "%d actualización"
+msgstr ""
 
 #. translators: %s: updated count.
 #: apps/my-wordpress/parts/actions.php:432
-#, fuzzy, php-format
+#, php-format
 msgid "%s entry updated."
 msgid_plural "%s entries updated."
-msgstr[0] "%d actualización"
-msgstr[1] "%d actualización"
+msgstr[0] ""
+msgstr[1] ""
 
 #: apps/my-wordpress/parts/actions.php:462
-#, fuzzy
 msgid "Nothing could be trashed."
-msgstr "%d actualización"
+msgstr ""
 
 #. translators: %s: trashed count.
 #: apps/my-wordpress/parts/actions.php:468
-#, fuzzy, php-format
+#, php-format
 msgid "Moved %s item to the Trash."
 msgid_plural "Moved %s items to the Trash."
-msgstr[0] "No se pudieron cargar tus medios: %s"
-msgstr[1] "No se pudieron cargar tus medios: %s"
+msgstr[0] ""
+msgstr[1] ""
 
 #: apps/my-wordpress/parts/agents.php:189 includes/agents/draft.php:46
 msgid "Describe the agent first. A sentence is enough."
@@ -3973,9 +3794,8 @@ msgstr ""
 
 #: apps/my-wordpress/parts/dossiers.php:101
 #: apps/my-wordpress/parts/dossiers.php:207
-#, fuzzy
 msgid "Attached media"
-msgstr "Buscar medios"
+msgstr ""
 
 #. translators: %s: entry count.
 #: apps/my-wordpress/parts/dossiers.php:196
@@ -3989,9 +3809,9 @@ msgstr[1] ""
 #. translators: 1: customer name, 2: date.
 #: apps/my-wordpress/parts/lists.php:202
 #: apps/my-wordpress/parts/woocommerce.php:250
-#, fuzzy, php-format
+#, php-format
 msgid "%1$s — %2$s"
-msgstr "Error al subir."
+msgstr ""
 
 #: apps/my-wordpress/parts/lists.php:451 includes/agents/privacy.php:65
 msgid "Role"
@@ -4006,9 +3826,8 @@ msgid "Dimensions"
 msgstr ""
 
 #: apps/my-wordpress/parts/lists.php:494
-#, fuzzy
 msgid "Uploaded"
-msgstr "Subir nueva"
+msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:75 apps/users/users.os.php:98
 #: includes/ai-copilot/search.php:153 includes/multisite.php:45
@@ -4029,9 +3848,8 @@ msgid "Name Z–A"
 msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:248
-#, fuzzy
 msgid "Recently registered"
-msgstr "Cambiar a modo escritorio"
+msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:249
 msgid "Longest registered"
@@ -4068,9 +3886,8 @@ msgid "Most posts"
 msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:257
-#, fuzzy
 msgid "Fewest posts"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:263
 msgid "Title A–Z"
@@ -4081,9 +3898,8 @@ msgid "Title Z–A"
 msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:267
-#, fuzzy
 msgid "Recently modified"
-msgstr "Cambiar a modo escritorio"
+msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:268
 msgid "Least recently modified"
@@ -4098,14 +3914,12 @@ msgid "Slug Z–A"
 msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:273
-#, fuzzy
 msgid "Most comments"
-msgstr "Buscar medios"
+msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:274
-#, fuzzy
 msgid "Fewest comments"
-msgstr "Cambiar a modo escritorio"
+msgstr ""
 
 #: apps/my-wordpress/parts/woocommerce.php:182
 msgid "Needs attention first"
@@ -4125,9 +3939,9 @@ msgstr ""
 #: includes/my-wordpress/integrations/woocommerce-relations.php:823
 #: includes/my-wordpress/integrations/woocommerce-relations.php:1024
 #: includes/my-wordpress/integrations/woocommerce.php:1047
-#, fuzzy, php-format
+#, php-format
 msgid "#%1$s · %2$s"
-msgstr "Error al subir."
+msgstr ""
 
 #: apps/my-wordpress/parts/woocommerce.php:251
 #: includes/my-wordpress/integrations/woocommerce.php:1453
@@ -4135,10 +3949,8 @@ msgid "Guest"
 msgstr ""
 
 #: apps/os-settings/os-settings.os.php:74
-#, fuzzy
 msgid "You are not allowed to change site-wide options."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/os-settings/os-settings.os.php:160
 msgid "Files REST endpoint is not available."
@@ -4151,9 +3963,8 @@ msgid "Folder sharing data deleted. (%d tables)"
 msgstr ""
 
 #: apps/pages/parts/query.php:74
-#, fuzzy
 msgid "Default template"
-msgstr "Predeterminada"
+msgstr ""
 
 #: apps/pages/parts/query.php:115
 msgid "Total non-trashed comments on this page."
@@ -4169,10 +3980,8 @@ msgstr ""
 
 #: apps/plugins/parts/ajax.php:70 apps/plugins/plugins.os.php:126
 #: includes/seen-intros.php:225
-#, fuzzy
 msgid "You are not allowed to do that."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/plugins/parts/ajax.php:123
 msgid "Missing plugin slug."
@@ -4233,9 +4042,8 @@ msgid "No file received. Pick a .zip and try again."
 msgstr ""
 
 #: apps/plugins/parts/upload.php:173
-#, fuzzy
 msgid "Upload payload is malformed."
-msgstr "Error al subir."
+msgstr ""
 
 #. translators: %d: PHP UPLOAD_ERR_* code.
 #: apps/plugins/parts/upload.php:182
@@ -4269,9 +4077,9 @@ msgstr ""
 
 #. translators: %s: error message
 #: apps/plugins/plugins.os.php:165
-#, fuzzy, php-format
+#, php-format
 msgid "Delete failed: %s"
-msgstr "Error al subir."
+msgstr ""
 
 #. translators: %s: plugin name
 #: apps/plugins/plugins.os.php:172
@@ -4317,11 +4125,11 @@ msgstr ""
 
 #. translators: %d: number of rows that could not be trashed.
 #: apps/posts/parts/query.php:296
-#, fuzzy, php-format
+#, php-format
 msgid "%d item could not be moved to the trash."
 msgid_plural "%d items could not be moved to the trash."
-msgstr[0] "No se pudieron cargar tus medios: %s"
-msgstr[1] "No se pudieron cargar tus medios: %s"
+msgstr[0] ""
+msgstr[1] ""
 
 #: apps/posts/parts/terms-rest.php:51
 msgid "Number of non-trashed posts (any status) in this term."
@@ -4337,28 +4145,24 @@ msgid "Unknown taxonomy."
 msgstr ""
 
 #: apps/station-home/parts/snapshot.php:97
-#, fuzzy
 msgid "(Untitled)"
-msgstr "Organizar ventanas"
+msgstr ""
 
 #: apps/station-home/parts/snapshot.php:98
 msgid "Content"
 msgstr ""
 
 #: apps/station-home/parts/snapshot.php:222
-#, fuzzy
 msgid "New post"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: apps/station-home/parts/snapshot.php:231
-#, fuzzy
 msgid "Upload media"
-msgstr "Subir nueva"
+msgstr ""
 
 #: apps/station-home/parts/snapshot.php:239
-#, fuzzy
 msgid "View site"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: apps/station-home/parts/snapshot.php:255
 msgid "Classic Dashboard"
@@ -4402,14 +4206,12 @@ msgid "Add a useful description for people using assistive technology."
 msgstr ""
 
 #: apps/station-home/parts/snapshot.php:354
-#, fuzzy
 msgid "Pending comments"
-msgstr "Buscar medios"
+msgstr ""
 
 #: apps/station-home/parts/snapshot.php:360 includes/ai-copilot/search.php:237
-#, fuzzy
 msgid "Updates"
-msgstr "Añadir %s"
+msgstr ""
 
 #. translators: %s: current user's name.
 #: apps/station-home/parts/view.php:51
@@ -4431,14 +4233,12 @@ msgstr ""
 
 #: apps/station-home/parts/view.php:166 apps/station-home/parts/view.php:179
 #: apps/station-home/station-home.os.php:43
-#, fuzzy
 msgid "Station Home"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: apps/station-home/parts/view.php:182
-#, fuzzy
 msgid "Quick actions"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. translators: %s: site name.
 #: apps/station-home/parts/view.php:199
@@ -4459,9 +4259,8 @@ msgid "Continue working"
 msgstr ""
 
 #: apps/station-home/parts/view.php:225
-#, fuzzy
 msgid "Site pulse"
-msgstr "Predeterminada"
+msgstr ""
 
 #: apps/station-home/parts/view.php:240
 #: includes/my-wordpress/integrations/woocommerce.php:214
@@ -4469,9 +4268,8 @@ msgid "Needs attention"
 msgstr ""
 
 #: apps/station-home/parts/view.php:249
-#, fuzzy
 msgid "From your plugins"
-msgstr "Subir nueva"
+msgstr ""
 
 #: apps/station-home/parts/view.php:279
 msgid "Your desk is clear"
@@ -4498,18 +4296,16 @@ msgid "Use Customize to opt in to information from your plugins."
 msgstr ""
 
 #: apps/station-home/parts/view.php:404
-#, fuzzy
 msgid "Customize Station Home"
-msgstr "Imagen personalizada"
+msgstr ""
 
 #: apps/station-home/parts/view.php:408
 msgid "Choose which plugin cards can show information on your Station Home."
 msgstr ""
 
 #: apps/station-home/station-home.os.php:78
-#, fuzzy
 msgid "That Station Home card is not available."
-msgstr "Ese archivo no es una imagen."
+msgstr ""
 
 #. translators: %d: number of items that could not be processed.
 #: apps/trash/trash.os.php:100
@@ -4580,16 +4376,12 @@ msgid "No user ids supplied."
 msgstr ""
 
 #: apps/users/parts/rest.php:69
-#, fuzzy
 msgid "You are not allowed to assign this role."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/users/parts/rest.php:158
-#, fuzzy
 msgid "You are not allowed to send a password reset for this user."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/users/parts/rest.php:162
 msgid "A reset email was already sent recently. Try again in a minute."
@@ -4597,10 +4389,8 @@ msgstr ""
 
 #: apps/users/parts/rest.php:184 apps/users/users.os.php:209
 #: apps/users/users.os.php:224
-#, fuzzy
 msgid "You are not allowed to email this user."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/users/parts/rest.php:188
 msgid "A welcome email was already sent recently. Try again in a minute."
@@ -4627,16 +4417,12 @@ msgid "That email is already in use."
 msgstr ""
 
 #: apps/users/parts/rest.php:298
-#, fuzzy
 msgid "You are not allowed to assign that role."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/users/users.os.php:157
-#, fuzzy
 msgid "You are not allowed to change roles."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: apps/users/users.os.php:168
 msgid "No users updated."
@@ -4649,16 +4435,14 @@ msgid "Role updated for %1$d user(s) (%2$d skipped)."
 msgstr ""
 
 #: apps/users/users.os.php:183
-#, fuzzy
 msgid "You are not allowed to delete users."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #. translators: %1$d users deleted, %2$d skipped.
 #: apps/users/users.os.php:194
-#, fuzzy, php-format
+#, php-format
 msgid "%1$d user(s) deleted (%2$d skipped)."
-msgstr "Biblioteca de medios"
+msgstr ""
 
 #. translators: %s is the user's email address.
 #: apps/users/users.os.php:212
@@ -4673,10 +4457,8 @@ msgid "Welcome email resent to %s."
 msgstr ""
 
 #: apps/users/users.os.php:238
-#, fuzzy
 msgid "You are not allowed to create users."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #. translators: %s is the user's email address.
 #: apps/users/users.os.php:259
@@ -4685,9 +4467,8 @@ msgid "User created — welcome email sent to %s."
 msgstr ""
 
 #: includes/about-feed.php:169
-#, fuzzy
 msgid "You cannot load OpenStation updates."
-msgstr "Escritorio %d"
+msgstr ""
 
 #: includes/about-feed.php:177
 msgid "The OpenStation journal is temporarily unavailable."
@@ -4738,9 +4519,8 @@ msgid "Switch to Classic Admin"
 msgstr "Cambiar a administración clásica"
 
 #: includes/admin-bar.php:39 includes/welcome-dialog.php:544
-#, fuzzy
 msgid "Switch to OpenStation"
-msgstr "Cambiar a %s"
+msgstr ""
 
 #: includes/admin-bar.php:94
 msgid "Arrange windows"
@@ -4782,18 +4562,16 @@ msgstr ""
 "escritorio."
 
 #: includes/admin-bar.php:245 includes/admin-bar.php:739
-#, fuzzy
 msgid "Keyboard shortcuts"
-msgstr "Escritorio 1"
+msgstr ""
 
 #: includes/admin-bar.php:270
 msgid "Open the Bug Report window"
 msgstr ""
 
 #: includes/admin-bar.php:721
-#, fuzzy
 msgid "Fullscreen"
-msgstr "Salir de pantalla completa"
+msgstr ""
 
 #: includes/admin-bar.php:741
 msgid "Desktops & Overview"
@@ -4804,19 +4582,16 @@ msgid "Key"
 msgstr ""
 
 #: includes/admin-bar.php:744
-#, fuzzy
 msgid "Outside overview"
-msgstr "Vista general"
+msgstr ""
 
 #: includes/admin-bar.php:745
-#, fuzzy
 msgid "Inside overview"
-msgstr "Vista general"
+msgstr ""
 
 #: includes/admin-bar.php:746
-#, fuzzy
 msgid "In Show Desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/admin-bar.php:751
 msgid "Previous desktop (wraps)"
@@ -4827,9 +4602,8 @@ msgid "Previous desktop (grid + top-bar update)"
 msgstr ""
 
 #: includes/admin-bar.php:753
-#, fuzzy
 msgid "Previous desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/admin-bar.php:757
 msgid "Next desktop (wraps)"
@@ -4840,14 +4614,12 @@ msgid "Next desktop (grid + top-bar update)"
 msgstr ""
 
 #: includes/admin-bar.php:759
-#, fuzzy
 msgid "Next desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/admin-bar.php:763
-#, fuzzy
 msgid "Enter Overview"
-msgstr "Vista general"
+msgstr ""
 
 #: includes/admin-bar.php:764
 msgid "Exit Overview onto active desktop"
@@ -4858,18 +4630,16 @@ msgid "Restore windows (exit Show Desktop)"
 msgstr ""
 
 #: includes/admin-bar.php:769 includes/admin-bar.php:771
-#, fuzzy
 msgid "Toggle Show Desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/admin-bar.php:770
 msgid "Exit Overview (no minimize)"
 msgstr ""
 
 #: includes/admin-bar.php:775
-#, fuzzy
 msgid "(in overview)"
-msgstr "Vista general"
+msgstr ""
 
 #: includes/admin-bar.php:777
 msgid "Commit current desktop, exit overview"
@@ -4908,18 +4678,16 @@ msgid "Get media details"
 msgstr ""
 
 #: includes/agents/abilities.php:126
-#, fuzzy
 msgid "Update media details"
-msgstr "Añadir %s"
+msgstr ""
 
 #: includes/agents/abilities.php:173
 msgid "Create draft post"
 msgstr ""
 
 #: includes/agents/abilities.php:217
-#, fuzzy
 msgid "Update post"
-msgstr "Añadir %s"
+msgstr ""
 
 #: includes/agents/abilities.php:275 includes/agents/abilities.php:478
 #: includes/content-graph/rest.php:213 includes/widgets/widget-drafts.php:312
@@ -4937,19 +4705,16 @@ msgid "Invalid post status."
 msgstr ""
 
 #: includes/agents/conversations.php:73
-#, fuzzy
 msgid "Agent conversations"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: includes/agents/conversations.php:218
-#, fuzzy
 msgid "Conversation"
-msgstr "Navegación del administrador"
+msgstr ""
 
 #: includes/agents/conversations.php:294
-#, fuzzy
 msgid "Deleted agent"
-msgstr "Error al subir."
+msgstr ""
 
 #: includes/agents/conversations.php:416
 msgid "No agent with that id exists."
@@ -4964,9 +4729,8 @@ msgid "No conversation with that id exists."
 msgstr ""
 
 #: includes/agents/draft.php:72 includes/agents/runner.php:950
-#, fuzzy
 msgid "The WordPress AI Client is not available on this site."
-msgstr "Azul WordPress"
+msgstr ""
 
 #: includes/agents/draft.php:129
 msgid ""
@@ -4975,14 +4739,12 @@ msgid ""
 msgstr ""
 
 #: includes/agents/face.php:107
-#, fuzzy
 msgid "Could not create the agent-faces directory."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/agents/face.php:210
-#, fuzzy
 msgid "Could not write the agent face."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/agents/guard.php:88
 msgid "This account is a OpenStation agent. Login is disabled."
@@ -4997,14 +4759,12 @@ msgid "Agent slug could not be derived from the name."
 msgstr ""
 
 #: includes/agents/identity.php:145
-#, fuzzy
 msgid "User is not a OpenStation agent."
-msgstr "Escritorio %d"
+msgstr ""
 
 #: includes/agents/identity.php:173
-#, fuzzy
 msgid "Could not delete the agent user."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/agents/identity.php:251
 msgid "OpenStation agent"
@@ -5044,9 +4804,8 @@ msgid "Triggers (JSON)"
 msgstr ""
 
 #: includes/agents/privacy.php:97
-#, fuzzy
 msgid "Model override"
-msgstr "Vista general"
+msgstr ""
 
 #: includes/agents/privacy.php:105
 msgid "Rate limit (per hour)"
@@ -5061,22 +4820,16 @@ msgid "Face (JSON)"
 msgstr ""
 
 #: includes/agents/rest.php:250
-#, fuzzy
 msgid "You do not have permission to read OpenStation agents."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/agents/rest.php:266
-#, fuzzy
 msgid "You do not have permission to manage OpenStation agents."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/agents/rest.php:282
-#, fuzzy
 msgid "You do not have permission to invoke OpenStation agents."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/agents/rest.php:325 includes/agents/rest.php:381
 #: includes/agents/rest.php:437 includes/agents/rest.php:467
@@ -5085,15 +4838,12 @@ msgid "Agent not found."
 msgstr ""
 
 #: includes/agents/rest.php:480
-#, fuzzy
 msgid "You do not have permission to invoke this agent."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/agents/runner.php:153
-#, fuzzy
 msgid "Message must be a non-empty string."
-msgstr "El parámetro «url» debe ser una cadena o null."
+msgstr ""
 
 #: includes/agents/runner.php:159
 msgid ""
@@ -5175,9 +4925,8 @@ msgid "Drop a tile onto the agent."
 msgstr ""
 
 #: includes/agents/store.php:596
-#, fuzzy
 msgid "WordPress hook"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: includes/agents/store.php:597
 msgid "Run automatically when a WordPress action fires."
@@ -5216,9 +4965,8 @@ msgid "A new comment is inserted."
 msgstr ""
 
 #: includes/agents/store.php:684
-#, fuzzy
 msgid "A new comment is posted."
-msgstr "Buscar medios"
+msgstr ""
 
 #: includes/agents/store.php:688
 msgid "A new user registers."
@@ -5233,10 +4981,8 @@ msgid "A new attachment is added."
 msgstr ""
 
 #: includes/agents/store.php:994 includes/agents/store.php:1118
-#, fuzzy
 msgid "Pick a role you are allowed to assign to an agent."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/agents/store.php:1095
 msgid "Agent name cannot be empty."
@@ -5307,34 +5053,28 @@ msgid ""
 msgstr ""
 
 #: includes/ai-copilot/abilities.php:211
-#, fuzzy
 msgid "Search posts"
-msgstr "Buscar medios"
+msgstr ""
 
 #: includes/ai-copilot/abilities.php:227
-#, fuzzy
 msgid "Search pages"
-msgstr "Buscar medios"
+msgstr ""
 
 #: includes/ai-copilot/abilities.php:243
-#, fuzzy
 msgid "Search comments"
-msgstr "Buscar medios"
+msgstr ""
 
 #: includes/ai-copilot/abilities.php:259
-#, fuzzy
 msgid "Search comments on a post"
-msgstr "Buscar medios"
+msgstr ""
 
 #: includes/ai-copilot/abilities.php:293
-#, fuzzy
 msgid "List admin pages"
-msgstr "Subpáginas de %s"
+msgstr ""
 
 #: includes/ai-copilot/abilities.php:327
-#, fuzzy
 msgid "Search WordPress.org plugins"
-msgstr "Azul WordPress"
+msgstr ""
 
 #: includes/ai-copilot/abilities.php:361
 msgid "Read PHP error log"
@@ -5371,9 +5111,8 @@ msgid "List, edit, bulk-manage blog posts."
 msgstr ""
 
 #: includes/ai-copilot/search.php:75
-#, fuzzy
 msgid "Add New Post"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/ai-copilot/search.php:78
 msgid "Create a new blog post."
@@ -5396,14 +5135,12 @@ msgid "List and edit static pages (About, Contact, etc.)."
 msgstr ""
 
 #: includes/ai-copilot/search.php:99
-#, fuzzy
 msgid "Add New Page"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/ai-copilot/search.php:102
-#, fuzzy
 msgid "Create a new page."
-msgstr "Ese archivo no es una imagen."
+msgstr ""
 
 #: includes/ai-copilot/search.php:105
 msgid "Media Library"
@@ -5414,16 +5151,13 @@ msgid "Browse, upload, and manage images, files, videos."
 msgstr ""
 
 #: includes/ai-copilot/search.php:114
-#, fuzzy
 msgid "Moderate and reply to comments on posts and pages."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/ai-copilot/search.php:117 includes/core-notices.php:231
 #: includes/multisite.php:46
-#, fuzzy
 msgid "Themes"
-msgstr "Añadir %s"
+msgstr ""
 
 #: includes/ai-copilot/search.php:120
 msgid "Change, install, or customize the active theme."
@@ -5450,9 +5184,8 @@ msgid "Activate, deactivate, update or delete plugins."
 msgstr ""
 
 #: includes/ai-copilot/search.php:147
-#, fuzzy
 msgid "Add New Plugin"
-msgstr "Subir nueva"
+msgstr ""
 
 #: includes/ai-copilot/search.php:150
 msgid "Search and install new plugins from the directory."
@@ -5463,9 +5196,8 @@ msgid "Manage user accounts and roles."
 msgstr ""
 
 #: includes/ai-copilot/search.php:159
-#, fuzzy
 msgid "Add New User"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/ai-copilot/search.php:162
 msgid "Create a new user account."
@@ -5512,9 +5244,8 @@ msgid "Comment moderation, avatars, email notifications."
 msgstr ""
 
 #: includes/ai-copilot/search.php:195
-#, fuzzy
 msgid "Media Settings"
-msgstr "Biblioteca de medios"
+msgstr ""
 
 #: includes/ai-copilot/search.php:198
 msgid "Image size settings for thumbnail / medium / large."
@@ -5561,9 +5292,8 @@ msgid "Export all site content as XML."
 msgstr ""
 
 #: includes/ai-copilot/search.php:231
-#, fuzzy
 msgid "Site Health"
-msgstr "Predeterminada"
+msgstr ""
 
 #: includes/ai-copilot/search.php:234
 msgid "Performance and security recommendations for the site."
@@ -5592,9 +5322,8 @@ msgid "Continue searching in posts (from item %d)"
 msgstr ""
 
 #: includes/ai-copilot/search.php:1205
-#, fuzzy
 msgid "Could not parse structured search answer."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/ai-copilot/search.php:1473
 msgid ""
@@ -5607,10 +5336,8 @@ msgid "You must be logged in to use the AI assistant."
 msgstr ""
 
 #: includes/ai-copilot/search.php:1928
-#, fuzzy
 msgid "The AI assistant is unavailable on this site."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/ai-copilot/search.php:1938
 msgid ""
@@ -5665,9 +5392,8 @@ msgid ""
 msgstr ""
 
 #: includes/core-notices.php:95
-#, fuzzy
 msgid "Retry update"
-msgstr "%d actualización"
+msgstr ""
 
 #: includes/core-notices.php:118
 msgid "Recovery Mode"
@@ -5678,9 +5404,8 @@ msgid "You are in recovery mode. There may be an error with a theme or plugin."
 msgstr ""
 
 #: includes/core-notices.php:120
-#, fuzzy
 msgid "Exit recovery mode"
-msgstr "Escritorio %d"
+msgstr ""
 
 #: includes/core-notices.php:140
 msgid "Profile"
@@ -5709,9 +5434,8 @@ msgid "One or more plugins failed to load properly."
 msgstr ""
 
 #: includes/core-notices.php:208
-#, fuzzy
 msgid "Go to Plugins"
-msgstr "Subir nueva"
+msgstr ""
 
 #: includes/core-notices.php:232
 msgid "One or more themes failed to load properly."
@@ -5767,9 +5491,8 @@ msgid "Block Editor"
 msgstr ""
 
 #: includes/desktop-files/built-in-openers.php:33
-#, fuzzy
 msgid "Media editor"
-msgstr "Biblioteca de medios"
+msgstr ""
 
 #: includes/desktop-files/built-in-openers.php:39
 msgid "User profile"
@@ -5785,14 +5508,12 @@ msgstr ""
 
 #: includes/desktop-files/built-in-openers.php:57
 #: includes/desktop-files/built-in-openers.php:63
-#, fuzzy
 msgid "Open in browser"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: includes/desktop-files/built-in-openers.php:69
-#, fuzzy
 msgid "Open as window"
-msgstr "Abrir en una nueva pestaña del navegador"
+msgstr ""
 
 #: includes/desktop-files/built-in-types.php:48
 msgid "Taxonomy term"
@@ -5827,9 +5548,8 @@ msgstr ""
 
 #: includes/desktop-files/downloads.php:153
 #: includes/desktop-files/downloads.php:162
-#, fuzzy
 msgid "Could not create the archive."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-files/downloads.php:179
 msgid "Could not finish the archive (disk full?)."
@@ -5852,10 +5572,8 @@ msgstr ""
 
 #: includes/desktop-files/file-shares.php:115
 #: includes/desktop-files/file-shares.php:362
-#, fuzzy
 msgid "You cannot manage shares for this file."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/file-shares.php:118
 #: includes/desktop-files/shares-store.php:369
@@ -5863,10 +5581,8 @@ msgid "Invalid user id."
 msgstr ""
 
 #: includes/desktop-files/file-shares.php:121
-#, fuzzy
 msgid "You cannot share with the file owner."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/file-shares.php:125
 #: includes/desktop-files/shares-store.php:373
@@ -5912,10 +5628,8 @@ msgid "Owners cannot leave their own file."
 msgstr ""
 
 #: includes/desktop-files/file-shares.php:326
-#, fuzzy
 msgid "You do not have access to this file."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/file-shares.php:613
 msgid "Uploaded files can only be shared read-only."
@@ -6015,10 +5729,8 @@ msgid "`class` must extend `OpenStation_File`."
 msgstr ""
 
 #: includes/desktop-files/rest-uploads.php:118
-#, fuzzy
 msgid "You are not allowed to upload files."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/rest-uploads.php:212
 #: includes/desktop-files/rest-uploads.php:631
@@ -6061,20 +5773,16 @@ msgstr ""
 
 #: includes/desktop-files/rest.php:62 includes/games/rest.php:37
 #: includes/notes/rest.php:43 includes/recycle-bin/rest.php:151
-#, fuzzy
 msgid "OpenStation is not enabled for this user."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/rest.php:86
 msgid "No route was found matching the URL and request method."
 msgstr ""
 
 #: includes/desktop-files/rest.php:103
-#, fuzzy
 msgid "You do not have permission to perform this action."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/rest.php:523 includes/desktop-files/store.php:229
 #: includes/desktop-files/store.php:382 includes/desktop-files/trash.php:363
@@ -6091,21 +5799,16 @@ msgid "This row was changed by another session."
 msgstr ""
 
 #: includes/desktop-files/rest.php:923
-#, fuzzy
 msgid "You cannot view shares for this folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/rest.php:988
-#, fuzzy
 msgid "Share not found in this folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/rest.php:1168
-#, fuzzy
 msgid "You cannot search users."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-files/shares-store.php:353
 msgid "Invalid principal type."
@@ -6119,16 +5822,12 @@ msgstr ""
 #: includes/desktop-files/shares-store.php:359
 #: includes/desktop-files/shares-store.php:477
 #: includes/desktop-files/shares-store.php:544
-#, fuzzy
 msgid "You cannot manage shares for this folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/shares-store.php:378
-#, fuzzy
 msgid "You cannot share with the folder owner."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/shares-store.php:387
 msgid "This role is not eligible."
@@ -6144,42 +5843,32 @@ msgid "Owners cannot leave their own folder."
 msgstr ""
 
 #: includes/desktop-files/shares-store.php:858
-#, fuzzy
 msgid "You do not have access to this folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/store.php:51
 msgid "Unknown file type."
 msgstr ""
 
 #: includes/desktop-files/store.php:68
-#, fuzzy
 msgid "You are not allowed to place this file."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/store.php:83 includes/desktop-files/store.php:285
-#, fuzzy
 msgid "You only have read access to that folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/store.php:154
 msgid "Failed to write placement."
 msgstr ""
 
 #: includes/desktop-files/store.php:257 includes/desktop-files/store.php:265
-#, fuzzy
 msgid "You only have read access to this folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/store.php:272
-#, fuzzy
 msgid "You cannot edit this placement."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/store.php:311
 msgid "A folder cannot be placed inside itself or one of its descendants."
@@ -6190,10 +5879,8 @@ msgid "Failed to update placement."
 msgstr ""
 
 #: includes/desktop-files/store.php:401
-#, fuzzy
 msgid "You cannot remove this placement."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/store.php:407
 msgid "Failed to remove placement."
@@ -6204,9 +5891,8 @@ msgid "Only the file’s owner can move or delete an uploaded file."
 msgstr ""
 
 #: includes/desktop-files/stored-files-store.php:81
-#, fuzzy
 msgid "Could not create the storage directory."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-files/stored-files-store.php:182
 msgid "Invalid storage name."
@@ -6214,9 +5900,8 @@ msgstr ""
 
 #: includes/desktop-files/stored-files-store.php:186
 #: includes/desktop-files/types/class-openstation-upload-file.php:48
-#, fuzzy
 msgid "file"
-msgstr "Abrir"
+msgstr ""
 
 #: includes/desktop-files/stored-files-store.php:205
 msgid "Failed to record the uploaded file."
@@ -6227,26 +5912,20 @@ msgid "A file name is required."
 msgstr ""
 
 #: includes/desktop-files/trash.php:373
-#, fuzzy
 msgid "You do not have permission to trash this item."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/trash.php:412
 msgid "Failed to write trash row."
 msgstr ""
 
 #: includes/desktop-files/trash.php:461
-#, fuzzy
 msgid "You do not have permission to restore this item."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/trash.php:566
-#, fuzzy
 msgid "You do not have permission to delete this item."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/trash.php:644
 msgid "You do not have permission to trash this folder."
@@ -6257,25 +5936,22 @@ msgid "Failed to trash folder."
 msgstr ""
 
 #: includes/desktop-files/trash.php:784
-#, fuzzy
 msgid "You do not have permission to restore this folder."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-files/trash.php:939
 msgid "You do not have permission to delete this folder."
 msgstr ""
 
 #: includes/desktop-files/trash.php:1137
-#, fuzzy
 msgid "Desktop shortcut"
-msgstr "Escritorio 1"
+msgstr ""
 
 #. translators: %s: file-type slug like 'post', 'attachment'.
 #: includes/desktop-files/trash.php:1140
-#, fuzzy, php-format
+#, php-format
 msgid "%s on desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #: includes/desktop-files/trash.php:1165
 msgid "URL"
@@ -6339,9 +6015,8 @@ msgid "(missing user)"
 msgstr ""
 
 #: includes/desktop-themes/builtin.php:174
-#, fuzzy
 msgid "Desktop Mode (Legacy)"
-msgstr "Escritorio %d"
+msgstr ""
 
 #: includes/desktop-themes/builtin.php:177
 msgid ""
@@ -6424,9 +6099,8 @@ msgid "An SVG in that theme could not be re-serialized after sanitization."
 msgstr ""
 
 #: includes/desktop-themes/install.php:457
-#, fuzzy
 msgid "Could not create a staging directory for the upload."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-themes/install.php:467
 msgid "WordPress could not access the filesystem to unpack the theme."
@@ -6441,24 +6115,20 @@ msgid "theme.json is not valid JSON."
 msgstr ""
 
 #: includes/desktop-themes/install.php:571
-#, fuzzy
 msgid "Could not create the theme directory."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-themes/install.php:584
-#, fuzzy
 msgid "Could not create a theme asset directory."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-themes/install.php:601
-#, fuzzy
 msgid "Could not move a theme asset into place."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-themes/install.php:634
-#, fuzzy
 msgid "Could not write the compiled theme stylesheet."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/desktop-themes/install.php:680
 msgid "That desktop theme is not installed."
@@ -6492,10 +6162,8 @@ msgid "The theme manifest requires a non-empty \"name\"."
 msgstr ""
 
 #: includes/desktop-themes/rest.php:38
-#, fuzzy
 msgid "You are not allowed to manage desktop themes."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/desktop-themes/rest.php:126
 msgid "That theme archive is larger than this server accepts."
@@ -6510,9 +6178,8 @@ msgid "A desktop theme must be uploaded as a .zip archive."
 msgstr ""
 
 #: includes/desktop-themes/rest.php:165
-#, fuzzy
 msgid "That file name is not allowed."
-msgstr "Ese archivo no es una imagen."
+msgstr ""
 
 #. translators: %s: formatted maximum file size.
 #: includes/desktop-themes/rest.php:177
@@ -6529,9 +6196,8 @@ msgid "The theme installed but could not be described back to the shell."
 msgstr ""
 
 #: includes/desktop-themes/store.php:109
-#, fuzzy
 msgid "Could not create the desktop-themes directory."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #. translators: %s: desktop theme name. Marks a wallpaper that came from a theme.
 #: includes/desktop-themes/wallpapers.php:99
@@ -6559,10 +6225,8 @@ msgid "Unknown app."
 msgstr ""
 
 #: includes/framework/wordpress.php:709 includes/framework/wordpress.php:723
-#, fuzzy
 msgid "You are not allowed to use this window."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/framework/wordpress.php:724
 msgid "This window does not know that action."
@@ -6630,15 +6294,12 @@ msgid ""
 msgstr ""
 
 #: includes/games/rest.php:40 includes/games/rest.php:56
-#, fuzzy
 msgid "You cannot use desktop games."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/games/rest.php:427
-#, fuzzy
 msgid "You cannot challenge this user."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/games/rest.php:459 includes/games/store.php:333
 #: includes/games/store.php:399
@@ -6654,29 +6315,25 @@ msgid "A valid user is required to save a score."
 msgstr ""
 
 #: includes/games/store.php:119
-#, fuzzy
 msgid "Could not save the score."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/games/store.php:212 includes/games/store.php:501
 #: includes/games/store.php:504
-#, fuzzy
 msgid "Former user"
-msgstr "Buscar medios"
+msgstr ""
 
 #: includes/games/store.php:247
 msgid "The challenged user does not exist."
 msgstr ""
 
 #: includes/games/store.php:254
-#, fuzzy
 msgid "You cannot challenge yourself."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/games/store.php:278
-#, fuzzy
 msgid "Could not create the challenge."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/games/store.php:325
 msgid "Invalid challenge state."
@@ -6727,14 +6384,12 @@ msgid "Only return images at least this many pixels tall."
 msgstr "Devolver solo imágenes con al menos esta altura en píxeles."
 
 #: includes/multisite.php:44
-#, fuzzy
 msgid "Sites"
-msgstr "Predeterminada"
+msgstr ""
 
 #: includes/multisite.php:48
-#, fuzzy
 msgid "Settings"
-msgstr "Biblioteca de medios"
+msgstr ""
 
 #: includes/my-wordpress/attached-media.php:52
 msgid ""
@@ -6760,40 +6415,32 @@ msgid "Sorry, that content type is not available."
 msgstr ""
 
 #: includes/my-wordpress/class-openstation-my-wordpress-post-type-controller.php:215
-#, fuzzy
 msgid "Sorry, you are not allowed to browse this content type."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/my-wordpress/comment-stats.php:75
-#, fuzzy
 msgid "You do not have permission to view this comment."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/my-wordpress/integrations/woocommerce-customers.php:327
 msgid "Repeat"
 msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce-customers.php:332
-#, fuzzy
 msgid "New"
-msgstr "Añadir %s"
+msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce-customers.php:337
-#, fuzzy
 msgid "No orders yet"
-msgstr "Subiendo…"
+msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce-customers.php:714
 msgid "WooCommerce lifetime facts for this customer."
 msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce-customers.php:747
-#, fuzzy
 msgid "Sorry, you are not allowed to view customers."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/my-wordpress/integrations/woocommerce-customers.php:902
 #: includes/my-wordpress/integrations/woocommerce-customers.php:1047
@@ -6802,15 +6449,15 @@ msgstr ""
 
 #. translators: %s: product name.
 #: includes/my-wordpress/integrations/woocommerce-relations.php:226
-#, fuzzy, php-format
+#, php-format
 msgid "Reviews of %s"
-msgstr "Vista general"
+msgstr ""
 
 #. translators: 1: order number, 2: customer name.
 #: includes/my-wordpress/integrations/woocommerce-relations.php:370
-#, fuzzy, php-format
+#, php-format
 msgid "Order #%1$s · %2$s"
-msgstr "Error al subir."
+msgstr ""
 
 #. translators: %s: order number.
 #: includes/my-wordpress/integrations/woocommerce-relations.php:376
@@ -6824,14 +6471,12 @@ msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce-relations.php:753
 #: includes/my-wordpress/integrations/woocommerce-relations.php:754
-#, fuzzy
 msgid "Reviews"
-msgstr "Vista general"
+msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce-relations.php:771
-#, fuzzy
 msgid "Variations"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #. translators: 1: order number, 2: customer name, 3: order total.
 #: includes/my-wordpress/integrations/woocommerce-relations.php:816
@@ -6903,10 +6548,8 @@ msgid "Stock and category facts used by the site window tiles."
 msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce.php:1018
-#, fuzzy
 msgid "Sorry, you are not allowed to view orders."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/my-wordpress/integrations/woocommerce.php:1306
 #: includes/my-wordpress/integrations/woocommerce.php:1395
@@ -6938,10 +6581,8 @@ msgid "Unknown summary type."
 msgstr ""
 
 #: includes/my-wordpress/integrations/woocommerce.php:1730
-#, fuzzy
 msgid "Sorry, you are not allowed to view this item."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/my-wordpress/lock.php:266
 msgid "Active edit-lock holder, or null when the post is not locked."
@@ -6984,9 +6625,8 @@ msgid "View activity footprint"
 msgstr ""
 
 #: includes/notes/cpt.php:63
-#, fuzzy
 msgid "Desktop Notes"
-msgstr "Escritorio %d"
+msgstr ""
 
 #: includes/notes/recycle-bin.php:89 includes/notes/rest.php:230
 msgid "Note"
@@ -7001,30 +6641,24 @@ msgid "Only the note owner can change it."
 msgstr ""
 
 #: includes/notes/rest.php:300
-#, fuzzy
 msgid "You are not allowed to create notes."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/notes/rest.php:385
 msgid "The note was changed by another session."
 msgstr ""
 
 #: includes/notes/rest.php:446
-#, fuzzy
 msgid "Could not move the note to the trash."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/notes/rest.php:477
-#, fuzzy
 msgid "Could not restore the note."
-msgstr "No se pudieron cargar tus medios: %s"
+msgstr ""
 
 #: includes/notes/rest.php:544
-#, fuzzy
 msgid "You are not allowed to create posts."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/oauth-relay.php:98
 msgid "OAuth relay registration requires a non-empty service slug."
@@ -7088,9 +6722,8 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: includes/plugin-notices.php:121
-#, fuzzy
 msgid "View actions"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: includes/portal.php:124
 msgid "Sorry, you are not allowed to access the WordPress desktop."
@@ -7122,10 +6755,8 @@ msgid "Item is not in the trash."
 msgstr ""
 
 #: includes/recycle-bin/store.php:712
-#, fuzzy
 msgid "You are not allowed to restore this item."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/recycle-bin/store.php:725
 msgid "Failed to restore item."
@@ -7136,10 +6767,8 @@ msgid "Comment is not in the trash."
 msgstr ""
 
 #: includes/recycle-bin/store.php:758
-#, fuzzy
 msgid "You are not allowed to restore this comment."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/recycle-bin/store.php:771
 msgid "Failed to restore comment."
@@ -7307,9 +6936,8 @@ msgid "Admin navigation"
 msgstr "Navegación del administrador"
 
 #: includes/seen-intros.php:247
-#, fuzzy
 msgid "The `slug` parameter must be a non-empty string."
-msgstr "El parámetro «url» debe ser una cadena o null."
+msgstr ""
 
 #: includes/settings-tabs.php:58
 msgid "Settings tab script registration requires a non-empty script handle."
@@ -7325,15 +6953,12 @@ msgid "Settings tab registration requires a non-empty `label`."
 msgstr ""
 
 #: includes/shell-screen.php:358
-#, fuzzy
 msgid "OpenStation is not active for your account on this request."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/shell-screen.php:359
-#, fuzzy
 msgid "Open the desktop"
-msgstr "Añadir nuevo escritorio"
+msgstr ""
 
 #. translators: 1: script or style handle, 2: script or style
 #: includes/shell-screen.php:581
@@ -7364,9 +6989,8 @@ msgid "Station Home card registration requires a callable `callback`."
 msgstr ""
 
 #: includes/themes-tabs.php:59
-#, fuzzy
 msgid "Add Theme"
-msgstr "Añadir %s"
+msgstr ""
 
 #: includes/themes-tabs.php:130
 msgid "Site appearance"
@@ -7382,11 +7006,10 @@ msgid ""
 msgstr ""
 
 #: includes/themes-tabs.php:147
-#, fuzzy
 msgid "Theme installed"
 msgid_plural "Themes installed"
-msgstr[0] "Ese archivo no es una imagen."
-msgstr[1] "Ese archivo no es una imagen."
+msgstr[0] ""
+msgstr[1] ""
 
 #: includes/title-bar-buttons.php:54
 msgid ""
@@ -7518,9 +7141,8 @@ msgid ""
 msgstr ""
 
 #: includes/welcome-dialog.php:105
-#, fuzzy
 msgid "Welcome to OpenStation"
-msgstr "Cambiar a modo escritorio"
+msgstr ""
 
 #: includes/welcome-dialog.php:106
 msgid ""
@@ -7540,9 +7162,8 @@ msgid "Enable it now"
 msgstr ""
 
 #: includes/welcome-dialog.php:110
-#, fuzzy
 msgid "Enabling…"
-msgstr "Subiendo…"
+msgstr ""
 
 #: includes/welcome-dialog.php:115
 msgid "Multi-window workspace"
@@ -7605,9 +7226,8 @@ msgid ""
 msgstr ""
 
 #: includes/widgets/widget-comments.php:71
-#, fuzzy
 msgid "Recent Comments"
-msgstr "Cambiar a modo escritorio"
+msgstr ""
 
 #: includes/widgets/widget-comments.php:72
 msgid "Live feed of the latest comments with pending count."
@@ -7619,20 +7239,16 @@ msgstr ""
 
 #: includes/widgets/widget-drafts.php:150
 #: includes/widgets/widget-drafts.php:455 includes/window-links.php:902
-#, fuzzy
 msgid "You are not allowed to edit this post."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/widgets/widget-drafts.php:157
 msgid "No AI provider is configured."
 msgstr ""
 
 #: includes/widgets/widget-drafts.php:303
-#, fuzzy
 msgid "AI is not available on this site."
 msgstr ""
-"Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
 #: includes/widgets/widget-drafts.php:349
 msgid "The AI response could not be parsed."
@@ -7748,21 +7364,21 @@ msgstr ""
 
 #. translators: %s: post title.
 #: includes/window-links.php:105
-#, fuzzy, php-format
+#, php-format
 msgid "Revisions of %s"
-msgstr "Vista general"
+msgstr ""
 
 #. translators: %s: post title.
 #: includes/window-links.php:205
-#, fuzzy, php-format
+#, php-format
 msgid "Comments on %s"
-msgstr "Buscar medios"
+msgstr ""
 
 #. translators: %d: attachment ID.
 #: includes/window-links.php:744
-#, fuzzy, php-format
+#, php-format
 msgid "Media item %d"
-msgstr "Biblioteca de medios"
+msgstr ""
 
 #. translators: %d: post ID.
 #: includes/window-links.php:778
@@ -7771,9 +7387,8 @@ msgid "Post %d"
 msgstr ""
 
 #: includes/window-links.php:783
-#, fuzzy
 msgid "Linked posts"
-msgstr "Tamaño del dock"
+msgstr ""
 
 #: includes/window-links.php:875
 msgid "Post ID to recompute the content identity for."
@@ -7807,14 +7422,12 @@ msgid "Window notice `tone` must be one of the documented values."
 msgstr ""
 
 #: includes/wp-icon-registry.php:40
-#, fuzzy
 msgid "Window"
-msgstr "Acciones de ventana"
+msgstr ""
 
 #: includes/wp-icon-registry.php:41
-#, fuzzy
 msgid "All windows"
-msgstr "Organizar todas las ventanas en mosaico"
+msgstr ""
 
 #: includes/wp-icon-registry.php:43
 msgid "Spaces"
@@ -7825,9 +7438,8 @@ msgid "Copilot"
 msgstr ""
 
 #: includes/wp-icon-registry.php:45
-#, fuzzy
 msgid "Snap layout"
-msgstr "Escritorio 1"
+msgstr ""
 
 #: includes/wp-icon-registry.php:46
 msgid "Command palette"
@@ -7851,529 +7463,401 @@ msgid ""
 "fork it as the starting point for a theme of your own."
 msgstr ""
 
-#, fuzzy
 #~ msgid "Pin to desktop"
 #~ msgstr "Añadir nuevo escritorio"
 
-#, fuzzy
 #~ msgid "Search"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Recent"
 #~ msgstr "Cambiar a modo escritorio"
 
-#, fuzzy
 #~ msgid "Scanned %1$s of %2$s"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Updated"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Could not read the log: %s"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Could not clear the log: %s"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Could not load log sources: %s"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "%d replies"
 #~ msgstr "Subpáginas de %s"
 
-#, fuzzy
 #~ msgid "Comments on this post"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Show all"
 #~ msgstr "Mostrando %d"
 
 #~ msgid "Load more"
 #~ msgstr "Cargar más"
 
-#, fuzzy
 #~ msgid "View post"
 #~ msgstr "Acciones de ventana"
 
-#, fuzzy
 #~ msgid "Reply"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Comment moved to trash."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Reply sent."
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Reply failed."
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Could not load comments"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "%d agent"
 #~ msgid_plural "%d agents"
 #~ msgstr[0] "Error al subir."
 #~ msgstr[1] "Error al subir."
 
-#, fuzzy
 #~ msgid "Delete agent?"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Cast an agent"
 #~ msgstr "Subpáginas de %s"
 
-#, fuzzy
 #~ msgid "No description yet."
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Cast a new agent"
 #~ msgstr "Ese archivo no es una imagen."
 
-#, fuzzy
 #~ msgid "Search abilities"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "On"
 #~ msgstr "Abrir"
 
-#, fuzzy
 #~ msgid "When to use"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Create and chat"
 #~ msgstr "Ese archivo no es una imagen."
 
-#, fuzzy
 #~ msgid "Open profile"
 #~ msgstr "Abrir"
 
-#, fuzzy
 #~ msgid "View contributions"
 #~ msgstr "Acciones de ventana"
 
-#, fuzzy
 #~ msgid "Send to Desktop"
 #~ msgstr "Añadir nuevo escritorio"
 
-#, fuzzy
 #~ msgid "Agent added to the desktop."
 #~ msgstr "Añadir nuevo escritorio"
 
-#, fuzzy
 #~ msgid "Send to %s"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Edit %1$d %2$s"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Add categories"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Add tags…"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Add tags"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Update"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Switch to Draft"
 #~ msgstr "Cambiar a %s"
 
-#, fuzzy
 #~ msgid "%d user updated"
 #~ msgstr "%d actualización"
 
-#, fuzzy
 #~ msgid "%d users updated"
 #~ msgstr "%d actualización"
 
-#, fuzzy
 #~ msgid "%d user deleted"
 #~ msgstr "Biblioteca de medios"
 
-#, fuzzy
 #~ msgid "Delete…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Delete %d users…"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Copy link"
 #~ msgstr "Mostrando %d"
 
-#, fuzzy
 #~ msgid "Copy %d links"
 #~ msgstr "Mostrando %d"
 
-#, fuzzy
 #~ msgid "Could not read the selected entries."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "%d entries updated"
 #~ msgstr "%d actualización"
 
-#, fuzzy
 #~ msgid "New role"
 #~ msgstr "Añadir nuevo escritorio"
 
-#, fuzzy
 #~ msgid "Delete %d users"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Delete all their content"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Search %s…"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Open %d items in the editor"
 #~ msgstr "Abrir en una nueva pestaña del navegador"
 
-#, fuzzy
 #~ msgid "Search users…"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Search users"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Could not load footprint."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "T"
 #~ msgstr "Hasta"
 
-#, fuzzy
 #~ msgid "Updated “%s”"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Often paired categories"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Move %d items to Trash?"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "%d items moved to Trash"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Nothing could be moved to Trash."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Search…"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Open %1$d items in %2$s"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Failed to load usage data."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Open file in new tab"
 #~ msgstr "Abrir en una nueva pestaña del navegador"
 
-#, fuzzy
 #~ msgid "Delete %d files permanently"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Search media…"
 #~ msgstr "Buscar medios"
 
 #~ msgid "Search media"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Delete media?"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "%d files deleted."
 #~ msgstr "Biblioteca de medios"
 
-#, fuzzy
 #~ msgid "Media deleted."
 #~ msgstr "Biblioteca de medios"
 
-#, fuzzy
 #~ msgid "Couldn’t delete that file."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Open file"
 #~ msgstr "Abrir"
 
-#, fuzzy
 #~ msgid "Uploader"
 #~ msgstr "Subir nueva"
 
-#, fuzzy
 #~ msgid "Upload Plugin"
 #~ msgstr "Subir nueva"
 
-#, fuzzy
 #~ msgid "Installing…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Activating…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Could not load plugins: %s"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Could not load featured plugins: %s"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Could not load plugin details."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Updated %s"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Could not load reviews."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Update to %s"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Loading description…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "View on WordPress.org"
 #~ msgstr "Azul WordPress"
 
-#, fuzzy
 #~ msgid "Requires WordPress"
 #~ msgstr "Azul WordPress"
 
-#, fuzzy
 #~ msgid "Couldn’t load reviews"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Disabling…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Updating…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Update %d"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "%s is already up to date."
 #~ msgstr "%s (ya añadido)"
 
-#, fuzzy
 #~ msgid "Update of %1$s failed: %2$s"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "updated"
 #~ msgstr "%d actualización"
 
-#, fuzzy
 #~ msgid "Upload a plugin"
 #~ msgstr "Subir nueva"
 
-#, fuzzy
 #~ msgid "Drop a .zip plugin file here, or click to choose a file."
 #~ msgstr "Suelta una imagen aquí, o haz clic para subir"
 
-#, fuzzy
 #~ msgid "Drop your .zip here or click to browse"
 #~ msgstr "Suelta una imagen aquí, o haz clic para subir"
 
-#, fuzzy
 #~ msgid "Activate Plugin"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Activate failed: %s"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Uploading and installing…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Replace"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Upload failed: %s"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Couldn’t load categories:"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Couldn’t create:"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Couldn’t reparent:"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Couldn’t save:"
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Reparent failed:"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Couldn’t load posts:"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Move %d page to the trash?"
 #~ msgid_plural "Move %d pages to the trash?"
 #~ msgstr[0] "No se pudieron cargar tus medios: %s"
 #~ msgstr[1] "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Move %d post to the trash?"
 #~ msgid_plural "Move %d posts to the trash?"
 #~ msgstr[0] "No se pudieron cargar tus medios: %s"
 #~ msgstr[1] "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Couldn’t add tag \"%s\"."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Couldn’t remove tag \"%s\"."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Couldn’t update categories."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Couldn’t add category."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "No pages"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Add tag"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Search tags…"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Couldn’t load tags:"
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Site default"
 #~ msgstr "Predeterminada"
 
-#, fuzzy
 #~ msgid "Save failed."
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "+ %d page"
 #~ msgid_plural "+ %d pages"
 #~ msgstr[0] "Subpáginas de %s"
 #~ msgstr[1] "Subpáginas de %s"
 
-#, fuzzy
 #~ msgid "Member"
 #~ msgstr "Ámbar"
 
-#, fuzzy
 #~ msgid "on"
 #~ msgstr "Monocromo"
 
-#, fuzzy
 #~ msgid "%d min ago"
 #~ msgstr "Navegación del administrador"
 
-#, fuzzy
 #~ msgid "Loading profile…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Could not load profile (%s)."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Could not load insights (%s)."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Could not create the user."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Could not load the Trash. Try Refresh."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Emptying…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Loading preferences…"
 #~ msgstr "Subiendo…"
 
@@ -8390,42 +7874,33 @@ msgstr ""
 #~ "Personaliza tu escritorio. Los cambios se aplican al instante y se "
 #~ "guardan en este navegador."
 
-#, fuzzy
 #~ msgid "Navigation"
 #~ msgstr "Acciones de ventana"
 
-#, fuzzy
 #~ msgid "Search settings"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Read more"
 #~ msgstr "Cargar más"
 
-#, fuzzy
 #~ msgid "No dispatches yet."
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "About OpenStation"
 #~ msgstr "Cambiar a modo escritorio"
 
-#, fuzzy
 #~ msgid "A desktop for WordPress."
 #~ msgstr "Azul WordPress"
 
-#, fuzzy
 #~ msgid "View the project"
 #~ msgstr "Acciones de ventana"
 
 #~ msgid "Used in focused window title bars, buttons, and focus rings."
 #~ msgstr "Usado en barras de título enfocadas, botones y anillos de foco."
 
-#, fuzzy
 #~ msgid "Custom"
 #~ msgstr "Imagen personalizada"
 
-#, fuzzy
 #~ msgid "Admin bar"
 #~ msgstr "Navegación del administrador"
 
@@ -8486,94 +7961,72 @@ msgstr ""
 #~ msgid "Upload failed."
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Placement"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Dock position"
 #~ msgstr "Tamaño del dock"
 
 #~ msgid "Dock size"
 #~ msgstr "Tamaño del dock"
 
-#, fuzzy
 #~ msgid "Desktop layout"
 #~ msgstr "Escritorio 1"
 
-#, fuzzy
 #~ msgid "Dock style"
 #~ msgstr "Tamaño del dock"
 
-#, fuzzy
 #~ msgid "Unfocused windows"
 #~ msgstr "Organizar ventanas"
 
-#, fuzzy
 #~ msgid "Window reveal"
 #~ msgstr "Acciones de ventana"
 
-#, fuzzy
 #~ msgid "Window links"
 #~ msgstr "Acciones de ventana"
 
-#, fuzzy
 #~ msgid "Link style"
 #~ msgstr "Tamaño del dock"
 
-#, fuzzy
 #~ msgid "Show links"
 #~ msgstr "Mostrando %d"
 
-#, fuzzy
 #~ msgid "Saving…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Could not delete sharing data."
 #~ msgstr "No se pudieron cargar tus medios: %s"
 
-#, fuzzy
 #~ msgid "Deleting…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "WordPress Heartbeat rate"
 #~ msgstr "Azul WordPress"
 
-#, fuzzy
 #~ msgid "Search components"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "default"
 #~ msgstr "Predeterminada"
 
-#, fuzzy
 #~ msgid "WordPress Core"
 #~ msgstr "Azul WordPress"
 
-#, fuzzy
 #~ msgid "On the desktop"
 #~ msgstr "Añadir nuevo escritorio"
 
-#, fuzzy
 #~ msgid "Delete this theme?"
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "The look OpenStation ships with"
 #~ msgstr "Cambiar a modo escritorio"
 
-#, fuzzy
 #~ msgid "Drop a theme .zip here, or click to upload"
 #~ msgstr "Suelta una imagen aquí, o haz clic para subir"
 
-#, fuzzy
 #~ msgid "Desktop theme"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "Wallpaper settings"
 #~ msgstr "Fondo de pantalla"
 
@@ -8593,123 +8046,95 @@ msgstr ""
 #~ "El fondo tras tus ventanas. Elige un preestablecido, mezcla tu propio "
 #~ "gradiente o suelta una imagen."
 
-#, fuzzy
 #~ msgid "Use your own image"
 #~ msgstr "O usa tu propia imagen"
 
-#, fuzzy
 #~ msgid "Window corners"
 #~ msgstr "Acciones de ventana"
 
-#, fuzzy
 #~ msgid "Comment status"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Search comments…"
 #~ msgstr "Buscar medios"
 
-#, fuzzy
 #~ msgid "Add New"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Add Plugin"
 #~ msgstr "Subir nueva"
 
-#, fuzzy
 #~ msgid "Desktop"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "Preparing your station…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Add new"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Add a new user"
 #~ msgstr "Añadir nuevo escritorio"
 
-#, fuzzy
 #~ msgid "Add trigger"
 #~ msgstr "Añadir %s"
 
-#, fuzzy
 #~ msgid "Apps & Plugins"
 #~ msgstr "Subir nueva"
 
-#, fuzzy
 #~ msgid "WordPress at scale"
 #~ msgstr "Azul WordPress"
 
 #~ msgid "Width of the dock and size of its icons."
 #~ msgstr "Anchura del dock y tamaño de sus iconos."
 
-#, fuzzy
 #~ msgid "Desktop themes"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "Could not save sticky note."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Exit Desktop Mode"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "WordPress Desktop Mode"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "Made for Desktop Mode"
 #~ msgstr "Cambiar a modo escritorio"
 
 #~ msgid "Switch to Desktop Mode"
 #~ msgstr "Cambiar a modo escritorio"
 
-#, fuzzy
 #~ msgid "Desktop Mode agents"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "You do not have permission to invoke Desktop Mode agents."
 #~ msgstr ""
 #~ "Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
-#, fuzzy
 #~ msgid "Desktop Mode plugins"
 #~ msgstr "Escritorio %d"
 
-#, fuzzy
 #~ msgid "You can't edit this comment."
 #~ msgstr ""
 #~ "Lo sentimos, no tienes permiso para acceder al escritorio de WordPress."
 
-#, fuzzy
 #~ msgid "Loading author insights…"
 #~ msgstr "Subiendo…"
 
-#, fuzzy
 #~ msgid "Could not load insights."
 #~ msgstr "No se pudieron cargar tus medios."
 
-#, fuzzy
 #~ msgid "Bulk %s failed."
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Undo failed."
 #~ msgstr "Error al subir."
 
-#, fuzzy
 #~ msgid "Welcome to the new Comments"
 #~ msgstr "Cambiar a modo escritorio"
 
-#, fuzzy
 #~ msgid "Undo last action"
 #~ msgstr "Acciones de ventana"
 
