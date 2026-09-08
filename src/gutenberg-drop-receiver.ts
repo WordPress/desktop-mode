@@ -27,6 +27,13 @@
  * but the browser's same-origin boundary is the real defence.
  */
 
+import {
+	computeInsertionPoint,
+	resolveCanvasPoint,
+	sameInsertionPoint,
+	type InsertionPoint,
+} from './gutenberg-insertion-point';
+
 // ---------------------------------------------------------------------
 // Payload shapes — mirror the discriminated union in `src/drag-bridge.ts`.
 // Duplicated here (instead of imported) because this is a standalone
@@ -59,15 +66,36 @@ interface UserDragPayload {
 	title: string;
 }
 
+/**
+ * A stored desktop file. The shell resolves it into an `attachment`
+ * before `os-drop`, so it only ever reaches this receiver on
+ * `os-drag-over` — where it means "a media file is on its way" and
+ * earns the insertion indicator like any other payload.
+ */
+interface UploadDragPayload {
+	kind: 'upload';
+	fileId: number;
+	title: string;
+	mime: string;
+	thumbnailUrl?: string;
+}
+
 type DragBridgePayload =
 	| AttachmentDragPayload
 	| PostDragPayload
-	| UserDragPayload;
+	| UserDragPayload
+	| UploadDragPayload;
+
+/** Pointer position relative to this window's iframe, as the parent posts it. */
+interface DragPosition {
+	x: number;
+	y: number;
+}
 
 interface DropMsg {
 	type: 'os-drop';
 	payload: DragBridgePayload;
-	position?: { x: number; y: number };
+	position?: DragPosition;
 }
 
 // ---------------------------------------------------------------------
@@ -178,6 +206,11 @@ export function buildBlockSpec(
 	// hrefs aren't useful and the drop should snap back instead of
 	// silently inserting a dead link. Same scheme gate as
 	// attachments: a `javascript:` URL would be a one-click XSS.
+	if ( payload.kind === 'upload' ) {
+		// Never delivered on `os-drop` — the shell resolves it to an
+		// attachment first. Nothing to insert from the bare shape.
+		return null;
+	}
 	if ( ! payload.url || ! isSafeUrl( payload.url ) ) {
 		return null;
 	}
@@ -200,7 +233,14 @@ interface WpBlocks {
 }
 
 interface WpDataDispatch {
-	insertBlocks( blocks: unknown[] ): void;
+	insertBlocks( blocks: unknown[], index?: number, rootClientId?: string ): void;
+	/** Draws Gutenberg's own insertion line at `( rootClientId, index )`. */
+	showInsertionPoint(
+		rootClientId: string | undefined,
+		index: number,
+		options?: { operation?: 'insert' | 'replace' | 'group' },
+	): void;
+	hideInsertionPoint(): void;
 }
 
 interface WpDataSelect {
@@ -257,14 +297,79 @@ async function waitForEditor(): Promise< {
 	} );
 }
 
-async function performInsert( payload: DragBridgePayload ): Promise< void > {
-	const spec = buildBlockSpec( payload );
-	if ( ! spec ) {
+// ---------------------------------------------------------------------
+// Insertion point — where the drop will land, drawn by Gutenberg.
+// ---------------------------------------------------------------------
+
+/**
+ * The spot the last `os-drag-move` (or native `dragover`) resolved
+ * to. Kept so a drop can land where the indicator was even if its
+ * own position resolves to nothing (the pointer released a pixel
+ * off the list), and so unchanged spots don't re-dispatch.
+ */
+let lastInsertionPoint: InsertionPoint | null = null;
+
+/**
+ * Resolve a pointer position — in this window's viewport unless
+ * `doc` names the document the pointer is already in — to an
+ * insertion point, and draw (or clear) Gutenberg's indicator.
+ */
+function trackInsertionPoint( x: number, y: number, doc?: Document ): void {
+	const target = doc ? { doc, x, y } : resolveCanvasPoint( document, x, y );
+	const point = computeInsertionPoint( target.doc, target.x, target.y );
+	if ( sameInsertionPoint( point, lastInsertionPoint ) ) {
 		return;
 	}
+	lastInsertionPoint = point;
+	const dispatch = window.wp?.data?.dispatch( 'core/block-editor' );
+	if ( ! dispatch ) {
+		return;
+	}
+	if ( point ) {
+		dispatch.showInsertionPoint( point.rootClientId || undefined, point.index, {
+			operation: 'insert',
+		} );
+	} else {
+		dispatch.hideInsertionPoint();
+	}
+}
+
+function clearInsertionPoint(): void {
+	const hadPoint = lastInsertionPoint !== null;
+	lastInsertionPoint = null;
+	if ( hadPoint ) {
+		window.wp?.data?.dispatch( 'core/block-editor' )?.hideInsertionPoint();
+	}
+}
+
+/**
+ * Insert the payload's block — at the drop position when that
+ * resolves to a spot in the block list, else where the indicator
+ * last was, else wherever the editor puts a plain insert.
+ */
+async function performInsert(
+	payload: DragBridgePayload,
+	position?: DragPosition,
+	doc?: Document,
+): Promise< void > {
+	const spec = buildBlockSpec( payload );
+	if ( ! spec ) {
+		clearInsertionPoint();
+		return;
+	}
+	if ( position ) {
+		trackInsertionPoint( position.x, position.y, doc );
+	}
+	const point = lastInsertionPoint;
+	clearInsertionPoint();
 	const { blocks, data } = await waitForEditor();
 	const block = blocks.createBlock( spec.name, spec.attributes );
-	data.dispatch( 'core/block-editor' ).insertBlocks( [ block ] );
+	const dispatch = data.dispatch( 'core/block-editor' );
+	if ( point ) {
+		dispatch.insertBlocks( [ block ], point.index, point.rootClientId || undefined );
+	} else {
+		dispatch.insertBlocks( [ block ] );
+	}
 }
 
 /**
@@ -364,6 +469,12 @@ interface DragOverMsg {
 	payload: DragBridgePayload;
 }
 
+/** The pointer moved while over this window; streamed per frame by the parent. */
+interface DragMoveMsg {
+	type: 'os-drag-move';
+	position: DragPosition;
+}
+
 interface DragLeaveMsg {
 	type: 'os-drag-leave';
 }
@@ -380,7 +491,24 @@ function isDragOverMsg( m: unknown ): m is DragOverMsg {
 	if ( ! p || typeof p !== 'object' ) {
 		return false;
 	}
-	return p.kind === 'attachment' || p.kind === 'post' || p.kind === 'user';
+	return (
+		p.kind === 'attachment' ||
+		p.kind === 'post' ||
+		p.kind === 'user' ||
+		p.kind === 'upload'
+	);
+}
+
+function isDragMoveMsg( m: unknown ): m is DragMoveMsg {
+	if ( ! m || typeof m !== 'object' ) {
+		return false;
+	}
+	const obj = m as { type?: unknown; position?: unknown };
+	if ( obj.type !== 'os-drag-move' ) {
+		return false;
+	}
+	const pos = obj.position as { x?: unknown; y?: unknown } | undefined;
+	return !! pos && typeof pos.x === 'number' && typeof pos.y === 'number';
 }
 
 function isDragLeaveMsg( m: unknown ): m is DragLeaveMsg {
@@ -405,6 +533,23 @@ function onNativeDragOver( e: DragEvent ): void {
 	if ( e.dataTransfer ) {
 		e.dataTransfer.dropEffect = 'copy';
 	}
+	// The event fired inside the document that holds the list (the
+	// canvas iframe's, when attached there), so no canvas translation.
+	const doc = documentOfTarget( e );
+	if ( doc ) {
+		trackInsertionPoint( e.clientX, e.clientY, doc );
+	}
+}
+
+/**
+ * The document a native drag event fired in. Duck-typed rather than
+ * `instanceof Node`: an event from the canvas iframe carries a
+ * target from that iframe's realm, where `Node` is a different
+ * constructor and the check is false.
+ */
+function documentOfTarget( e: Event ): Document | undefined {
+	const target = e.target as { ownerDocument?: Document | null } | null;
+	return target?.ownerDocument ?? undefined;
 }
 
 function onNativeDrop( e: DragEvent ): void {
@@ -426,7 +571,8 @@ function onNativeDrop( e: DragEvent ): void {
 	if ( typeof e.stopImmediatePropagation === 'function' ) {
 		e.stopImmediatePropagation();
 	}
-	void performInsert( payload ).catch( ( err: unknown ) => {
+	const doc = documentOfTarget( e );
+	void performInsert( payload, { x: e.clientX, y: e.clientY }, doc ).catch( ( err: unknown ) => {
 		const reason = err instanceof Error ? err.message : String( err );
 		// eslint-disable-next-line no-console
 		console.error(
@@ -488,8 +634,18 @@ function install(): void {
 			stashedBridgePayload = e.data.payload;
 			return;
 		}
+		// Bridge `drag-move` — the pointer, in this iframe's
+		// coordinates, once per frame. Turns into Gutenberg's own
+		// insertion line at the spot the drop would land.
+		if ( isDragMoveMsg( e.data ) ) {
+			if ( stashedBridgePayload ) {
+				trackInsertionPoint( e.data.position.x, e.data.position.y );
+			}
+			return;
+		}
 		if ( isDragLeaveMsg( e.data ) ) {
 			stashedBridgePayload = null;
+			clearInsertionPoint();
 			return;
 		}
 		if ( ! isDropMsg( e.data ) ) {
@@ -500,7 +656,7 @@ function install(): void {
 		// the parent doc). Clear any stash so the native backstop
 		// doesn't double-fire on the same drop.
 		stashedBridgePayload = null;
-		void performInsert( e.data.payload ).catch( ( err: unknown ) => {
+		void performInsert( e.data.payload, e.data.position ).catch( ( err: unknown ) => {
 			const reason = err instanceof Error ? err.message : String( err );
 			// eslint-disable-next-line no-console
 			console.error(

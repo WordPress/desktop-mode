@@ -60,6 +60,76 @@ add_action( 'openstation_stored_file_downloaded', static function ( $file_id, $u
 }, 10, 2 );
 ```
 
+## Into the Media Library — caption the copy, seed the post
+
+"Add to Media Library" and "Start a post / page with this image"
+copy the stored file into the Media Library once (idempotent per
+file) and, for the post entries, start an `auto-draft` with the
+attachment as its content. Three filters shape that:
+
+```php
+// Give the attachment a caption and description when it is copied.
+add_filter( 'openstation_stored_file_media_post_data', static function ( $post_data, $row, $user_id ) {
+	$post_data['post_excerpt'] = sprintf( 'From %s’s desktop', get_the_author_meta( 'display_name', $user_id ) );
+	$post_data['post_content'] = 'Original file: ' . $row['display_name'];
+	return $post_data;
+}, 10, 3 );
+
+// Put a heading above the image in every post started from a file.
+add_filter( 'openstation_stored_file_start_post_content', static function ( $content, $attachment_id, $post_type ) {
+	if ( 'post' !== $post_type ) {
+		return $content;
+	}
+	return '<!-- wp:heading --><h2 class="wp-block-heading">Photo of the day</h2><!-- /wp:heading -->' . $content;
+}, 10, 3 );
+
+// Start pages as real drafts instead of auto-drafts.
+add_filter( 'openstation_stored_file_start_post_args', static function ( $args, $attachment_id, $post_type ) {
+	if ( 'page' === $post_type ) {
+		$args['post_status'] = 'draft'; // survives an abandoned editor
+	}
+	return $args;
+}, 10, 3 );
+```
+
+To keep a type out of the Media Library even though WordPress would
+accept it — or to let one in — decide per row:
+
+```php
+add_filter( 'openstation_stored_file_is_media', static function ( $is_media, $row ) {
+	return $is_media && 'application/zip' !== $row['mime'];
+}, 10, 2 );
+```
+
+And react once the copy or the post exists:
+
+```php
+add_action( 'openstation_stored_file_post_started', static function ( $post_id, $attachment_id, $file_id, $user_id ) {
+	wp_set_post_tags( $post_id, array( 'from-desktop' ), true );
+}, 10, 4 );
+```
+
+Dropping media uploads on a post tile appends them as blocks. To
+wrap several dropped images in a gallery instead of one image block
+each:
+
+```php
+add_filter( 'openstation_stored_file_attach_content', static function ( $markup, $attachment_ids ) {
+	$images = array_filter( $attachment_ids, 'wp_attachment_is_image' );
+	if ( count( $images ) < 2 ) {
+		return $markup;
+	}
+	$inner = implode( '', array_map( static function ( $id ) {
+		return sprintf(
+			'<!-- wp:image {"id":%1$d,"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+			$id,
+			esc_url( wp_get_attachment_image_url( $id, 'large' ) )
+		);
+	}, $images ) );
+	return '<!-- wp:gallery {"linkTo":"none"} --><figure class="wp-block-gallery has-nested-images columns-default is-cropped">' . $inner . '</figure><!-- /wp:gallery -->';
+}, 10, 2 );
+```
+
 ## Share a file from PHP
 
 Single-file shares are read + download only, user principals only —

@@ -459,10 +459,11 @@ Drop-receiver iframes have two ways to consume the payload:
    | Message | Direction | Payload |
    |---|---|---|
    | `os-drag-over` | parent → iframe | `{ type, payload: DragBridgePayload }` |
+   | `os-drag-move` | parent → iframe | `{ type, position: { x, y } }` — the pointer in the iframe's own coordinates, at most once per animation frame while it is over the window |
    | `os-drag-leave` | parent → iframe | `{ type }` |
    | `os-drop` | parent → iframe | `{ type, payload: DragBridgePayload, position: { x, y } }` |
 
-   Receivers listen on `window.message`, check `event.origin === window.location.origin`, and switch on `data.payload.kind`. The built-in Gutenberg receiver (`src/gutenberg-drop-receiver.ts`) is the canonical example.
+   Receivers listen on `window.message`, check `event.origin === window.location.origin`, and switch on `data.payload.kind`. The built-in Gutenberg receiver (`src/gutenberg-drop-receiver.ts`) is the canonical example: it turns every `os-drag-move` into an insertion point — the innermost block under the pointer, split at its midpoint (`src/gutenberg-insertion-point.ts`) — and draws Gutenberg's own blue line there through the block-editor store (`showInsertionPoint`), so the user sees where the block will land and can steer it; `os-drop` then inserts at that `( rootClientId, index )`. `os-drag-leave` clears the line. A pointer over the sidebar or the top bar resolves to no point: no line, and a drop there inserts where a plain insert would.
 
 2. **Pull** — any iframe can postMessage `{ type: 'os-drag-payload-request' }` and the parent replies (directly to `event.source`) with `{ type: 'os-drag-payload', payload }`. Useful for iframes that bind their own native `drop` handler and need the rich payload after the browser has stripped the custom MIME from DataTransfer.
 
@@ -485,8 +486,16 @@ type DragBridgePayload =
       sizes?: Record<string, unknown> }
   | { kind: 'post'; id: number; postType: string; url: string;
       title: string }
-  | { kind: 'user'; id: number; url: string; title: string };
+  | { kind: 'user'; id: number; url: string; title: string }
+  | { kind: 'upload'; fileId: number; title: string; mime: string;
+      thumbnailUrl?: string };
 ```
+
+### Payloads resolved at drop time
+
+An `upload` payload is a stored desktop file — not an attachment, so it has no id and no URL a receiver could insert. The shell **resolves** it when the drop lands: `src/drag/iframe-drop-targets.ts` asks the bridge's resolver registry (`registerBridgePayloadResolver( kind, resolver )` / `resolveBridgePayload( payload )`) before posting `os-drop`, and the `upload` resolver copies the file into the Media Library (idempotently — the same file dropped twice is one attachment) and hands back an `attachment` payload. The receiver therefore never sees `kind: 'upload'` on `os-drop`; it can see it on `os-drag-over` and on a payload pull, where it means "a media file is on its way". Resolution happens at drop, never at lift, so a drag that ends on the wallpaper or in a folder creates nothing. If the resolver fails (the user gets a toast), the iframe receives `os-drag-leave` instead of `os-drop`.
+
+A plugin that lifts a payload kind of its own that cannot be delivered as-is registers a resolver the same way; kinds with no resolver are posted unchanged, synchronously.
 
 ### Sniff points
 

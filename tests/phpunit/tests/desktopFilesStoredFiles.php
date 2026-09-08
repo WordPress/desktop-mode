@@ -166,6 +166,7 @@ class Tests_OpenStation_StoredFiles extends WP_UnitTestCase {
 		$this->assertSame( 4, $shape['sizeBytes'] );
 		$this->assertSame( 'image/jpeg', $shape['mime'] );
 		$this->assertSame( 'image', $shape['kind'] );
+		$this->assertTrue( $shape['isMedia'] );
 		$this->assertSame( 'dashicons-format-image', $shape['icon'] );
 	}
 

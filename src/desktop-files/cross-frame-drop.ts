@@ -106,17 +106,22 @@ function bridgePayload(): DragBridgePayload | null {
 function payloadToEntity(
 	payload: DragBridgePayload | null,
 ): ShortcutDragItem | null {
-	if ( ! payload || typeof payload.id !== 'number' ) {
+	if ( ! payload ) {
 		return null;
 	}
 	// The bridge's union and the file-type registry happen to agree on
 	// every slug (`attachment`, `post`, `user`), so `kind` maps across
 	// unchanged. A new bridge kind without a registered file type
-	// lands in the default and is refused.
+	// lands in the default and is refused — `upload` included: a
+	// stored file dragged from one canvas to another is a placement
+	// move, and the DragManager handles it, never this path.
 	switch ( payload.kind ) {
 		case 'attachment':
 		case 'post':
 		case 'user':
+			if ( typeof payload.id !== 'number' ) {
+				return null;
+			}
 			return {
 				kind: payload.kind,
 				ref: String( payload.id ),

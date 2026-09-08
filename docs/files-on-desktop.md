@@ -941,8 +941,28 @@ resync failed, on the next Heartbeat delta.
 | `GET` | `/uploads/<id>/download` | Stream the bytes, unmodified. `_wpnonce` accepted as a query param so plain `<a>` navigations work. |
 | `GET` | `/folders/<id>/download` | On-demand `.zip` of the folder's stored files (reference-type placements are skipped; empty sub-folders round-trip). Requires the PHP zip extension — 501 + a hidden affordance otherwise. Caps filterable via `openstation_stored_files_zip_caps` (default 1000 entries / 500 MB input). |
 | `GET/POST` | `/uploads/<id>/shares` (+ `/<shareId>`, `/accept`, `/deny`, `/leave`) | Single-file sharing — see [folder-sharing.md](folder-sharing.md#single-file-shares). |
+| `POST` | `/uploads/<id>/media` | Copy the file into the Media Library (see [Into the Media Library](#into-the-media-library) below). Returns `{ attachmentId, created, title, url, editUrl }`. |
+| `POST` | `/uploads/<id>/post` | The same copy, then a new `auto-draft` of `postType` (`post` by default) with the attachment as its content. Returns `{ postId, postType, editUrl, attachment }`. |
+| `POST` | `/posts/<id>/uploads` | Put stored files (`fileIds`) into an existing post the viewer can edit: copy each, append as blocks, attach, first image as featured image when there is none. Returns `{ postId, title, editUrl, appended, featuredImageSet, attachments }`. |
 
-Downloads answer **404** for files the viewer cannot read (existence masking). Not-found and no-access are indistinguishable.
+Downloads and the two media routes answer **404** for files the viewer cannot read (existence masking). Not-found and no-access are indistinguishable.
+
+### Into the Media Library
+
+A stored file is not an attachment, on purpose — but a file the site would accept as an upload can be **copied** into the Media Library from its tile, and an image can start a post or page with itself already in place:
+
+- **Add to Media Library** — offered on every stored file whose `file.isMedia` is true: the MIME type is on the site's upload allow-list (`get_allowed_mime_types()`), filterable via `openstation_stored_file_is_media`. Multi-select aware. Requires `upload_files`.
+- **Start a post with this image** / **Start a page with this image** — images only, gated by the post type's `create_posts` capability.
+
+The copy is **idempotent per stored file**: the attachment records its source in `_openstation_stored_file_id` and `_openstation_stored_file_key` (the row's disk-name UUID) post meta, and a second call — or a "Start a post" after an "Add" — returns the existing attachment rather than a duplicate. Deleting the attachment lets the file be added again. The stored bytes are never moved: the placement keeps owning them, trashing the tile does not touch the attachment, and deleting the attachment does not touch the tile.
+
+"Start a post" inserts an `auto-draft` — exactly what `post-new.php` creates — whose content is the attachment as a block (`core/image` for images, `core/video`, `core/audio`, or `core/file` otherwise), with the image as the featured image when the post type supports thumbnails. The client opens the returned edit URL in a window; an abandoned start is swept with every other auto-draft. The block markup and the insert arguments are filterable (`openstation_stored_file_start_post_content`, `openstation_stored_file_start_post_args`).
+
+The shell config carries what the viewer may do — `desktopStorage.canAddToMedia`, `canStartPost`, `canStartPage` — so the tile only offers what the server would allow.
+
+**Drag a media upload into the block editor.** A media upload tile lifts with an `upload` bridge payload, so an iframe window running the editor lights up as a drop target. The copy into the Media Library happens when the drop lands — never at lift, so a drag that ends on the wallpaper or in a folder creates nothing — and the editor receives the ordinary `attachment` payload it already turns into an image / video / audio / file block. Protocol: [bridge-protocol.md → Payloads resolved at drop time](bridge-protocol.md#payloads-resolved-at-drop-time).
+
+**Drop a media upload on a post tile.** A `post` tile on the wallpaper or in a folder window accepts a `desktop-file` drag when every dragged tile is a media upload (all-or-refuse, like every other set drop); the ghost chip reads "Add to post" or "Add to page". One request (`POST /posts/<id>/uploads`) copies each file, appends it to the post content as a block in drop order (when the post type has an editor), attaches it to the post when it was attached to nothing, and makes the first image the featured image when the post has none. Requires `edit_post` on the target; a post in the Trash refuses. The post then opens in a window, so what landed is in view (and undoable), and the tile's preview re-pulls when a featured image was set. Filter `openstation_stored_file_attach_content` shapes the appended markup; `openstation_stored_file_attached_to_post` fires afterwards.
 
 ### Ownership and sharing
 
@@ -954,7 +974,7 @@ Reconciliation runs on the existing daily prune: placement-less rows and row-les
 
 ### PHP surface
 
-`openstation_stored_files_get/create/rename/delete/purge()`, `openstation_stored_file_path()`, `openstation_stored_file_user_can_read()`, `openstation_stored_files_total_bytes()`, `openstation_stored_file_share_{invite,accept,deny,leave,revoke}()`. Actions: `openstation_stored_file_{created,uploaded,renamed,deleted,downloaded}`, `openstation_folder_zip_downloaded`. See [hooks-reference.md](hooks-reference.md#real-file-storage) for the filters.
+`openstation_stored_files_get/create/rename/delete/purge()`, `openstation_stored_file_path()`, `openstation_stored_file_user_can_read()`, `openstation_stored_files_total_bytes()`, `openstation_stored_file_share_{invite,accept,deny,leave,revoke}()`, `openstation_stored_file_is_media( $row )`, `openstation_stored_file_to_attachment( $file_id, $user_id )`, `openstation_stored_file_find_attachment( $row )`, `openstation_stored_file_start_post( $file_id, $post_type, $user_id )`, `openstation_stored_files_attach_to_post( $post_id, $file_ids, $user_id )`. Actions: `openstation_stored_file_{created,uploaded,renamed,deleted,downloaded,added_to_media,post_started,attached_to_post}`, `openstation_folder_zip_downloaded`. See [hooks-reference.md](hooks-reference.md#real-file-storage) for the filters.
 
 ## What's NOT here yet
 

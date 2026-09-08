@@ -600,6 +600,7 @@ messages into the iframe under the cursor:
 | postMessage type | Direction | When | Payload shape |
 | --- | --- | --- | --- |
 | `os-drag-over` | parent → iframe | cursor entered the iframe | `{ type, payload: DragBridgePayload }` |
+| `os-drag-move` | parent → iframe | cursor moved over the iframe (once per animation frame) | `{ type, position: { x, y } }` in the iframe's coordinates |
 | `os-drag-leave` | parent → iframe | cursor left the iframe | `{ type }` |
 | `os-drop` | parent → iframe | pointerup over the iframe | `{ type, payload: DragBridgePayload, position: { x, y } }` |
 | `os-drag-start` | iframe → parent | iframe initiated its own drag | `{ type, payload: DragBridgePayload }` |
@@ -615,8 +616,30 @@ type DragBridgePayload =
       sizes?: Record<string, unknown> }
   | { kind: 'post'; id: number; postType: string; url: string;
       title: string }
-  | { kind: 'user'; id: number; url: string; title: string };
+  | { kind: 'user'; id: number; url: string; title: string }
+  | { kind: 'upload'; fileId: number; title: string; mime: string;
+      thumbnailUrl?: string };
 ```
+
+`upload` is a stored desktop file (the `upload` file type) lifted
+from a tile — a file the Media Library would accept, dragged by a
+viewer who may add to it. It carries no attachment id and no URL, so
+the shell resolves it when the drop lands: the file is copied into
+the Media Library (idempotently) and the iframe receives an
+`attachment` payload on `os-drop`. A receiver only ever sees
+`kind: 'upload'` on `os-drag-over` or a payload pull. The resolver
+registry is public:
+
+```ts
+import {
+  registerBridgePayloadResolver, // ( kind, resolver ) => deregister
+  resolveBridgePayload,          // ( payload ) => Promise< payload | null >
+} from '…/drag-bridge';
+```
+
+A plugin lifting its own not-yet-deliverable kind registers a
+resolver the same way; kinds without one are posted unchanged. See
+[bridge-protocol.md → Payloads resolved at drop time](bridge-protocol.md#payloads-resolved-at-drop-time).
 
 Public `DragBridgeApi` surface:
 
@@ -648,6 +671,16 @@ listens for `os-drop` and inserts a block:
 - `attachment` `audio/*` → `core/audio`
 - `attachment` other → `core/file`
 - `post` / `user` → `core/paragraph` with `<a href="URL">title</a>`
+
+While the drag is over the editor the receiver turns each
+`os-drag-move` into an insertion point — the innermost block under
+the pointer, before or after it by its midpoint (the cross axis in a
+horizontal list such as Columns), or a position in a list's empty
+space — and draws Gutenberg's own insertion line there with the
+block-editor store's `showInsertionPoint`, so the user steers the
+drop the way they would a block. `os-drop` inserts at that
+`( rootClientId, index )`; a pointer outside the block list gets no
+line and a plain insert. The lookup is `src/gutenberg-insertion-point.ts`.
 
 ### OS-file drop hooks — Experimental
 
@@ -6500,10 +6533,13 @@ contract: [files-on-desktop.md → Real file storage](files-on-desktop.md#real-f
 
 ```ts
 interface DesktopStorageConfig {
-	canUpload: boolean;    // viewer holds the (filterable) upload capability
-	maxBytes: number;      // per-file cap, 0 = no client cap
-	quotaBytes: number;    // per-user quota, 0 = unlimited
-	zipAvailable: boolean; // server has ZipArchive → folder-zip affordances render
+	canUpload: boolean;      // viewer holds the (filterable) upload capability
+	maxBytes: number;        // per-file cap, 0 = no client cap
+	quotaBytes: number;      // per-user quota, 0 = unlimited
+	zipAvailable: boolean;   // server has ZipArchive → folder-zip affordances render
+	canAddToMedia: boolean;  // viewer holds `upload_files` → "Add to Media Library" renders
+	canStartPost: boolean;   // …and may create posts → "Start a post with this image"
+	canStartPage: boolean;   // …and may create pages → "Start a page with this image"
 }
 ```
 
@@ -6526,16 +6562,45 @@ open replaces its pending batch with the latest drop (one dialog,
 never stacked modals, never mixed batches).
 
 **Serialized shape** — `upload` placements carry
-`file.ownerId`, `file.sizeBytes`, `file.mime`, and `file.kind`
-(`image | video | audio | pdf | archive | text | file`) on top of
-the base `DesktopFileShape`.
+`file.ownerId`, `file.sizeBytes`, `file.mime`, `file.kind`
+(`image | video | audio | pdf | archive | text | file`) and
+`file.isMedia` (the Media Library would accept the file — decided
+server-side, filterable via `openstation_stored_file_is_media`) on
+top of the base `DesktopFileShape`.
 
 **Tile menu** — the built-in entries injected through the standard
 `os.files.tile-menu` filter: `desktop-mode/upload-download`
 (every viewer), `desktop-mode/upload-share` (owner),
-`desktop-mode/upload-leave` (recipient's root tile), and
+`desktop-mode/upload-leave` (recipient's root tile),
+`desktop-mode/upload-add-to-media` (every viewer with
+`canAddToMedia`, when `file.isMedia`; multi-select aware),
+`desktop-mode/upload-start-post` / `desktop-mode/upload-start-page`
+(images, with `canStartPost` / `canStartPage`), and
 `desktop-mode/folder-zip-download` on folder tiles when
 `zipAvailable`. Plugins reorder/hide them like any other item.
+
+**Media Library routes** — `POST /uploads/<id>/media` copies the
+file into the Media Library and answers `{ attachmentId, created,
+title, url, editUrl }`; it is idempotent per stored file (`created:
+false` on a repeat). `POST /uploads/<id>/post` with `{ postType }`
+does the same copy, starts an `auto-draft` with the attachment as
+its content (and featured image, for images) and answers `{ postId,
+postType, editUrl, attachment }`; the shell opens `editUrl` in a
+window. `POST /posts/<id>/uploads` with `{ fileIds }` puts stored
+files into an existing post — copy, append as blocks, attach, first
+image as featured image when there is none — and answers `{ postId,
+title, editUrl, appended, featuredImageSet, attachments }`. Server
+contract: [files-on-desktop.md → Into the Media
+Library](files-on-desktop.md#into-the-media-library).
+
+**Drag** — a media upload tile carries an `upload` bridge payload
+(see [`wp.os.dragBridge`](#wposdragbridge--cross-iframe-drag--stable)),
+so it can be dropped into the block editor in an iframe window; the
+copy into the Media Library happens at drop time. Dropped on a
+`post` tile (wallpaper or folder window), the `desktop-file` payload
+is accepted through the tile-payload seam — every dragged tile has
+to be a media upload — and lands through `POST /posts/<id>/uploads`;
+the ghost chip reads "Add to post" / "Add to page".
 
 **Heartbeat invites** — single-file share invites ride the existing
 `shares.pending` channel with `targetType: 'file'`, `fileId`, and

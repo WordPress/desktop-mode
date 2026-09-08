@@ -56,6 +56,8 @@ import type {
 } from '../desktop-files/drag-payloads';
 import {
 	DRAG_BRIDGE_EVENTS,
+	bridgePayloadNeedsResolution,
+	resolveBridgePayload,
 	type DragBridgePayload,
 } from '../drag-bridge';
 import { findWindowRootAtPoint } from './window-at-point';
@@ -127,9 +129,13 @@ const onBridgeDragOver = ( e: DragEvent ): void => {
 	}
 	const iframe = findIframeAtCursor( e.clientX, e.clientY );
 	if ( iframe === _lastHoveredBridgeIframe ) {
+		if ( iframe ) {
+			postDragMove( iframe, e.clientX, e.clientY );
+		}
 		return;
 	}
 	if ( _lastHoveredBridgeIframe ) {
+		cancelDragMove();
 		postIntoIframe( _lastHoveredBridgeIframe, {
 			type: 'os-drag-leave',
 		} );
@@ -140,6 +146,7 @@ const onBridgeDragOver = ( e: DragEvent ): void => {
 			type: 'os-drag-over',
 			payload: _bridgeInterceptPayload,
 		} );
+		postDragMove( iframe, e.clientX, e.clientY );
 	}
 };
 
@@ -216,6 +223,7 @@ function stopBridgeIntercept(): void {
 		return;
 	}
 	_bridgeInterceptPayload = null;
+	cancelDragMove();
 	if ( _lastHoveredBridgeIframe ) {
 		postIntoIframe( _lastHoveredBridgeIframe, {
 			type: 'os-drag-leave',
@@ -253,6 +261,50 @@ function extractBridgePayload(
 	return data?.bridgePayload;
 }
 
+/**
+ * The iframe a pointer-driven (DragManager) session is currently
+ * over, so `DRAG_EVENTS.MOVE` can stream `os-drag-move` into it.
+ * The native bridge intercept keeps its own `_lastHoveredBridgeIframe`.
+ */
+let _pointerHoveredIframe: HTMLIFrameElement | null = null;
+
+/**
+ * One pending `os-drag-move` per animation frame, whichever path
+ * produced it. A receiver turns each into an insertion-point lookup
+ * against the editor DOM, so the stream is paced to the display
+ * rather than to pointer-event frequency.
+ */
+let _pendingMove: { iframe: HTMLIFrameElement; clientX: number; clientY: number } | null = null;
+let _moveFrame = 0;
+
+function postDragMove( iframe: HTMLIFrameElement, clientX: number, clientY: number ): void {
+	_pendingMove = { iframe, clientX, clientY };
+	if ( _moveFrame ) {
+		return;
+	}
+	_moveFrame = requestAnimationFrame( () => {
+		_moveFrame = 0;
+		const move = _pendingMove;
+		_pendingMove = null;
+		if ( ! move || ! move.iframe.isConnected ) {
+			return;
+		}
+		const rect = move.iframe.getBoundingClientRect();
+		postIntoIframe( move.iframe, {
+			type: 'os-drag-move',
+			position: { x: move.clientX - rect.left, y: move.clientY - rect.top },
+		} );
+	} );
+}
+
+function cancelDragMove(): void {
+	_pendingMove = null;
+	if ( _moveFrame ) {
+		cancelAnimationFrame( _moveFrame );
+		_moveFrame = 0;
+	}
+}
+
 function postIntoIframe(
 	iframe: HTMLIFrameElement,
 	msg: unknown,
@@ -284,6 +336,7 @@ function registerDropTargetFor(
 				return;
 			}
 			target.setAttribute( DROP_ACTIVE_ATTR, '' );
+			_pointerHoveredIframe = iframe;
 			postIntoIframe( iframe, {
 				type: 'os-drag-over',
 				payload: bridge,
@@ -291,25 +344,50 @@ function registerDropTargetFor(
 		},
 		onLeave: () => {
 			target.removeAttribute( DROP_ACTIVE_ATTR );
+			if ( _pointerHoveredIframe === iframe ) {
+				_pointerHoveredIframe = null;
+			}
 			postIntoIframe( iframe, { type: 'os-drag-leave' } );
 		},
 		onDrop: ( session, ev ) => {
 			target.removeAttribute( DROP_ACTIVE_ATTR );
+			_pointerHoveredIframe = null;
 			const bridge = extractBridgePayload( session.payload );
 			if ( ! bridge ) {
 				return;
 			}
 			const rect = iframe.getBoundingClientRect();
-			postIntoIframe( iframe, {
-				type: 'os-drop',
-				payload: bridge,
-				position: {
-					x: ev.clientX - rect.left,
-					y: ev.clientY - rect.top,
-				},
-			} );
+			const position = {
+				x: ev.clientX - rect.left,
+				y: ev.clientY - rect.top,
+			};
+			if ( ! bridgePayloadNeedsResolution( bridge ) ) {
+				postIntoIframe( iframe, { type: 'os-drop', payload: bridge, position } );
+				return;
+			}
+			void deliverResolvedDrop( iframe, bridge, position );
 		},
 	} );
+}
+
+/**
+ * A payload that cannot be delivered as-is (an `upload` tile: no
+ * attachment yet) goes through its resolver first — the DragManager
+ * has already committed the drop, so this is the one place a
+ * cross-frame drop can wait on the server. The receiver keeps its
+ * highlight until `os-drop` or `os-drag-leave` arrives.
+ */
+async function deliverResolvedDrop(
+	iframe: HTMLIFrameElement,
+	bridge: DragBridgePayload,
+	position: { x: number; y: number },
+): Promise< void > {
+	const resolved = await resolveBridgePayload( bridge );
+	if ( ! resolved ) {
+		postIntoIframe( iframe, { type: 'os-drag-leave' } );
+		return;
+	}
+	postIntoIframe( iframe, { type: 'os-drop', payload: resolved, position } );
 }
 
 function deriveWindowIdFromIframe( iframe: HTMLIFrameElement ): string {
@@ -431,6 +509,8 @@ function onDragStart( payload: unknown ): void {
 }
 
 function onDragEnd(): void {
+	cancelDragMove();
+	_pointerHoveredIframe = null;
 	_suppressedIframes.forEach( ( prev, iframe ) => {
 		iframe.style.pointerEvents = prev;
 	} );
@@ -471,6 +551,21 @@ export function installIframeDropTargets( dragManager: DragManagerApi ): void {
 	} );
 	document.addEventListener( DRAG_EVENTS.END, () => {
 		onDragEnd();
+	} );
+	// Stream the pointer into the hovered iframe, so a receiver can
+	// show where the drop will land (Gutenberg's insertion line).
+	document.addEventListener( DRAG_EVENTS.MOVE, ( e ) => {
+		const iframe = _pointerHoveredIframe;
+		if ( ! iframe ) {
+			return;
+		}
+		const detail = ( e as CustomEvent ).detail as
+			| { clientX?: number; clientY?: number }
+			| undefined;
+		if ( typeof detail?.clientX !== 'number' || typeof detail?.clientY !== 'number' ) {
+			return;
+		}
+		postDragMove( iframe, detail.clientX, detail.clientY );
 	} );
 
 	// Iframe-to-iframe HTML5 drag intercept. The legacy Media Library

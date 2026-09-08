@@ -38,6 +38,8 @@
  * switches on `kind` to decide what block to create.
  */
 
+import { createSharedStore } from './shared-store';
+
 /**
  * Attachment payload — media item dragged from a media surface
  * (My WordPress media view, future Media Library iframe).
@@ -81,11 +83,102 @@ export interface UserDragPayload {
 	title: string;
 }
 
+/**
+ * Stored-file payload — an `upload` tile (desktop storage) lifted in
+ * the shell. It is NOT an attachment yet: the file lives outside the
+ * Media Library, so there is no attachment id and no public URL to
+ * hand a receiver. The shell resolves it to an
+ * {@link AttachmentDragPayload} at drop time — copying the file into
+ * the Media Library through a registered resolver (see
+ * {@link resolveBridgePayload}) — so a receiver never sees this kind
+ * on `os-drop`. It can see it on `os-drag-over` and on a payload
+ * pull, where it means "a media file is on its way".
+ */
+export interface UploadDragPayload {
+	kind: 'upload';
+	/** Stored-file row id (`desktop_mode_stored_files`). */
+	fileId: number;
+	title: string;
+	/** `image/png`, `video/mp4`, … — the stored file's MIME type. */
+	mime: string;
+	thumbnailUrl?: string;
+}
+
 /** Discriminated union of all bridge payload shapes. */
 export type DragBridgePayload =
 	| AttachmentDragPayload
 	| PostDragPayload
-	| UserDragPayload;
+	| UserDragPayload
+	| UploadDragPayload;
+
+/**
+ * Turn a payload that cannot be delivered as-is into one that can.
+ * Resolves to `null` when the payload could not be resolved (the
+ * resolver is expected to have told the user why).
+ */
+export type BridgePayloadResolver = (
+	payload: DragBridgePayload,
+) => Promise< DragBridgePayload | null >;
+
+interface ResolverStore {
+	byKind: Map< string, BridgePayloadResolver >;
+}
+
+/**
+ * The resolver registry, one per page. The bridge and the iframe
+ * drop targets compile into the shell bundle, and a feature bundle
+ * may register a resolver for its own payload kind — hence a shared
+ * store rather than a module-level Map (see `createSharedStore`).
+ */
+const resolvers = createSharedStore< ResolverStore >(
+	'desktop-mode/drag-bridge-resolvers',
+	() => ( { byKind: new Map() } ),
+);
+
+/**
+ * Register the resolver for a payload kind. A kind has at most one
+ * resolver; registering again replaces it. Returns a deregister fn.
+ *
+ * @public
+ */
+export function registerBridgePayloadResolver(
+	kind: DragBridgePayload[ 'kind' ],
+	resolver: BridgePayloadResolver,
+): () => void {
+	resolvers.state.byKind.set( kind, resolver );
+	return () => {
+		if ( resolvers.state.byKind.get( kind ) === resolver ) {
+			resolvers.state.byKind.delete( kind );
+		}
+	};
+}
+
+/** Whether a payload has to go through a resolver before delivery. */
+export function bridgePayloadNeedsResolution( payload: DragBridgePayload ): boolean {
+	return resolvers.state.byKind.has( payload.kind );
+}
+
+/**
+ * Resolve a payload for delivery. Payloads without a registered
+ * resolver come back unchanged.
+ *
+ * @public
+ */
+export async function resolveBridgePayload(
+	payload: DragBridgePayload,
+): Promise< DragBridgePayload | null > {
+	const resolver = resolvers.state.byKind.get( payload.kind );
+	if ( ! resolver ) {
+		return payload;
+	}
+	try {
+		return await resolver( payload );
+	} catch ( err ) {
+		// eslint-disable-next-line no-console
+		console.error( '[openstation] bridge payload resolver threw:', err );
+		return null;
+	}
+}
 
 /** Public surface — mounted on `wp.os.dragBridge`. */
 export interface DragBridgeApi {

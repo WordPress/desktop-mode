@@ -124,6 +124,11 @@ if [ "${#po_files[@]}" -eq 0 ]; then
 fi
 
 for po in "${po_files[@]}"; do
-	msgmerge --update --backup=none --quiet "$po" "$POT_FILE"
+	# No fuzzy matching: msgmerge's guesses ("Create workspace" →
+	# "Ese archivo no es una imagen.") are flagged `#, fuzzy`, but
+	# `wp i18n make-json` compiles fuzzy entries like real ones, so a
+	# guess ships to the browser as a translation. A new string stays
+	# untranslated until a person translates it.
+	msgmerge --update --backup=none --quiet --no-fuzzy-matching "$po" "$POT_FILE"
 	echo "extract-i18n.sh: merged $POT_FILE into $(basename "$po")"
 done
