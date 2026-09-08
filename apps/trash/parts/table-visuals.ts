@@ -25,6 +25,7 @@ import {
 	resolveThemedIconColor,
 } from '../../../src/desktop-themes/icons';
 import { DESKTOP_THEME_SLOTS } from '../../../src/desktop-themes/slots';
+import { makeRowActionButton } from '../../../src/ui/util/row-action-button';
 import type { RecycleBinItem, RecycleBinItemRef } from './types';
 import type { OsTableColumn } from '../../../src/ui/components/os-table/os-table';
 
@@ -136,75 +137,12 @@ const ICON_SVG: Record< string, string > = {
 };
 
 /**
- * Build a row-action button: icon + hidden label, every visual
- * property inline, click bound in place with propagation stopped
- * (`data-noclick` opts it out of `os-table-row-click`). Colours are
- * inline `var()` chains so themes reach through the table's shadow
- * boundary; hover / focus swap the relevant properties directly.
+ * Build a row-action button: the shared row button
+ * (`src/ui/util/row-action-button.ts` — inline colour chains, hover
+ * and focus faces, `data-noclick`) around this bin's glyph, which is
+ * a theme's mask when it maps the slot, and an inline SVG otherwise.
  */
 export function makeRowButton( opts: RowButtonOptions ): HTMLElement {
-	const btn = document.createElement( 'button' );
-	btn.type = 'button';
-	btn.setAttribute( 'data-noclick', '' );
-	btn.setAttribute( 'aria-label', opts.label );
-	btn.title = opts.label;
-
-	const isDanger = opts.variant === 'danger';
-
-	const restColor = isDanger
-		? 'var( --os-ui-danger, #d63638 )'
-		: 'var( --os-ui-fg-muted, #50575e )';
-	const restBorder = isDanger
-		? 'var( --os-ui-danger, #d63638 )'
-		: 'var( --os-ui-border, #c3c4c7 )';
-	const restBg = 'var( --os-ui-surface, #fff )';
-
-	const applyRest = (): void => {
-		btn.style.background = restBg;
-		btn.style.color = restColor;
-		btn.style.borderColor = restBorder;
-	};
-	const applyHover = (): void => {
-		if ( isDanger ) {
-			btn.style.background = 'var( --os-ui-danger, #d63638 )';
-			btn.style.color = 'var( --os-ui-fg-on-accent, #fff )';
-			btn.style.borderColor = 'var( --os-ui-danger, #d63638 )';
-		} else {
-			btn.style.background = 'var( --os-ui-hover, #f0f0f1 )';
-			btn.style.color = 'var( --os-ui-fg, #1d2327 )';
-			btn.style.borderColor = 'var( --os-ui-border-strong, #8c8f94 )';
-		}
-	};
-
-	const labelled = opts.labelled === true;
-	btn.style.cssText = [
-		'display: inline-flex',
-		'align-items: center',
-		'justify-content: center',
-		labelled ? 'gap: 6px' : '',
-		labelled ? 'flex: 0 0 auto' : 'flex: 0 0 30px',
-		labelled ? 'width: auto' : 'width: 30px',
-		labelled ? 'height: 36px' : 'height: 30px',
-		labelled ? 'padding: 0 12px' : 'padding: 0',
-		labelled ? 'font-size: 13px' : '',
-		labelled ? 'font-weight: 600' : '',
-		'margin: 0',
-		'border: 1px solid ' + restBorder,
-		'border-radius: 6px',
-		'background: ' + restBg,
-		'color: ' + restColor,
-		'cursor: pointer',
-		'box-sizing: border-box',
-		'line-height: 1',
-		'font: inherit',
-		'transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease',
-	].join( ';' );
-
-	btn.addEventListener( 'mouseenter', applyHover );
-	btn.addEventListener( 'mouseleave', applyRest );
-	btn.addEventListener( 'focus', applyHover );
-	btn.addEventListener( 'blur', applyRest );
-
 	// Desktop-theme override for the glyph, rendered as an 18x18 CSS
 	// MASK tinted with `currentColor` so hover / danger tinting keeps
 	// working. A theme that maps the slot to a DASHICON is ignored on
@@ -224,6 +162,7 @@ export function makeRowButton( opts: RowButtonOptions ): HTMLElement {
 		/^(https?:\/\/|data:image\/)/i.test( themed ) &&
 		! /['"()\\<>\s]/.test( themed );
 
+	let glyph: Element;
 	if ( maskSafe ) {
 		const mask = document.createElement( 'span' );
 		mask.setAttribute( 'aria-hidden', 'true' );
@@ -236,7 +175,7 @@ export function makeRowButton( opts: RowButtonOptions ): HTMLElement {
 			`-webkit-mask: url("${ themed }") center / contain no-repeat`,
 			`mask: url("${ themed }") center / contain no-repeat`,
 		].join( ';' );
-		btn.appendChild( mask );
+		glyph = mask;
 	} else {
 		const svgNs = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS( svgNs, 'svg' );
@@ -247,22 +186,16 @@ export function makeRowButton( opts: RowButtonOptions ): HTMLElement {
 		svg.setAttribute( 'focusable', 'false' );
 		svg.style.display = 'block';
 		svg.innerHTML = ICON_SVG[ opts.icon ] ?? '';
-		btn.appendChild( svg );
+		glyph = svg;
 	}
 
-	if ( labelled ) {
-		const text = document.createElement( 'span' );
-		text.textContent = opts.label;
-		text.style.cssText = 'white-space: nowrap; line-height: 1;';
-		btn.appendChild( text );
-	}
-
-	btn.addEventListener( 'click', ( e: Event ) => {
-		e.stopPropagation();
-		opts.onClick();
+	return makeRowActionButton( {
+		label: opts.label,
+		glyph,
+		onClick: opts.onClick,
+		variant: opts.variant,
+		labelled: opts.labelled,
 	} );
-
-	return btn;
 }
 
 export interface RowActionHandlers {

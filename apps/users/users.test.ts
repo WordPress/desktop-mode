@@ -309,7 +309,18 @@ describe( 'the table parts', () => {
 		expect( cell( 'stats' ).textContent ).toBe( '312' );
 		expect( ( cell( 'email' ) as HTMLButtonElement ).textContent ).toBe( 'ada@example.com' );
 		expect( cell( 'identity' ).querySelector( 'os-avatar' )?.getAttribute( 'presence' ) ).toBe( 'offline' );
-		expect( cell( 'actions' ).querySelectorAll( 'button' ).length ).toBe( 2 );
+		const buttons = cell( 'actions' ).querySelectorAll( 'button' );
+		expect( buttons.length ).toBe( 2 );
+		// The face resolves through the palette, never an inherited
+		// colour on a white fallback — that painted white glyphs on a
+		// white chip under the dark palette.
+		for ( const btn of Array.from( buttons ) ) {
+			expect( btn.hasAttribute( 'data-noclick' ) ).toBe( true );
+			expect( btn.style.background ).toContain( '--os-ui-surface' );
+			expect( btn.style.color ).toContain( '--os-ui-fg-muted' );
+			expect( btn.style.color ).not.toBe( 'inherit' );
+			expect( btn.querySelector( 'os-icon' ) ).not.toBeNull();
+		}
 		const locked = cols.find( ( c ) => c.key === 'actions' )!.render!( undefined, user( { id: 5, openstation_can_edit: false } ), 0 ) as HTMLElement;
 		expect( locked.textContent ).toBe( '—' );
 	} );

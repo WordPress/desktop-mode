@@ -13,6 +13,7 @@
 import { __, copyText, formatDate } from '@openstation/app';
 import { isMobileStamped } from '../../../src/mode/stamp';
 import { applyAvatarSrc, pickAvatarUrl } from '../../../src/ui/util/avatar-resolve';
+import { makeRowActionButton } from '../../../src/ui/util/row-action-button';
 import { openUserEditWindow } from '../../../src/open-targets/user-edit-window';
 import '../../../src/ui/components/os-avatar/os-avatar';
 import '../../../src/ui/components/os-icon/os-icon';
@@ -103,7 +104,7 @@ export function forgetRow( cache: UserCellCache, id: number ): void {
 	}
 }
 
-const MUTED = 'var(--os-ui-fg-muted, #8c8f94)';
+const MUTED = 'var( --os-ui-fg-muted, #50575e )';
 const CHIP =
 	'display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--os-ui-badge-info-bg, rgba(34,113,177,0.10));color:var(--os-ui-info-fg, #0a4b78);white-space:nowrap;';
 
@@ -286,22 +287,14 @@ function buildActionsCell( row: UserListItem, cfg: ListConfig, actions: RowActio
 		cell.style.color = MUTED;
 		return cell;
 	}
+	// The Recycle Bin's row button, so the two lists share one face
+	// and one colour chain. `<os-icon>` works inside the table's
+	// shadow tree where a bare dashicons class renders blank.
 	const mk = ( label: string, dashicon: string, fn: () => void ): HTMLElement => {
-		const btn = document.createElement( 'button' );
-		btn.type = 'button';
-		btn.title = label;
-		btn.setAttribute( 'aria-label', label );
-		btn.style.cssText =
-			'appearance:none;border:1px solid var(--os-ui-border, #dcdcde);background:var(--os-ui-btn-bg, #fff);color:inherit;padding:4px 6px;border-radius:4px;cursor:pointer;line-height:1;';
 		const ic = document.createElement( 'os-icon' );
 		ic.setAttribute( 'name', dashicon );
-		ic.setAttribute( 'size', '14' );
-		btn.appendChild( ic );
-		btn.addEventListener( 'click', ( e ) => {
-			e.stopPropagation();
-			fn();
-		} );
-		return btn;
+		ic.setAttribute( 'size', '18' );
+		return makeRowActionButton( { label, glyph: ic, onClick: fn } );
 	};
 	cell.append(
 		mk( __( 'Send password reset' ), 'email-alt', () => actions.onSendReset( row ) ),
