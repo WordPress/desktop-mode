@@ -4887,6 +4887,7 @@ All Experimental.
 | `openstation_stored_file_media_post_data` | `( array $post_data, array $row, int $user_id ) => array` | Attachment post fields passed to `media_handle_sideload()` when a stored file is copied (`post_title`, `post_excerpt` for the caption, `post_content` for the description, …). Default sets only `post_author`. |
 | `openstation_stored_file_start_post_content` | `( string $content, int $attachment_id, string $post_type, array $row ) => string` | Initial block markup of a post started from a stored file. Default: the attachment as a `core/image` / `core/video` / `core/audio` / `core/file` block. |
 | `openstation_stored_file_start_post_args` | `( array $args, int $attachment_id, string $post_type, array $row ) => array` | `wp_insert_post()` arguments of a post started from a stored file. Default `post_status` is `auto-draft`, like `post-new.php`; keep it unless abandoned starts should persist as drafts. |
+| `openstation_stored_file_attach_content` | `( string $markup, int[] $attachment_ids, WP_Post $post, int[] $file_ids ) => string` | Block markup appended to an existing post when stored files are dropped on its tile. Default: one `core/image` / `core/video` / `core/audio` / `core/file` block per attachment, in drop order. Return `''` to append nothing (the files are still copied, attached, and the featured image still set). |
 
 ### Actions
 
@@ -4900,6 +4901,7 @@ All Experimental.
 | `openstation_folder_zip_downloaded` | `( int $folder_id, int $user_id, int $count )` | Just before a folder zip streams. |
 | `openstation_stored_file_added_to_media` | `( int $attachment_id, int $file_id, int $user_id )` | After a stored file has been copied into the Media Library. Fires once per stored file — a repeat "Add" returns the existing attachment silently. |
 | `openstation_stored_file_post_started` | `( int $post_id, int $attachment_id, int $file_id, int $user_id )` | After an `auto-draft` has been started from a stored file, featured image already set. |
+| `openstation_stored_file_attached_to_post` | `( int $post_id, int[] $attachment_ids, int[] $file_ids, int $user_id )` | After stored files dropped on a post tile have been copied, appended, attached, and (for the first image) made the featured image. |
 
 Single-file shares fire the SAME share actions folder shares use
 (`openstation_files_share_{invited,accepted,denied,left,revoked}`)

@@ -374,12 +374,163 @@ class Tests_OpenStation_MediaLibrary extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers ::openstation_stored_files_attach_to_post
+	 */
+	public function test_attach_to_post_appends_blocks_attaches_and_sets_the_featured_image() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$admin_id,
+				'post_content' => '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->',
+			)
+		);
+		$image   = $this->make_stored_image( self::$admin_id );
+		$text    = $this->make_stored_file( self::$admin_id, 'notes.txt', 'hello world', 'text/plain' );
+
+		$fired = array();
+		add_action(
+			'openstation_stored_file_attached_to_post',
+			function ( $pid, $attachment_ids, $file_ids, $user_id ) use ( &$fired ) {
+				$fired[] = array( $pid, $attachment_ids, $file_ids, $user_id );
+			},
+			10,
+			4
+		);
+
+		$result = openstation_stored_files_attach_to_post( $post_id, array( $text, $image ), self::$admin_id );
+		$this->assertNotWPError( $result );
+		$this->assertTrue( $result['appended'] );
+		$this->assertTrue( $result['featured_image_set'] );
+		$this->assertCount( 2, $result['attachment_ids'] );
+		list( $text_att, $image_att ) = $result['attachment_ids'];
+
+		$post = get_post( $post_id );
+		// The intro survives; the blocks follow in drop order.
+		$this->assertStringStartsWith( '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->', $post->post_content );
+		$this->assertStringContainsString( '<!-- wp:file {"id":' . $text_att . ',', $post->post_content );
+		$this->assertStringContainsString( '<!-- wp:image {"id":' . $image_att . ',', $post->post_content );
+		$this->assertLessThan( strpos( $post->post_content, 'wp:image' ), strpos( $post->post_content, 'wp:file' ) );
+
+		// Attached to the post; the image is the featured image.
+		$this->assertSame( $post_id, (int) get_post_field( 'post_parent', $text_att ) );
+		$this->assertSame( $post_id, (int) get_post_field( 'post_parent', $image_att ) );
+		$this->assertSame( $image_att, get_post_thumbnail_id( $post_id ) );
+
+		$this->assertStringContainsString( 'post.php?post=' . $post_id . '&action=edit', $result['edit_url'] );
+		$this->assertSame( array( array( $post_id, array( $text_att, $image_att ), array( $text, $image ), self::$admin_id ) ), $fired );
+	}
+
+	/**
+	 * @covers ::openstation_stored_files_attach_to_post
+	 */
+	public function test_attach_to_post_keeps_an_existing_featured_image_and_parent() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$admin_id ) );
+		$other   = self::factory()->post->create( array( 'post_author' => self::$admin_id ) );
+		$image   = $this->make_stored_image( self::$admin_id );
+
+		// The copy already exists, attached to another post.
+		$first = openstation_stored_file_to_attachment( $image, self::$admin_id );
+		wp_update_post( array( 'ID' => $first['attachment_id'], 'post_parent' => $other ) );
+		$existing_thumb = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/test-image.jpg', $post_id );
+		set_post_thumbnail( $post_id, $existing_thumb );
+
+		$result = openstation_stored_files_attach_to_post( $post_id, array( $image ), self::$admin_id );
+		$this->assertNotWPError( $result );
+		$this->assertSame( array( $first['attachment_id'] ), $result['attachment_ids'] );
+		$this->assertFalse( $result['featured_image_set'] );
+		$this->assertSame( $existing_thumb, get_post_thumbnail_id( $post_id ) );
+		$this->assertSame( $other, (int) get_post_field( 'post_parent', $first['attachment_id'] ) );
+		$this->assertStringContainsString( 'wp-image-' . $first['attachment_id'], get_post( $post_id )->post_content );
+	}
+
+	/**
+	 * @covers ::openstation_stored_files_attach_to_post
+	 */
+	public function test_attach_to_post_content_is_filterable_and_empty_content_gets_no_leading_gap() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$admin_id, 'post_content' => '' ) );
+		$image   = $this->make_stored_image( self::$admin_id );
+		add_filter(
+			'openstation_stored_file_attach_content',
+			function ( $markup, $attachment_ids, $post ) {
+				return '<!-- wp:heading --><h2 class="wp-block-heading">' . count( $attachment_ids ) . ' for ' . $post->ID . '</h2><!-- /wp:heading -->' . $markup;
+			},
+			10,
+			3
+		);
+		$result = openstation_stored_files_attach_to_post( $post_id, array( $image ), self::$admin_id );
+		remove_all_filters( 'openstation_stored_file_attach_content' );
+		$this->assertNotWPError( $result );
+		$content = get_post( $post_id )->post_content;
+		$this->assertStringStartsWith( '<!-- wp:heading --><h2 class="wp-block-heading">1 for ' . $post_id . '</h2>', $content );
+		$this->assertStringContainsString( '<!-- wp:image', $content );
+	}
+
+	/**
+	 * @covers ::openstation_stored_files_attach_to_post
+	 */
+	public function test_attach_to_post_refuses_bad_targets_and_touches_nothing_on_failure() {
+		$image = $this->make_stored_image( self::$admin_id );
+
+		$result = openstation_stored_files_attach_to_post( 999999, array( $image ), self::$admin_id );
+		$this->assertWPError( $result );
+		$this->assertSame( 'openstation_stored_file_post_not_found', $result->get_error_code() );
+
+		$trashed = self::factory()->post->create( array( 'post_author' => self::$admin_id, 'post_status' => 'trash' ) );
+		$result  = openstation_stored_files_attach_to_post( $trashed, array( $image ), self::$admin_id );
+		$this->assertWPError( $result );
+		$this->assertSame( 'openstation_stored_file_post_trashed', $result->get_error_code() );
+
+		// An author cannot edit the admin's post.
+		$admins = self::factory()->post->create( array( 'post_author' => self::$admin_id ) );
+		$own    = $this->make_stored_image( self::$author_id );
+		$result = openstation_stored_files_attach_to_post( $admins, array( $own ), self::$author_id );
+		$this->assertWPError( $result );
+		$this->assertSame( 'openstation_stored_file_cannot_edit_post', $result->get_error_code() );
+
+		// No files.
+		$result = openstation_stored_files_attach_to_post( $admins, array(), self::$admin_id );
+		$this->assertWPError( $result );
+		$this->assertSame( 'openstation_stored_file_no_files', $result->get_error_code() );
+
+		// One bad file fails the request before the post changes.
+		$before = get_post( $admins )->post_content;
+		$exe    = $this->make_stored_file( self::$admin_id, 'setup.exe', 'MZ', 'application/x-msdownload' );
+		$result = openstation_stored_files_attach_to_post( $admins, array( $image, $exe ), self::$admin_id );
+		$this->assertWPError( $result );
+		$this->assertSame( 'openstation_stored_file_not_media', $result->get_error_code() );
+		$this->assertSame( $before, get_post( $admins )->post_content );
+		$this->assertFalse( has_post_thumbnail( $admins ) );
+	}
+
+	/**
+	 * @covers ::openstation_files_rest_attach_to_post
+	 */
+	public function test_rest_attach_to_post_returns_the_summary() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$admin_id, 'post_title' => 'Drop zone' ) );
+		$image   = $this->make_stored_image( self::$admin_id );
+		$req     = new WP_REST_Request( 'POST', '/desktop-mode/v1/files/posts/' . $post_id . '/uploads' );
+		$req->set_param( 'id', $post_id );
+		$req->set_param( 'fileIds', array( $image ) );
+
+		$res = openstation_files_rest_attach_to_post( $req );
+		$this->assertNotWPError( $res );
+		$data = $res->get_data();
+		$this->assertSame( $post_id, $data['postId'] );
+		$this->assertSame( 'Drop zone', $data['title'] );
+		$this->assertTrue( $data['appended'] );
+		$this->assertTrue( $data['featuredImageSet'] );
+		$this->assertCount( 1, $data['attachments'] );
+		$this->assertSame( get_post_thumbnail_id( $post_id ), $data['attachments'][0]['attachmentId'] );
+		$this->assertStringContainsString( 'post.php?post=' . $post_id . '&action=edit', $data['editUrl'] );
+	}
+
+	/**
 	 * @covers ::openstation_files_register_media_rest_routes
 	 */
 	public function test_rest_routes_are_registered() {
 		$routes = rest_get_server()->get_routes( 'desktop-mode/v1' );
 		$this->assertArrayHasKey( '/desktop-mode/v1/files/uploads/(?P<id>\d+)/media', $routes );
 		$this->assertArrayHasKey( '/desktop-mode/v1/files/uploads/(?P<id>\d+)/post', $routes );
+		$this->assertArrayHasKey( '/desktop-mode/v1/files/posts/(?P<id>\d+)/uploads', $routes );
 	}
 
 	/**

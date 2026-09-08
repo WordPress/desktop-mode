@@ -613,6 +613,36 @@ export function startPostFromUpload(
 }
 
 /**
+ * What putting stored files into an existing post did.
+ */
+export interface RestAttachToPostShape {
+	postId: number;
+	title: string;
+	editUrl: string;
+	/** Whether block markup was appended (the post type has an editor). */
+	appended: boolean;
+	/** Whether the first image became the featured image. */
+	featuredImageSet: boolean;
+	attachments: RestMediaAttachmentShape[];
+}
+
+/**
+ * Put stored files into an existing post: each is copied into the
+ * Media Library (idempotently), appended to the content as a block,
+ * attached to the post, and the first image becomes the featured
+ * image when the post has none.
+ */
+export function attachUploadsToPost(
+	postId: number,
+	fileIds: number[],
+): Promise< RestAttachToPostShape > {
+	return call< RestAttachToPostShape >( `/posts/${ postId }/uploads`, {
+		method: 'POST',
+		body: JSON.stringify( { fileIds } ),
+	} );
+}
+
+/**
  * A folder a request created mkdir-p style, with the placement that
  * shows it in the parent the client is looking at. Carried by the
  * upload and `ensureUploadPath()` responses so the tile can be

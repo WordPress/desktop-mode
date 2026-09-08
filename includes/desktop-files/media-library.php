@@ -394,6 +394,135 @@ function openstation_stored_file_start_post( $file_id, $post_type, $user_id ) {
 }
 
 /**
+ * Put stored files into an existing post.
+ *
+ * Each file is copied into the Media Library (idempotently), its
+ * block is appended to the post content when the post type has an
+ * editor, it is attached to the post when it was attached to nothing,
+ * and the first image becomes the featured image when the post type
+ * supports one and the post has none. All-or-nothing on the copies:
+ * a file that cannot be copied fails the request before the post is
+ * touched.
+ *
+ * @param int   $post_id  Target post.
+ * @param int[] $file_ids Stored-file ids, in the order they were dragged.
+ * @param int   $user_id  Acting user; must be able to edit the post.
+ * @return array|WP_Error `{ post_id, attachment_ids, appended, featured_image_set, edit_url }`.
+ */
+function openstation_stored_files_attach_to_post( $post_id, $file_ids, $user_id ) {
+	$post_id  = (int) $post_id;
+	$user_id  = (int) $user_id;
+	$file_ids = array_values( array_unique( array_filter( array_map( 'intval', (array) $file_ids ) ) ) );
+	$post     = get_post( $post_id );
+	if ( ! $post || in_array( $post->post_type, array( 'attachment', 'revision' ), true ) ) {
+		return new WP_Error(
+			'openstation_stored_file_post_not_found',
+			__( 'Post not found.', 'desktop-mode' ),
+			array( 'status' => 404 )
+		);
+	}
+	if ( ! user_can( $user_id, 'edit_post', $post_id ) ) {
+		return new WP_Error(
+			'openstation_stored_file_cannot_edit_post',
+			__( 'You are not allowed to edit this post.', 'desktop-mode' ),
+			array( 'status' => 403 )
+		);
+	}
+	if ( 'trash' === $post->post_status ) {
+		return new WP_Error(
+			'openstation_stored_file_post_trashed',
+			__( 'That post is in the Trash.', 'desktop-mode' ),
+			array( 'status' => 400 )
+		);
+	}
+	if ( empty( $file_ids ) ) {
+		return new WP_Error(
+			'openstation_stored_file_no_files',
+			__( 'No files to add.', 'desktop-mode' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	$attachment_ids = array();
+	foreach ( $file_ids as $file_id ) {
+		$attached = openstation_stored_file_to_attachment( $file_id, $user_id );
+		if ( is_wp_error( $attached ) ) {
+			return $attached;
+		}
+		$attachment_ids[] = (int) $attached['attachment_id'];
+	}
+
+	$markup = implode( "\n\n", array_map( 'openstation_attachment_block_markup', $attachment_ids ) );
+	/**
+	 * Filters the block markup appended to a post when stored files
+	 * are dropped onto it.
+	 *
+	 * @param string  $markup         Serialized blocks, one per attachment.
+	 * @param int[]   $attachment_ids The Media Library copies, in drop order.
+	 * @param WP_Post $post           The post being extended.
+	 * @param int[]   $file_ids       Source stored-file ids.
+	 */
+	$markup = (string) apply_filters( 'openstation_stored_file_attach_content', $markup, $attachment_ids, $post, $file_ids );
+
+	$appended = false;
+	if ( post_type_supports( $post->post_type, 'editor' ) && '' !== $markup ) {
+		$content = '' === trim( $post->post_content ) ? $markup : rtrim( $post->post_content ) . "\n\n" . $markup;
+		$updated = wp_update_post(
+			wp_slash(
+				array(
+					'ID'           => $post_id,
+					'post_content' => $content,
+				)
+			),
+			true
+		);
+		if ( is_wp_error( $updated ) ) {
+			$updated->add_data( array( 'status' => 500 ) );
+			return $updated;
+		}
+		$appended = true;
+	}
+
+	$featured_image_set = false;
+	foreach ( $attachment_ids as $attachment_id ) {
+		if ( 0 === (int) get_post_field( 'post_parent', $attachment_id ) ) {
+			wp_update_post(
+				array(
+					'ID'          => $attachment_id,
+					'post_parent' => $post_id,
+				)
+			);
+		}
+		if (
+			! $featured_image_set &&
+			post_type_supports( $post->post_type, 'thumbnail' ) &&
+			! has_post_thumbnail( $post_id ) &&
+			wp_attachment_is_image( $attachment_id )
+		) {
+			$featured_image_set = (bool) set_post_thumbnail( $post_id, $attachment_id );
+		}
+	}
+
+	/**
+	 * Fires after stored files have been put into a post.
+	 *
+	 * @param int   $post_id        The post.
+	 * @param int[] $attachment_ids The Media Library copies, in drop order.
+	 * @param int[] $file_ids       Source stored-file ids.
+	 * @param int   $user_id        Acting user.
+	 */
+	do_action( 'openstation_stored_file_attached_to_post', $post_id, $attachment_ids, $file_ids, $user_id );
+
+	return array(
+		'post_id'            => $post_id,
+		'attachment_ids'     => $attachment_ids,
+		'appended'           => $appended,
+		'featured_image_set' => $featured_image_set,
+		'edit_url'           => admin_url( sprintf( 'post.php?post=%d&action=edit', $post_id ) ),
+	);
+}
+
+/**
  * Permission callback: the base files gate plus WordPress's own
  * Media Library capability.
  *
@@ -438,6 +567,22 @@ function openstation_files_register_media_rest_routes() {
 				'postType' => array(
 					'type'    => 'string',
 					'default' => 'post',
+				),
+			),
+		)
+	);
+	register_rest_route(
+		'desktop-mode/v1',
+		'/files/posts/(?P<id>\d+)/uploads',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => 'openstation_files_rest_media_permission',
+			'callback'            => 'openstation_files_rest_attach_to_post',
+			'args'                => array(
+				'fileIds' => array(
+					'type'     => 'array',
+					'required' => true,
+					'items'    => array( 'type' => 'integer' ),
 				),
 			),
 		)
@@ -501,6 +646,37 @@ function openstation_files_rest_start_post( WP_REST_Request $req ) {
 			'postType'   => (string) $result['post_type'],
 			'editUrl'    => (string) $result['edit_url'],
 			'attachment' => $summary,
+		)
+	);
+}
+
+/**
+ * POST /files/posts/<id>/uploads   { fileIds }
+ *
+ * @param WP_REST_Request $req Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function openstation_files_rest_attach_to_post( WP_REST_Request $req ) {
+	$result = openstation_stored_files_attach_to_post(
+		(int) $req['id'],
+		(array) $req->get_param( 'fileIds' ),
+		get_current_user_id()
+	);
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	$attachments = array();
+	foreach ( $result['attachment_ids'] as $attachment_id ) {
+		$attachments[] = openstation_files_attachment_summary( $attachment_id, false );
+	}
+	return rest_ensure_response(
+		array(
+			'postId'           => (int) $result['post_id'],
+			'title'            => get_the_title( $result['post_id'] ),
+			'editUrl'          => (string) $result['edit_url'],
+			'appended'         => (bool) $result['appended'],
+			'featuredImageSet' => (bool) $result['featured_image_set'],
+			'attachments'      => $attachments,
 		)
 	);
 }

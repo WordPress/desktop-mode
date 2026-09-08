@@ -66,6 +66,7 @@ import {
 	type ShortcutDragItem,
 } from './drag-payloads';
 import { attachCrossFrameDrop } from './cross-frame-drop';
+import { uploadBridgePayload } from './media-drag';
 
 /**
  * Build a cross-frame bridge payload from a placement, or return
@@ -119,6 +120,11 @@ function buildBridgePayloadFromPlacement(
 			url: String( file.link ?? '' ),
 			title,
 		};
+	}
+	if ( file.type === 'upload' ) {
+		// Resolved to an `attachment` payload at drop time — see
+		// `media-drag.ts`.
+		return uploadBridgePayload( file );
 	}
 	return undefined;
 }

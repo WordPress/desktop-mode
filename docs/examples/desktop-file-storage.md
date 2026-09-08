@@ -109,6 +109,27 @@ add_action( 'openstation_stored_file_post_started', static function ( $post_id, 
 }, 10, 4 );
 ```
 
+Dropping media uploads on a post tile appends them as blocks. To
+wrap several dropped images in a gallery instead of one image block
+each:
+
+```php
+add_filter( 'openstation_stored_file_attach_content', static function ( $markup, $attachment_ids ) {
+	$images = array_filter( $attachment_ids, 'wp_attachment_is_image' );
+	if ( count( $images ) < 2 ) {
+		return $markup;
+	}
+	$inner = implode( '', array_map( static function ( $id ) {
+		return sprintf(
+			'<!-- wp:image {"id":%1$d,"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+			$id,
+			esc_url( wp_get_attachment_image_url( $id, 'large' ) )
+		);
+	}, $images ) );
+	return '<!-- wp:gallery {"linkTo":"none"} --><figure class="wp-block-gallery has-nested-images columns-default is-cropped">' . $inner . '</figure><!-- /wp:gallery -->';
+}, 10, 2 );
+```
+
 ## Share a file from PHP
 
 Single-file shares are read + download only, user principals only —
