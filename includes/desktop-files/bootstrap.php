@@ -45,6 +45,7 @@ require_once OPENSTATION_DIR . 'includes/desktop-files/favicon.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/rest.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/rest-uploads.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/downloads.php';
+require_once OPENSTATION_DIR . 'includes/desktop-files/media-library.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/wallpaper-menu.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/sharing.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/heartbeat.php';

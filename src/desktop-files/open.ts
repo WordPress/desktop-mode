@@ -29,6 +29,21 @@ export function installOpenDeps( next: OpenDeps ): void {
 }
 
 /**
+ * Open an admin URL in a chromeless window, the way a `url` opener
+ * would, without a file to resolve an opener for — a tile action
+ * that has just created something on the server (a post, an
+ * attachment) opens its edit screen this way. The window id is
+ * derived from the URL, so the same screen focuses rather than
+ * duplicates. Returns `false` before the shell has installed deps.
+ */
+export function openUrlWindow( args: { url: string; title: string; icon: string } ): boolean {
+	if ( ! deps || ! args.url ) {
+		return false;
+	}
+	return deps.openUrl( { id: deps.deriveWindowId( args.url ), ...args } );
+}
+
+/**
  * Open a desktop file using the resolved opener. Returns `true`
  * when something opened, `false` when no opener could handle the
  * file (caller may surface a "no app" toast).

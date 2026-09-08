@@ -4883,6 +4883,10 @@ All Experimental.
 | `openstation_stored_files_zip_caps` | `( array $caps ) => array` | `{ max_entries, max_bytes }` bounds for folder zips. Default 1000 entries / 500 MB of input. |
 | `openstation_stored_file_can_read` | `( bool $can, int $file_id, int $user_id, array $row ) => bool` | Last-mile read-access override after owner / file-share / folder-capability resolution all said no. |
 | `openstation_stored_files_share_can_manage` | `( bool $can, int $file_id, int $user_id, ?array $file ) => bool` | Who may manage a stored file's shares. Owner-only by default. |
+| `openstation_stored_file_is_media` | `( bool $is_media, array $row ) => bool` | Whether a stored file may be copied into the Media Library — and so whether its tile offers "Add to Media Library" (`file.isMedia`). Default: the MIME type is on the site's upload allow-list. |
+| `openstation_stored_file_media_post_data` | `( array $post_data, array $row, int $user_id ) => array` | Attachment post fields passed to `media_handle_sideload()` when a stored file is copied (`post_title`, `post_excerpt` for the caption, `post_content` for the description, …). Default sets only `post_author`. |
+| `openstation_stored_file_start_post_content` | `( string $content, int $attachment_id, string $post_type, array $row ) => string` | Initial block markup of a post started from a stored file. Default: the attachment as a `core/image` / `core/video` / `core/audio` / `core/file` block. |
+| `openstation_stored_file_start_post_args` | `( array $args, int $attachment_id, string $post_type, array $row ) => array` | `wp_insert_post()` arguments of a post started from a stored file. Default `post_status` is `auto-draft`, like `post-new.php`; keep it unless abandoned starts should persist as drafts. |
 
 ### Actions
 
@@ -4894,6 +4898,8 @@ All Experimental.
 | `openstation_stored_file_deleted` | `( int $file_id, array $row )` | After bytes + row are deleted. |
 | `openstation_stored_file_downloaded` | `( int $file_id, int $user_id )` | Download audit — just before a file streams. |
 | `openstation_folder_zip_downloaded` | `( int $folder_id, int $user_id, int $count )` | Just before a folder zip streams. |
+| `openstation_stored_file_added_to_media` | `( int $attachment_id, int $file_id, int $user_id )` | After a stored file has been copied into the Media Library. Fires once per stored file — a repeat "Add" returns the existing attachment silently. |
+| `openstation_stored_file_post_started` | `( int $post_id, int $attachment_id, int $file_id, int $user_id )` | After an `auto-draft` has been started from a stored file, featured image already set. |
 
 Single-file shares fire the SAME share actions folder shares use
 (`openstation_files_share_{invited,accepted,denied,left,revoked}`)

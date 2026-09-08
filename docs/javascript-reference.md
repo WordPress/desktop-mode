@@ -6500,10 +6500,13 @@ contract: [files-on-desktop.md → Real file storage](files-on-desktop.md#real-f
 
 ```ts
 interface DesktopStorageConfig {
-	canUpload: boolean;    // viewer holds the (filterable) upload capability
-	maxBytes: number;      // per-file cap, 0 = no client cap
-	quotaBytes: number;    // per-user quota, 0 = unlimited
-	zipAvailable: boolean; // server has ZipArchive → folder-zip affordances render
+	canUpload: boolean;      // viewer holds the (filterable) upload capability
+	maxBytes: number;        // per-file cap, 0 = no client cap
+	quotaBytes: number;      // per-user quota, 0 = unlimited
+	zipAvailable: boolean;   // server has ZipArchive → folder-zip affordances render
+	canAddToMedia: boolean;  // viewer holds `upload_files` → "Add to Media Library" renders
+	canStartPost: boolean;   // …and may create posts → "Start a post with this image"
+	canStartPage: boolean;   // …and may create pages → "Start a page with this image"
 }
 ```
 
@@ -6526,16 +6529,32 @@ open replaces its pending batch with the latest drop (one dialog,
 never stacked modals, never mixed batches).
 
 **Serialized shape** — `upload` placements carry
-`file.ownerId`, `file.sizeBytes`, `file.mime`, and `file.kind`
-(`image | video | audio | pdf | archive | text | file`) on top of
-the base `DesktopFileShape`.
+`file.ownerId`, `file.sizeBytes`, `file.mime`, `file.kind`
+(`image | video | audio | pdf | archive | text | file`) and
+`file.isMedia` (the Media Library would accept the file — decided
+server-side, filterable via `openstation_stored_file_is_media`) on
+top of the base `DesktopFileShape`.
 
 **Tile menu** — the built-in entries injected through the standard
 `os.files.tile-menu` filter: `desktop-mode/upload-download`
 (every viewer), `desktop-mode/upload-share` (owner),
-`desktop-mode/upload-leave` (recipient's root tile), and
+`desktop-mode/upload-leave` (recipient's root tile),
+`desktop-mode/upload-add-to-media` (every viewer with
+`canAddToMedia`, when `file.isMedia`; multi-select aware),
+`desktop-mode/upload-start-post` / `desktop-mode/upload-start-page`
+(images, with `canStartPost` / `canStartPage`), and
 `desktop-mode/folder-zip-download` on folder tiles when
 `zipAvailable`. Plugins reorder/hide them like any other item.
+
+**Media Library routes** — `POST /uploads/<id>/media` copies the
+file into the Media Library and answers `{ attachmentId, created,
+title, url, editUrl }`; it is idempotent per stored file (`created:
+false` on a repeat). `POST /uploads/<id>/post` with `{ postType }`
+does the same copy, starts an `auto-draft` with the attachment as
+its content (and featured image, for images) and answers `{ postId,
+postType, editUrl, attachment }`; the shell opens `editUrl` in a
+window. Server contract: [files-on-desktop.md → Into the Media
+Library](files-on-desktop.md#into-the-media-library).
 
 **Heartbeat invites** — single-file share invites ride the existing
 `shares.pending` channel with `targetType: 'file'`, `fileId`, and

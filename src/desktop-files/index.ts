@@ -44,6 +44,7 @@ import { seedBootFolders } from './boot-folders';
 import { installShareMenuItems } from './share-menu-items';
 import { installShareInviteBanner } from './share-invite-banner';
 import { installUploadMenuItems } from './upload-menu-items';
+import { installMediaMenuItems } from './media-menu-items';
 import { ingestPendingInvites, type PendingInvite } from './shares-store';
 import { registerTilePayloadHandler } from './tile-payloads';
 import * as filesRest from './rest';
@@ -70,6 +71,7 @@ registerFileAssociationsTab();
 seedBootFolders();
 installShareMenuItems();
 installUploadMenuItems();
+installMediaMenuItems();
 // Hydrate the shares store from the shell config snapshot BEFORE the
 // banner subscribes — the heartbeat-driven path only fires the
 // subscriber when new rows land, so the refresh case (rows seeded

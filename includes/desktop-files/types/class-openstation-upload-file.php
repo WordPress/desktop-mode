@@ -88,7 +88,7 @@ class OpenStation_Upload_File extends OpenStation_File {
 
 	/**
 	 * Augment the base serialized shape with owner id, size, mime,
-	 * and kind slug.
+	 * kind slug, and whether the Media Library would accept the file.
 	 *
 	 * @return array
 	 */
@@ -99,6 +99,9 @@ class OpenStation_Upload_File extends OpenStation_File {
 		$shape['sizeBytes'] = $row ? (int) $row['size_bytes'] : 0;
 		$shape['mime']      = $row ? (string) $row['mime'] : '';
 		$shape['kind']      = $this->kind();
+		$shape['isMedia']   = $row && function_exists( 'openstation_stored_file_is_media' )
+			? openstation_stored_file_is_media( $row )
+			: false;
 		return $shape;
 	}
 
