@@ -11,7 +11,10 @@ import { holoTokens } from '../../holo';
 export const containerStyles = css`
 	:host {
 		position: fixed;
-		top: calc( var( --wp-admin--admin-bar--height, 32px ) + 16px );
+		top: calc(
+			var( --os-admin-bar-height, var( --wp-admin--admin-bar--height, 32px ) ) +
+				16px
+		);
 		inset-inline-end: 16px;
 		display: flex;
 		flex-direction: column;

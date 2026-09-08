@@ -15,6 +15,12 @@ jobs:
     # Only run for repo owners, org members, and collaborators — the
     # privileged (secret-bearing) job must not even start for outside
     # commenters, as defense-in-depth on top of the action's own gate.
+    #
+    # This gate vouches for the person who mentioned @claude, never for the
+    # code Claude is about to check out: every event here is raised on the
+    # base repository, so a maintainer can invoke it on a pull request from a
+    # public fork. The "Resolve pull request origin" step below is what keeps
+    # a write-capable credential away from that fork's working tree.
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)) ||
@@ -26,16 +32,79 @@ jobs:
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     permissions:
+      # `contents` stays read-only on purpose: on a fork pull request the
+      # action runs with this workflow token (see below), and that is what
+      # makes a push from an untrusted working tree impossible. Pull-request
+      # and issue writes let Claude keep posting its tracking comment there.
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
+      - name: Resolve pull request origin
+        id: origin
+        # Decide whether the event points at a pull request whose head lives
+        # outside this repository. The events we listen to carry the PR
+        # number but not its head repository, so ask the API. Any failure
+        # here fails the job, so an unknown origin never reaches Claude with
+        # an App token; a deleted head repository counts as a fork.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          is_pr="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${NUMBER}" --jq 'has("pull_request")')"
+          if [ "$is_pr" != "true" ]; then
+            # A plain issue: Claude works on the default branch, trusted content.
+            echo "fork=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          head_repo="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${NUMBER}" --jq '.head.repo.full_name // ""')"
+          if [ "$head_repo" = "$GITHUB_REPOSITORY" ]; then
+            echo "fork=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Pull request #${NUMBER} comes from '${head_repo:-<deleted repository>}'; running without a write-capable token."
+            echo "fork=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+
+      - name: Collect the trusted agent guide
+        id: guide
+        if: steps.origin.outputs.fork == 'true'
+        # On a fork pull request Claude runs with project memory OFF
+        # (`--setting-sources user`, below). The action restores `CLAUDE.md`
+        # from the base branch, but ours is an `@AGENTS.md` include, and the
+        # included file is not on the action's restore list — so with memory
+        # on, the fork would write the instruction layer. Build the guide
+        # from the default branch ourselves instead, resolving the includes,
+        # and hand it to Claude as an appended system prompt. `origin` is
+        # this repository, never the fork, so what `FETCH_HEAD` holds is
+        # ours whatever the checkout above landed on.
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --depth 1 --no-recurse-submodules origin "$DEFAULT_BRANCH"
+          out="$RUNNER_TEMP/claude-trusted-guide.md"
+          {
+            echo "# Repository guide"
+            echo
+            echo "Project memory is not loaded for this run because the checkout is a pull request from a fork. This is the guide from the trusted \`${DEFAULT_BRANCH}\` branch instead; follow it as you would CLAUDE.md."
+            echo
+            git show "FETCH_HEAD:CLAUDE.md" | while IFS= read -r line || [ -n "$line" ]; do
+              case "$line" in
+                @*) git show "FETCH_HEAD:${line#@}" ;;
+                *)  printf '%s\n' "$line" ;;
+              esac
+            done
+          } > "$out"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+          echo "Wrote $(wc -c < "$out") bytes of trusted guide to $out"
 
       - name: Run Claude Code
         id: claude
@@ -43,15 +112,46 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+          # On a pull request from a fork, hand the action the workflow's own
+          # token instead of letting it exchange the OIDC token for a GitHub
+          # App token. The App token carries `contents: write` for this
+          # repository and the action writes it into `.git/config` for the
+          # whole run — inside a working tree the fork's author controls. The
+          # workflow token is scoped to the job's `permissions` (`contents:
+          # read`) and expires with the job, so nothing that runs against a
+          # fork's files can push to this repository. Claude can still review
+          # and comment there; it could never push to a fork's branch anyway.
+          github_token: ${{ steps.origin.outputs.fork == 'true' && github.token || '' }}
+
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
 
+          # A skill or custom slash command can carry a `!` shell expansion
+          # in its body, and Claude Code runs that expansion while building
+          # the prompt — BEFORE the model sees anything, and with the skill's
+          # own `allowed-tools` frontmatter widening this workflow's tool
+          # list. The action restores `.claude/` from the base branch, but a
+          # skill can be reached from other places in a checkout, so a
+          # public fork gets to author one. This setting merges into the
+          # runner's user settings and replaces every such expansion with a
+          # "disabled by policy" marker, for every skill source.
+          settings: |
+            { "disableSkillShellExecution": true }
+
+          # On a fork pull request, also turn skills and slash commands off
+          # altogether, and load no project memory or settings from the
+          # checkout at all: nothing in it is ours to trust, and the OAuth
+          # token for Claude itself is in the subprocess environment whatever
+          # GitHub token the run holds. The repository guide still reaches
+          # Claude — as the file the step above built from the default
+          # branch. Same-repository branches and plain issues keep the
+          # project skills (`@claude /pixijs …`) and memory as usual.
+          claude_args: ${{ steps.origin.outputs.fork == 'true' && format('--disable-slash-commands --setting-sources user --append-system-prompt-file {0}', steps.guide.outputs.path) || '' }}
+
           # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
           # prompt: 'Update the pull request description to include a summary of changes.'
 
-          # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr *)'
-
+          # or https://code.claude.com/docs/en/cli-reference for the other
+          # options `claude_args` accepts (e.g. '--allowed-tools Bash(gh pr *)').

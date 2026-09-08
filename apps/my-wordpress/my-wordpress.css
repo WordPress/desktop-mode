@@ -255,6 +255,13 @@
 	min-block-size: 0;
 }
 
+/* Nothing open, no pane: the list has the whole window until a
+ * click needs the preview beside it (`splitView()` in
+ * `parts/dossier-views.ts` leaves the aside out entirely). */
+.os-mywp__split--solo {
+	grid-template-columns: minmax( 0, 1fr );
+}
+
 .os-mywp__list-pane {
 	min-inline-size: 0;
 	/* Grid items default to min-size auto; without the 0 the row
@@ -275,9 +282,9 @@
  * A narrow window — a phone, or a desktop window pulled in under
  * the two floors above (240px list + 430px pane). The panes stack:
  * the list takes the window and the preview becomes a sheet along
- * the bottom, at most 45% tall and scrolling on its own, that is
- * there only while something is selected. An empty pane on a phone
- * is a bar of nothing over the list. The container is the app root
+ * the bottom, at most 45% tall and scrolling on its own. It is only
+ * rendered while something is selected, so the list alone fills the
+ * single row the rest of the time. The container is the app root
  * (`.os-app`, `app-runtime.css`).
  */
 @container ( max-width: 640px ) {
@@ -290,10 +297,6 @@
 		border-inline-start: 0;
 		border-block-start: 1px solid var( --os-ui-border, #dcdcde );
 		max-block-size: 45%;
-	}
-
-	.os-mywp__detail-pane:has( > .os-mywp__pane-empty ) {
-		display: none;
 	}
 }
 
@@ -1209,17 +1212,6 @@
 	color: var( --os-ui-fg-muted, #646970 );
 	border-block-start: 1px solid var( --os-ui-border, #dcdcde );
 	flex: 0 0 auto;
-}
-
-.os-mywp__pane-empty {
-	margin: 0;
-	block-size: 100%;
-	display: grid;
-	place-items: center;
-	padding: 24px;
-	text-align: center;
-	color: var( --os-ui-fg-muted, #646970 );
-	font-size: 13px;
 }
 
 /* ------------------------------------------------------------------ */

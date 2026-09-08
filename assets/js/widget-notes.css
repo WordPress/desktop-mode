@@ -158,13 +158,16 @@
 }
 
 /* ------------------------------------------------------------------
-   Footer: swatch dots, public toggle, pin button
+   Footer: swatch dots
    ------------------------------------------------------------------ */
 
 .dm-notes-pad__footer {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	/* Breathing room under the sheet: the swatch row sat close enough
+	   to the paper's bottom edge to read as part of it. */
+	margin-block-start: 8px;
 }
 
 .dm-notes-pad__swatches {
@@ -197,40 +200,6 @@
 }
 
 .dm-notes-pad__swatch:focus-visible {
-	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
-	outline-offset: 2px;
-}
-
-.dm-notes-pad__public {
-	font-size: 11px;
-	/* The widget card is dark glass; the component's default
-	   --os-ui-fg is near-black and disappears on it. */
-	--os-ui-fg: rgba(255, 255, 255, 0.85);
-	align-self: center;
-}
-
-.dm-notes-pad__pin-btn {
-	align-self: center;
-	padding: 4px 14px;
-	border: none;
-	border-radius: 999px;
-	background: var(--wp-admin-theme-color, #3858e9);
-	color: #fff;
-	font-size: 12px;
-	cursor: pointer;
-	transition: filter 140ms ease-out;
-}
-
-.dm-notes-pad__pin-btn:hover:not(:disabled) {
-	filter: brightness(1.1);
-}
-
-.dm-notes-pad__pin-btn:disabled {
-	opacity: 0.5;
-	cursor: default;
-}
-
-.dm-notes-pad__pin-btn:focus-visible {
 	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
 	outline-offset: 2px;
 }

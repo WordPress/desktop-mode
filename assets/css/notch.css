@@ -163,7 +163,9 @@ body.os-active.os-admin-bar-dynamic:has( #wpadminbar:hover ) .os-notch,
 body.os-active.os-admin-bar-dynamic:has( #wpadminbar:focus-within ) .os-notch,
 body.os-active.os-admin-bar-dynamic:has( .os-notch:hover ) .os-notch,
 body.os-active.os-admin-bar-dynamic:has( .os-notch:focus-visible ) .os-notch {
-	top: var( --wp-admin--admin-bar--height, 32px );
+	/* The bar's measured edge (src/admin-bar-height.ts), Core's token
+	   behind it — a host that made the bar taller moved this step too. */
+	top: var( --os-admin-bar-height, var( --wp-admin--admin-bar--height, 32px ) );
 }
 
 /*
@@ -186,5 +188,5 @@ body.os-active.os-admin-bar-dynamic .os-notch::before {
 	position: absolute;
 	inset-inline: 0;
 	inset-block-end: 100%;
-	height: var( --wp-admin--admin-bar--height, 32px );
+	height: var( --os-admin-bar-height, var( --wp-admin--admin-bar--height, 32px ) );
 }

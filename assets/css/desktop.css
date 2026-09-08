@@ -157,6 +157,25 @@ body.os-active #wpadminbar {
 }
 
 /*
+ * No top-level item may be taller than the bar.
+ *
+ * Core lays the two item groups out as floats, and a float that
+ * overflows the 32px bar overflows invisibly. A host may lay a group
+ * out as a flex row instead — WordPress.com's Debug Bar does, to
+ * order its own item first — and then every item stretches to the
+ * tallest one and the group's background paints the difference under
+ * the windows' title bars. Our own items were that tallest one once
+ * (an `inline-flex` item on a 32px line box grew to 37px; fixed at
+ * the source in `includes/admin-bar.php`), but any item from any
+ * plugin can be, so the cap lives here: the bar's own height token,
+ * which is also the 46px mobile bar. Submenus are absolutely
+ * positioned and unaffected.
+ */
+body.os-active #wpadminbar .ab-top-menu > li {
+	max-height: var(--wp-admin--admin-bar--height, 32px);
+}
+
+/*
  * Admin-bar presentation modes — OS Settings → Appearance → Admin bar,
  * persisted as `adminBarMode` and emitted as a
  * `os-admin-bar-<mode>` body class by PHP on first paint and
@@ -198,10 +217,12 @@ body.os-active #wpadminbar {
  * own token, so the parked offset follows the 46px mobile bar as well.
  */
 body.os-active.os-admin-bar-dynamic #wpadminbar {
+	/* One number for the slide; the reveal zone below waits on it. */
+	--os-admin-bar-slide: 180ms;
 	inset-block-start: calc(
 		var(--os-admin-bar-peek, 4px) - var(--wp-admin--admin-bar--height, 32px)
 	) !important;
-	transition: inset-block-start 180ms ease;
+	transition: inset-block-start var(--os-admin-bar-slide, 180ms) ease;
 }
 
 body.os-active.os-admin-bar-dynamic #wpadminbar:hover,
@@ -237,6 +258,23 @@ body.os-active.os-admin-bar-dynamic #wpadminbar::after {
 	inset-inline: 0;
 	inset-block-start: 100%;
 	height: var(--os-admin-bar-reveal-zone, 16px);
+	/*
+	 * The zone changes size only once the bar has come to rest — a
+	 * step, not a slide, held back for the length of the bar's own
+	 * slide. That delay is what keeps the reveal stable. Collapsed the
+	 * instant hover began, the zone was gone while the bar was still
+	 * on its way down: a pointer resting in the band the zone had
+	 * covered was outside the bar's box for the rest of the slide, so
+	 * hover dropped, the bar turned back, the zone returned under the
+	 * pointer, hover resumed — the bar flickered up and down for as
+	 * long as the pointer stayed near the edge. Held for the slide,
+	 * the zone still hangs off the moving bar and the two together
+	 * always cover the pointer that tripped it; by the time the zone
+	 * goes, the bar's own box is over that pointer. The same delay on
+	 * the way back keeps the zone from reappearing under a pointer
+	 * that just left the bar while the bar is still retracting.
+	 */
+	transition: height 0s linear var(--os-admin-bar-slide, 180ms);
 }
 
 /*
@@ -246,7 +284,8 @@ body.os-active.os-admin-bar-dynamic #wpadminbar::after {
  *
  * Collapsing it is also what keeps the reveal stable: the pointer
  * that tripped the zone is, post-reveal, inside the bar's real box,
- * so `:hover` holds without the zone's help.
+ * so `:hover` holds without the zone's help — and it collapses only
+ * once the bar is there (the transition above).
  */
 body.os-active.os-admin-bar-dynamic #wpadminbar:hover::after,
 body.os-active.os-admin-bar-dynamic #wpadminbar:focus-within::after,
@@ -268,7 +307,9 @@ body.os-active.os-admin-bar-dynamic #wpadminbar:active::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	body.os-active.os-admin-bar-dynamic #wpadminbar {
+	body.os-active.os-admin-bar-dynamic #wpadminbar,
+	body.os-active.os-admin-bar-dynamic #wpadminbar::after {
+		/* The bar jumps, so the zone has nothing to wait for. */
 		transition: none;
 	}
 }
@@ -354,10 +395,24 @@ body.os-active #wpcontent {
  * Desktop shell — fills the viewport below the admin bar.
  * Uses position: fixed so it's unaffected by any containing-block
  * quirks in #wpwrap/#wpcontent.
+ *
+ * The inset is the bar's MEASURED bottom edge, `--os-admin-bar-height`
+ * (written on <html> by `src/admin-bar-height.ts`), with Core's own
+ * token behind it for the first paint. Core's token is Core's promise
+ * about Core's bar; a host can make the bar taller, give it a border
+ * or push it down under a strip of its own — WordPress.com's staff
+ * debug chrome does — and the shell then started under the bar by
+ * exactly the difference. The measured token is absent whenever the
+ * bar has no box at the top edge (hidden, mobile, solo, fullscreen,
+ * parked in the dynamic mode), so every mode that rebinds Core's
+ * token below still resolves through it.
  */
 .os-shell {
 	position: fixed;
-	inset-block-start: var(--wp-admin--admin-bar--height, 32px);
+	inset-block-start: var(
+		--os-admin-bar-height,
+		var(--wp-admin--admin-bar--height, 32px)
+	);
 	inset-inline-start: 0;
 	inset-inline-end: 0;
 	inset-block-end: 0;
@@ -574,7 +629,10 @@ body.os-active #wpcontent {
 /* Below 783px WP collapses the admin bar to 46px. */
 @media screen and (max-width: 782px) {
 	.os-shell {
-		inset-block-start: var(--wp-admin--admin-bar--height, 46px);
+		inset-block-start: var(
+			--os-admin-bar-height,
+			var(--wp-admin--admin-bar--height, 46px)
+		);
 	}
 }
 

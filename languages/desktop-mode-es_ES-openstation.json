@@ -1320,12 +1320,6 @@
             "Pin here": [
                 ""
             ],
-            "Pin the note without dragging (Ctrl+Enter)": [
-                ""
-            ],
-            "Pin to desktop": [
-                "Añadir nuevo escritorio"
-            ],
             "Pinned by %s": [
                 ""
             ],
@@ -1399,9 +1393,6 @@
                 ""
             ],
             "Public note — everyone can see it. Click to make private.": [
-                ""
-            ],
-            "Public — visible to other desktop users": [
                 ""
             ],
             "Publish a post or a page and it is pinned here. Threads are drawn between posts when one links to another.": [

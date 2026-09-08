@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: OpenStation 1.1.6\n"
+"Project-Id-Version: OpenStation 1.1.7\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/desktop-mode\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-04T15:16:30+00:00\n"
+"POT-Creation-Date: 2026-09-07T17:22:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: desktop-mode\n"
@@ -852,12 +852,12 @@ msgid "Retry"
 msgstr ""
 
 #. %1$s is the workspace name, %2$d the windows kept, %3$d the windows on the desk.
-#: src/desktop.ts:2781
+#: src/desktop.ts:2787
 msgid "%1$s will open like this — the top %2$d of %3$d windows, where they are."
 msgstr ""
 
 #. %1$s is the workspace name, %2$d a number of windows.
-#: src/desktop.ts:2789
+#: src/desktop.ts:2795
 msgid "%1$s will open like this — %2$d windows, where they are."
 msgstr ""
 
@@ -1960,7 +1960,7 @@ msgid "Could not convert the note to a post."
 msgstr ""
 
 #: src/notes/layer.ts:309
-#: src/plugins/notes-widget/index.ts:449
+#: src/plugins/notes-widget/index.ts:432
 msgid "Could not pin the note. Please try again."
 msgstr ""
 
@@ -2028,17 +2028,17 @@ msgid "This note was changed in another session — showing the latest version."
 msgstr ""
 
 #: src/notes/layer.ts:1026
-#: src/plugins/notes-widget/index.ts:353
+#: src/plugins/notes-widget/index.ts:333
 msgid "Drop on the desktop to pin"
 msgstr ""
 
 #: src/notes/layer.ts:1027
-#: src/plugins/notes-widget/index.ts:354
+#: src/plugins/notes-widget/index.ts:334
 msgid "Pin here"
 msgstr ""
 
 #: src/notes/layer.ts:1028
-#: src/plugins/notes-widget/index.ts:355
+#: src/plugins/notes-widget/index.ts:335
 msgid "Can’t pin here"
 msgstr ""
 
@@ -2061,7 +2061,7 @@ msgstr ""
 
 #: src/notes/sentinel.ts:147
 #: src/notes/wallpaper-menu.ts:33
-#: src/plugins/notes-widget/index.ts:117
+#: src/plugins/notes-widget/index.ts:121
 msgid "New note"
 msgstr ""
 
@@ -2776,31 +2776,19 @@ msgstr ""
 msgid "Addresses"
 msgstr ""
 
-#: src/plugins/notes-widget/index.ts:112
+#: src/plugins/notes-widget/index.ts:116
 msgid "Drag to pin"
 msgstr ""
 
-#: src/plugins/notes-widget/index.ts:118
+#: src/plugins/notes-widget/index.ts:122
 msgid "Write a note…"
 msgstr ""
 
-#: src/plugins/notes-widget/index.ts:136
+#: src/plugins/notes-widget/index.ts:140
 msgid "Paper color"
 msgstr ""
 
-#: src/plugins/notes-widget/index.ts:154
-msgid "Public — visible to other desktop users"
-msgstr ""
-
-#: src/plugins/notes-widget/index.ts:168
-msgid "Pin to desktop"
-msgstr ""
-
-#: src/plugins/notes-widget/index.ts:169
-msgid "Pin the note without dragging (Ctrl+Enter)"
-msgstr ""
-
-#: src/plugins/notes-widget/index.ts:192
+#: src/plugins/notes-widget/index.ts:172
 msgid "Next paper color"
 msgstr ""
 
@@ -3111,7 +3099,7 @@ msgstr ""
 #: src/window-chrome/controls/built-ins.ts:63
 #: src/window/index.ts:2283
 #: includes/admin-bar.php:69
-#: includes/admin-bar.php:711
+#: includes/admin-bar.php:723
 msgid "Enter fullscreen"
 msgstr ""
 
@@ -3172,8 +3160,8 @@ msgid "Request failed (HTTP %d)."
 msgstr ""
 
 #: src/window/index.ts:2283
-#: includes/admin-bar.php:710
-#: includes/admin-bar.php:712
+#: includes/admin-bar.php:722
+#: includes/admin-bar.php:724
 msgid "Exit fullscreen"
 msgstr ""
 
@@ -4625,7 +4613,7 @@ msgid "Pack every window into an evenly tiled grid that fills the desktop."
 msgstr ""
 
 #: includes/admin-bar.php:245
-#: includes/admin-bar.php:727
+#: includes/admin-bar.php:739
 msgid "Keyboard shortcuts"
 msgstr ""
 
@@ -4633,104 +4621,104 @@ msgstr ""
 msgid "Open the Bug Report window"
 msgstr ""
 
-#: includes/admin-bar.php:709
+#: includes/admin-bar.php:721
 msgid "Fullscreen"
 msgstr ""
 
-#: includes/admin-bar.php:729
+#: includes/admin-bar.php:741
 msgid "Desktops & Overview"
 msgstr ""
 
-#: includes/admin-bar.php:731
+#: includes/admin-bar.php:743
 msgid "Key"
 msgstr ""
 
-#: includes/admin-bar.php:732
+#: includes/admin-bar.php:744
 msgid "Outside overview"
 msgstr ""
 
-#: includes/admin-bar.php:733
+#: includes/admin-bar.php:745
 msgid "Inside overview"
 msgstr ""
 
-#: includes/admin-bar.php:734
+#: includes/admin-bar.php:746
 msgid "In Show Desktop"
 msgstr ""
 
-#: includes/admin-bar.php:739
+#: includes/admin-bar.php:751
 msgid "Previous desktop (wraps)"
 msgstr ""
 
-#: includes/admin-bar.php:740
+#: includes/admin-bar.php:752
 msgid "Previous desktop (grid + top-bar update)"
 msgstr ""
 
-#: includes/admin-bar.php:741
+#: includes/admin-bar.php:753
 msgid "Previous desktop"
 msgstr ""
 
-#: includes/admin-bar.php:745
+#: includes/admin-bar.php:757
 msgid "Next desktop (wraps)"
 msgstr ""
 
-#: includes/admin-bar.php:746
+#: includes/admin-bar.php:758
 msgid "Next desktop (grid + top-bar update)"
 msgstr ""
 
-#: includes/admin-bar.php:747
+#: includes/admin-bar.php:759
 msgid "Next desktop"
 msgstr ""
 
-#: includes/admin-bar.php:751
+#: includes/admin-bar.php:763
 msgid "Enter Overview"
 msgstr ""
 
-#: includes/admin-bar.php:752
+#: includes/admin-bar.php:764
 msgid "Exit Overview onto active desktop"
 msgstr ""
 
-#: includes/admin-bar.php:753
+#: includes/admin-bar.php:765
 msgid "Restore windows (exit Show Desktop)"
 msgstr ""
 
-#: includes/admin-bar.php:757
-#: includes/admin-bar.php:759
+#: includes/admin-bar.php:769
+#: includes/admin-bar.php:771
 msgid "Toggle Show Desktop"
 msgstr ""
 
-#: includes/admin-bar.php:758
+#: includes/admin-bar.php:770
 msgid "Exit Overview (no minimize)"
 msgstr ""
 
-#: includes/admin-bar.php:763
+#: includes/admin-bar.php:775
 msgid "(in overview)"
 msgstr ""
 
-#: includes/admin-bar.php:765
+#: includes/admin-bar.php:777
 msgid "Commit current desktop, exit overview"
 msgstr ""
 
-#: includes/admin-bar.php:771
+#: includes/admin-bar.php:783
 msgid "Windows & palette"
 msgstr ""
 
-#: includes/admin-bar.php:775
+#: includes/admin-bar.php:787
 msgid "Cycle to the next window on the active desktop."
 msgstr ""
 
-#: includes/admin-bar.php:779
+#: includes/admin-bar.php:791
 msgid "Cycle to the previous window on the active desktop."
 msgstr ""
 
-#: includes/admin-bar.php:783
+#: includes/admin-bar.php:795
 msgid "Open the command palette / Ask AI overlay."
 msgstr ""
 
-#: includes/admin-bar.php:787
+#: includes/admin-bar.php:799
 msgid "Close every open window on the current desktop (asks first)."
 msgstr ""
 
-#: includes/admin-bar.php:791
+#: includes/admin-bar.php:803
 msgid "Exit Overview (or Snap Overview) without changing window state."
 msgstr ""
 
@@ -5778,36 +5766,36 @@ msgid "You are not allowed to upload files."
 msgstr ""
 
 #: includes/desktop-files/rest-uploads.php:212
-#: includes/desktop-files/rest-uploads.php:576
-#: includes/desktop-files/rest-uploads.php:594
-#: includes/desktop-files/rest-uploads.php:598
+#: includes/desktop-files/rest-uploads.php:631
+#: includes/desktop-files/rest-uploads.php:649
+#: includes/desktop-files/rest-uploads.php:653
 msgid "Invalid path."
 msgstr ""
 
-#: includes/desktop-files/rest-uploads.php:277
+#: includes/desktop-files/rest-uploads.php:284
 msgid "That file is larger than this server accepts."
 msgstr ""
 
-#: includes/desktop-files/rest-uploads.php:283
 #: includes/desktop-files/rest-uploads.php:290
+#: includes/desktop-files/rest-uploads.php:297
 msgid "No file was uploaded."
 msgstr ""
 
-#: includes/desktop-files/rest-uploads.php:352
+#: includes/desktop-files/rest-uploads.php:394
 msgid "This file type is not allowed."
 msgstr ""
 
 #. translators: %s: formatted maximum file size.
-#: includes/desktop-files/rest-uploads.php:364
+#: includes/desktop-files/rest-uploads.php:406
 #, php-format
 msgid "That file is larger than the allowed maximum of %s."
 msgstr ""
 
-#: includes/desktop-files/rest-uploads.php:375
+#: includes/desktop-files/rest-uploads.php:417
 msgid "Your desktop storage is full."
 msgstr ""
 
-#: includes/desktop-files/rest-uploads.php:588
+#: includes/desktop-files/rest-uploads.php:643
 msgid "That folder tree is nested too deeply."
 msgstr ""
 

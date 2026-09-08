@@ -165,11 +165,16 @@ export function wire( ctx: Ctx ): () => void {
 	} );
 
 	// --- hover card ------------------------------------------------------
-	// WP Explorer's tile tooltip: a floating card with the title, the
-	// lock banner, the thumbnail and the clamped excerpt. Same class
-	// names as the original, so the palette-level
-	// `--os-my-wordpress-card-*` family themes both windows' cards
-	// identically. Appended to document.body because the window clips.
+	// A floating card with the title, the lock banner, the thumbnail
+	// and the clamped excerpt, following the pointer over a tile.
+	// OFF by default: a card that inflates every thumbnail the pointer
+	// crosses gets in the way of a marquee, a bulk pick and a drag-out,
+	// so OpenStation paints nothing on hover. The wiring stays, behind
+	// the `os.my-wordpress.hover-card` filter: return `build( item )`
+	// for the stock card, or any element of your own, and it is
+	// positioned and torn down exactly as the stock one was. The card's
+	// class names still ride the palette-level `--os-my-wordpress-card-*`
+	// family. Appended to document.body because the window clips.
 	let hoverTip: HTMLElement | null = null;
 	let hoverFor = 0;
 	const hideTip = (): void => {
@@ -259,8 +264,20 @@ export function wire( ctx: Ctx ): () => void {
 			return;
 		}
 		hideTip();
-		hoverTip = buildTip( item );
+		// Remember the tile even when no card comes back, so the filter
+		// runs once per tile entered rather than on every child the
+		// pointer crosses inside it. `hideTip()` forgets it on leave.
 		hoverFor = id;
+		const card = hooksApi?.applyFilters(
+			'os.my-wordpress.hover-card',
+			null,
+			item,
+			{ build: buildTip, cell, event: e },
+		);
+		if ( ! ( card instanceof HTMLElement ) ) {
+			return;
+		}
+		hoverTip = card;
 		document.body.appendChild( hoverTip );
 		positionTip( hoverTip, e );
 	};

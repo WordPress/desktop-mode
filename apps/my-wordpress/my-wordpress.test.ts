@@ -279,13 +279,14 @@ describe( 'view', () => {
 		expect( root.querySelector( '.os-mywp__bulk' ) ).toBeNull();
 	} );
 
-	it( 'keeps the preview pane present, empty until an entry is selected', () => {
+	it( 'paints no preview pane until an entry is open — the list has the whole window', () => {
 		const empty = mount(
 			state( { section: 'posts' } ),
 			data( { list: page( [ item( { id: 1 } ) ] ) } ),
 		);
-		expect( empty.querySelector( '.os-mywp__detail-pane' ) ).not.toBeNull();
-		expect( empty.textContent ).toContain( 'Select an entry to preview it here.' );
+		expect( empty.querySelector( '.os-mywp__detail-pane' ) ).toBeNull();
+		expect( empty.querySelector( '.os-mywp__split' )?.classList.contains( 'os-mywp__split--solo' ) ).toBe( true );
+		expect( empty.textContent ).not.toContain( 'Select an entry to preview it here.' );
 
 		const open = mount(
 			state( { section: 'posts', item: 1 } ),
@@ -303,6 +304,8 @@ describe( 'view', () => {
 			} ),
 		);
 		expect( open.querySelector( '.os-mywp__tiles' ) ).not.toBeNull();
+		expect( open.querySelector( '.os-mywp__detail-pane' ) ).not.toBeNull();
+		expect( open.querySelector( '.os-mywp__split--solo' ) ).toBeNull();
 		expect( open.textContent ).toContain( 'Status' );
 		expect( open.querySelector( '[os-action="trash"]' ) ).not.toBeNull();
 		// The pane carries WP Explorer's full verb row: the door into
@@ -549,7 +552,11 @@ describe( 'view', () => {
 		}
 	} );
 
-	it( 'hovering a tile summons WP Explorer\'s card: title, excerpt, lock banner', () => {
+	/**
+	 * Mounts a one-post section and returns its tile — the hover-card
+	 * tests differ only in what `wp.os.hooks` answers.
+	 */
+	const mountHoverTile = (): { cell: HTMLElement; root: HTMLElement; teardown: () => void } => {
 		const root = document.createElement( 'div' );
 		document.body.appendChild( root );
 		const ctx = mockViewContext( {
@@ -576,24 +583,90 @@ describe( 'view', () => {
 		const cell = root.querySelector< HTMLElement >( '[data-mywp-drag][data-item-id]' );
 		expect( cell ).not.toBeNull();
 		expect( cell?.hasAttribute( 'title' ) ).toBe( false );
-		cell?.dispatchEvent( new MouseEvent( 'mouseover', { bubbles: true } ) );
-		const tip = document.body.querySelector( '.os-my-wordpress__tooltip' );
-		expect( tip ).not.toBeNull();
-		expect( tip?.querySelector( '.os-my-wordpress__tooltip-title' )?.textContent ).toBe(
-			'This is a test',
-		);
-		expect( tip?.querySelector( '.os-my-wordpress__tooltip-excerpt' )?.textContent ).toBe(
-			'Test 2 okay',
-		);
-		expect( tip?.querySelector( '.os-my-wordpress__tooltip-lock' )?.textContent ).toContain(
-			'Ada is currently editing',
-		);
-		// A press means a click, a drag-out or the menu — card gone.
-		// (MouseEvent: jsdom has no PointerEvent constructor; listeners
-		// key on the event NAME either way.)
-		root.dispatchEvent( new MouseEvent( 'pointerdown', { bubbles: true } ) );
+		return { cell: cell as HTMLElement, root, teardown };
+	};
+
+	it( 'hovering a tile paints nothing by default — no card, no tooltip', () => {
+		const { cell, teardown } = mountHoverTile();
+		cell.dispatchEvent( new MouseEvent( 'mouseover', { bubbles: true } ) );
+		cell.dispatchEvent( new MouseEvent( 'mousemove', { bubbles: true } ) );
 		expect( document.body.querySelector( '.os-my-wordpress__tooltip' ) ).toBeNull();
+		expect( document.body.querySelector( '[role="tooltip"]' ) ).toBeNull();
 		teardown();
+	} );
+
+	it( 'a `hover-card` filter returning build( item ) restores the stock card: title, excerpt, lock banner', () => {
+		const seen: unknown[] = [];
+		const hooks = {
+			applyFilters: ( hook: string, value: unknown, ...args: unknown[] ) => {
+				if ( hook !== 'os.my-wordpress.hover-card' ) {
+					return value;
+				}
+				seen.push( args[ 0 ] );
+				const { build } = args[ 1 ] as {
+					build: ( row: Record< string, unknown > ) => HTMLElement;
+					cell: HTMLElement;
+					event: MouseEvent;
+				};
+				return build( args[ 0 ] as Record< string, unknown > );
+			},
+		};
+		( window as { wp?: unknown } ).wp = { os: { hooks } };
+		try {
+			const { cell, root, teardown } = mountHoverTile();
+			cell.dispatchEvent( new MouseEvent( 'mouseover', { bubbles: true } ) );
+			const tip = document.body.querySelector( '.os-my-wordpress__tooltip' );
+			expect( tip ).not.toBeNull();
+			expect( tip?.querySelector( '.os-my-wordpress__tooltip-title' )?.textContent ).toBe(
+				'This is a test',
+			);
+			expect( tip?.querySelector( '.os-my-wordpress__tooltip-excerpt' )?.textContent ).toBe(
+				'Test 2 okay',
+			);
+			expect( tip?.querySelector( '.os-my-wordpress__tooltip-lock' )?.textContent ).toContain(
+				'Ada is currently editing',
+			);
+			// The filter is asked once per tile entered, not once per
+			// child element the pointer crosses inside it.
+			cell.dispatchEvent( new MouseEvent( 'mouseover', { bubbles: true } ) );
+			expect( seen ).toHaveLength( 1 );
+			// A press means a click, a drag-out or the menu — card gone.
+			// (MouseEvent: jsdom has no PointerEvent constructor; listeners
+			// key on the event NAME either way.)
+			root.dispatchEvent( new MouseEvent( 'pointerdown', { bubbles: true } ) );
+			expect( document.body.querySelector( '.os-my-wordpress__tooltip' ) ).toBeNull();
+			teardown();
+		} finally {
+			delete ( window as { wp?: unknown } ).wp;
+		}
+	} );
+
+	it( 'a `hover-card` filter returning its own element gets it positioned and torn down like the stock card', () => {
+		const hooks = {
+			applyFilters: ( hook: string, value: unknown, ...args: unknown[] ) => {
+				if ( hook !== 'os.my-wordpress.hover-card' ) {
+					return value;
+				}
+				const el = document.createElement( 'div' );
+				el.className = 'my-plugin-card';
+				el.textContent = String( ( args[ 0 ] as { title: string } ).title );
+				return el;
+			},
+		};
+		( window as { wp?: unknown } ).wp = { os: { hooks } };
+		try {
+			const { cell, root, teardown } = mountHoverTile();
+			cell.dispatchEvent( new MouseEvent( 'mouseover', { bubbles: true, clientX: 40, clientY: 30 } ) );
+			const card = document.body.querySelector< HTMLElement >( '.my-plugin-card' );
+			expect( card?.textContent ).toBe( 'This is a test' );
+			expect( card?.style.left ).toBe( '56px' );
+			expect( card?.style.top ).toBe( '46px' );
+			root.dispatchEvent( new MouseEvent( 'mouseleave' ) );
+			expect( document.body.querySelector( '.my-plugin-card' ) ).toBeNull();
+			teardown();
+		} finally {
+			delete ( window as { wp?: unknown } ).wp;
+		}
 	} );
 
 	it( 'the Edit… modal carries the original controls: notice, category picker, tag tokens', () => {

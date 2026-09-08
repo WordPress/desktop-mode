@@ -1,7 +1,7 @@
 /**
  * Note Pad widget: compose state, tear-off drag gating (empty text
  * never lifts), payload shape, commit clears the draft, and the
- * keyboard "Pin to desktop" path (POST + CustomEvent hand-off).
+ * Ctrl+Enter keyboard pin path (POST + CustomEvent hand-off).
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { WidgetContext } from '../../src/widgets/types';
@@ -112,7 +112,12 @@ describe( 'note pad widget', () => {
 		expect( container.querySelector( '.dm-notes-pad__sheet' ) ).not.toBeNull();
 		expect( container.querySelectorAll( '.dm-notes-pad__under' ).length ).toBe( 2 );
 		expect( container.querySelectorAll( '.dm-notes-pad__swatch' ).length ).toBe( 6 );
-		expect( container.querySelector( '.dm-notes-pad__pin-btn' ) ).not.toBeNull();
+		// The footer is the swatch row and nothing else: no Public
+		// checkbox (visibility lives on the pinned note) and no "Pin to
+		// desktop" button (the tear-off drag and Ctrl+Enter are the paths).
+		expect( container.querySelector( '.dm-notes-pad__footer' )?.children.length ).toBe( 1 );
+		expect( container.querySelector( 'button:not(.dm-notes-pad__swatch):not(.dm-notes-pad__corner)' ) ).toBeNull();
+		expect( container.querySelector( 'os-checkbox-label' ) ).toBeNull();
 		// Under-sheets advertise the NEXT colors in the cycle.
 		const sheet = container.querySelector( '.dm-notes-pad__sheet' ) as HTMLElement;
 		const under1 = container.querySelector( '.dm-notes-pad__under--1' ) as HTMLElement;
@@ -178,21 +183,30 @@ describe( 'note pad widget', () => {
 		expect( under1.dataset.noteColor ).toBe( 'sky' );
 	} );
 
-	test( '"Pin to desktop" POSTs and hands the note to the layer via CustomEvent', async () => {
+	test( 'Ctrl+Enter in the editor POSTs and hands the note to the layer via CustomEvent', async () => {
 		typeInEditor( container, 'kb note' );
 		const seen = vi.fn();
 		document.addEventListener( NOTE_CREATED_EVENT, seen, { once: true } );
-		( container.querySelector( '.dm-notes-pad__pin-btn' ) as HTMLButtonElement ).click();
+		const editor = container.querySelector( '.dm-notes-pad__editor' ) as HTMLElement;
+		editor.dispatchEvent(
+			new KeyboardEvent( 'keydown', { key: 'Enter', ctrlKey: true, cancelable: true } ),
+		);
+		// A held key repeats the keydown; the in-flight guard means one POST.
+		editor.dispatchEvent(
+			new KeyboardEvent( 'keydown', { key: 'Enter', ctrlKey: true, cancelable: true } ),
+		);
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 		const post = fetchSpy.mock.calls.find(
 			( call ) => ( call[ 1 ] as RequestInit | undefined )?.method === 'POST',
 		);
 		expect( post ).toBeDefined();
+		expect(
+			fetchSpy.mock.calls.filter( ( call ) => ( call[ 1 ] as RequestInit | undefined )?.method === 'POST' ),
+		).toHaveLength( 1 );
 		expect( seen ).toHaveBeenCalledTimes( 1 );
 		const detail = ( seen.mock.calls[ 0 ][ 0 ] as CustomEvent< { note: { id: number } } > ).detail;
 		expect( detail.note.id ).toBe( 31 );
 		// Draft cleared after a successful pin.
-		const editor = container.querySelector( '.dm-notes-pad__editor' ) as HTMLElement;
 		expect( editor.getAttribute( 'value' ) ).toBe( '' );
 	} );
 } );

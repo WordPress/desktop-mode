@@ -565,8 +565,8 @@ true (the current user has `edit_posts`):
 One companion CustomEvent (document-level):
 
 ```javascript
-// A note was created outside the layer (the widget's keyboard
-// "Pin to desktop" path POSTs from its own bundle) — the layer
+// A note was created outside the layer (the widget's Ctrl+Enter
+// keyboard path POSTs from its own bundle) — the layer
 // listens and pins it with the insertion animation.
 document.addEventListener( 'os-note-created', ( e ) => {
     // e.detail.note — the REST `Note` shape from /desktop-mode/v1/notes.
@@ -2097,7 +2097,7 @@ const off = wp.os.workArea.subscribe( ( snapshot ) => relayout( snapshot.rect ) 
 
 **CSS custom properties.** The same numbers are written on `#os-shell` so a stylesheet can reserve the band without JS: `--os-work-area-inset-top`, `--os-work-area-inset-right`, `--os-work-area-inset-bottom`, `--os-work-area-inset-left` (px) and `--os-work-area-width`, `--os-work-area-height`. Give the `bottom` inset an `80px` fallback (the bottom pill at its default size, the placement almost every user has) and the others `0px`; those apply until the shell has measured once. `.os-area`'s own padding, the `.os-icons` grid and the `.os-widgets` column read them the same way.
 
-**What claims an inset.** Only chrome that floats **over** the area: the bottom dock pill, and anything a custom dock-rail renderer floats over it (every `.os-dock` in the shell body is measured; a rail claims the edge it is nearest to). A left or right dock is a flex sibling of the area, so the area is already narrower and its inset is 0. The admin bar sits above the shell in every mode, so `viewport` is already below it. The notch floats and claims nothing, by contract. There is no API for a plugin to claim a band, on purpose: a work area is only useful while few things carve it.
+**What claims an inset.** Only chrome that floats **over** the area: the bottom dock pill, and anything a custom dock-rail renderer floats over it (every `.os-dock` in the shell body is measured; a rail claims the edge it is nearest to). A left or right dock is a flex sibling of the area, so the area is already narrower and its inset is 0. The admin bar sits above the shell in every mode, so `viewport` is already below it — below where the bar *actually ends*, not where Core says it should: the shell measures `#wpadminbar` and publishes its bottom edge in viewport px as **`--os-admin-bar-height`** on `<html>` (`src/admin-bar-height.ts`), and `.os-shell`, the notch, the toast stack and the release card all read `var( --os-admin-bar-height, var( --wp-admin--admin-bar--height, 32px ) )`. Core's token is Core's promise about Core's bar; a host that makes the bar taller, gives it a border or pushes it down under a fixed strip of its own (WordPress.com's staff debug chrome does) moves the measured edge and the shell follows. The property is present only while the bar is laid out at the top edge — a bar hidden by a mode, a mobile viewport, solo or a fullscreen window, or parked above the viewport in the `dynamic` mode, publishes nothing, so those states keep resolving Core's token. Chrome of your own that hangs below the bar should read the same chain. The notch floats and claims nothing, by contract. There is no API for a plugin to claim a band, on purpose: a work area is only useful while few things carve it.
 
 **Outside the contract.** Body-level popovers — context menus, tooltips, the dock's constellation and peek cards — position against the viewport and may open over the dock; they are transient chrome, not content, and stay that way. The Exposé overview collapses every rail while it is open and lays its grid out against the whole area on purpose.
 
@@ -6626,8 +6626,8 @@ sections) renders inside it, the activity footprint included.
 The app fires the `os.my-wordpress.*` hooks documented below over its
 DOM — `preview-extras` (the `header`/`meta`/`footer` slots),
 `list-tile`, `list-bands`, `tile-context-menu`, `preview-actions`,
-`group-extras`, `user-activate`, `user-preview-actions` and
-`user-dossier-sections` — and its rows carry the REST-visible fields
+`group-extras`, `hover-card`, `user-activate`, `user-preview-actions`
+and `user-dossier-sections` — and its rows carry the REST-visible fields
 subscribers read (`meta`, per-taxonomy term ids, `openstation_woo`;
 the Customers section's rows carry `openstation_woo_customer` — the
 built-in Users folder deliberately ships no money on its rows, and
@@ -6807,6 +6807,64 @@ read as the answer. Drop what doesn't apply.
 The filter does not fire for the author / contributor sub-folders
 inside a post's detail view — those have no section context and always
 render every block.
+
+### Filter — `os.my-wordpress.hover-card`
+
+Paint a card that follows the pointer over a tile. **OpenStation
+paints nothing here by default** — a card that inflates every
+thumbnail the pointer crosses gets in the way of a marquee, a bulk
+pick and a drag-out, so the stock card is opt-in. The filter runs
+once per tile the pointer enters (grid, folder and canvas views; the
+list view never asks, its rows already say what a card would) and
+receives `null`. Return an `HTMLElement` and the app owns it from
+there: appended to `document.body`, kept beside the pointer, clamped
+to the viewport, and removed on leave, press, right-click or unmount.
+Return anything else and nothing is painted.
+
+```ts
+// Bring back the stock card — title, lock banner, thumbnail, excerpt.
+wp.hooks.addFilter(
+    'os.my-wordpress.hover-card',
+    'my-plugin/hover-card',
+    ( card, item, ctx ) => ctx.build( item ),
+);
+
+// Or paint your own, only for media.
+wp.hooks.addFilter(
+    'os.my-wordpress.hover-card',
+    'my-plugin/media-peek',
+    ( card, item ) => {
+        if ( ! item.thumb ) {
+            return card;
+        }
+        const img = document.createElement( 'img' );
+        img.className = 'my-plugin-peek';
+        img.src = item.thumb;
+        img.alt = '';
+        return img;
+    },
+);
+```
+
+Arguments after the value:
+
+```ts
+/** The row under the pointer — title, thumb, excerpt, subtitle, lockedBy, … */
+item: Record< string, unknown >;
+ctx: {
+    /** The stock card for this row, built on demand. Themed by the `--os-my-wordpress-card-*` tokens. */
+    build: ( item ) => HTMLElement;
+    /** The tile element the pointer entered. */
+    cell: HTMLElement;
+    /** The `mouseover` that asked. */
+    event: MouseEvent;
+}
+```
+
+The element you return is positioned with `left` / `top` in viewport
+pixels, so give it `position: fixed` and a `z-index` above the
+windows; the stock card's class, `os-my-wordpress__tooltip`, already
+carries both.
 
 ### Filter — `os.my-wordpress.user-activate`
 

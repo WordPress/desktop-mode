@@ -165,7 +165,11 @@ describe( 'the apps fold under a narrow container', () => {
 		const narrow = css.slice( css.indexOf( '@container ( max-width: 640px )' ) );
 		expect( narrow ).toMatch( /\.os-mywp__split \{[^}]*grid-template-rows:\s*minmax\(\s*0,\s*1fr\s*\)\s*auto/ );
 		expect( narrow ).toMatch( /\.os-mywp__detail-pane \{[^}]*max-block-size:\s*45%/ );
-		expect( narrow ).toMatch( /\.os-mywp__detail-pane:has\(\s*>\s*\.os-mywp__pane-empty\s*\)\s*\{[^}]*display:\s*none/ );
+		// With nothing selected the pane is not rendered at all (the
+		// split carries `--solo` and one column), so no `:has()` rule
+		// has to hide an empty sheet.
+		expect( css ).toMatch( /\.os-mywp__split--solo \{[^}]*grid-template-columns:\s*minmax\(\s*0,\s*1fr\s*\)/ );
+		expect( css ).not.toMatch( /os-mywp__pane-empty/ );
 	} );
 } );
 

@@ -157,6 +157,37 @@ class Tests_OpenStation_AdminBarDesktopToggle extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The OpenStation items must be block-level, exactly the bar's
+	 * height. An `inline-flex` item sits on a line box aligned on the
+	 * baseline and grows its <li> to 37px inside the 32px bar; under
+	 * Core's float layout that is invisible, but a host that lays the
+	 * secondary group out as a flex row (WordPress.com's Debug Bar
+	 * does) stretches every sibling to it and paints the group's
+	 * background 5px into the shell.
+	 *
+	 * @covers ::openstation_enqueue_toggle_assets
+	 */
+	public function test_toggle_items_are_block_level_flex() {
+		wp_set_current_user( self::$admin_id );
+
+		openstation_enqueue_toggle_assets();
+
+		$after  = wp_styles()->get_data( 'admin-bar', 'after' );
+		$inline = is_array( $after ) ? implode( '', $after ) : (string) $after;
+
+		$this->assertMatchesRegularExpression(
+			'/#wp-admin-bar-desktop-help > \.ab-item \{\s*display: flex;/',
+			$inline,
+			'The admin-bar items must be display: flex.'
+		);
+		$this->assertStringNotContainsString(
+			"> .ab-item {\n\t\t\tdisplay: inline-flex",
+			$inline,
+			'An inline-flex item grows its <li> past the bar height.'
+		);
+	}
+
+	/**
 	 * The save-openstation nonce must be reachable from the toggle's
 	 * click handler. Today the config is delivered via wp_localize_script
 	 * on the `os-admin-bar` handle, so we assert the nonce that

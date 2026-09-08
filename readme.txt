@@ -4,7 +4,7 @@ Tags: admin, dashboard, desktop, productivity, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.6
+Stable tag: 1.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -169,6 +169,13 @@ The **Inkfall** game's word list (`assets/games/inkfall/words.txt`) is generated
 * **[LDNOOBW English list](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words)** (CC-BY 4.0) — used as an exclusion filter.
 
 == Changelog ==
+
+= 1.1.7 =
+* Files: paint a dropped folder's tile as soon as it exists
+* Shell: keep third-party scripts out of os-* fields and fixed panels out of the dynamic bar
+* Files: drop the marching-ants frame from the wallpaper drop highlight
+* WP Explorer: hover card off, preview pane only when open; Note Pad: drop the Public checkbox and Pin button
+* Admin bar: keep items the bar's height; shell starts below the bar's measured edge
 
 = 1.1.6 =
 * Fix: Script loading: read the concat blob's handle list, so a lazily-loaded package stops replacing wp.hooks

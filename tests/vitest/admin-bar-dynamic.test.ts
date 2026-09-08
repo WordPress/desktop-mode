@@ -105,6 +105,38 @@ describe( 'dynamic admin bar — never a containing block', () => {
 		expect( parked!.body ).toMatch( /transition\s*:\s*inset-block-start/ );
 	} );
 
+	test( 'the reveal zone waits for the slide before it changes size', () => {
+		// Collapsed the instant hover began, the zone was gone while the
+		// bar was still sliding down, so a pointer resting in the band
+		// it had covered lost hover mid-slide and the bar flickered up
+		// and down. The zone steps (0s) after the bar's own slide.
+		const all = rules( CSS );
+		const parked = all.find(
+			( r ) => r.selector === 'body.os-active.os-admin-bar-dynamic #wpadminbar',
+		);
+		expect( parked!.body ).toMatch( /--os-admin-bar-slide\s*:\s*\d+ms/ );
+		expect( parked!.body ).toMatch(
+			/transition\s*:\s*inset-block-start\s+var\(\s*--os-admin-bar-slide/,
+		);
+		const zone = all.find(
+			( r ) =>
+				r.selector === 'body.os-active.os-admin-bar-dynamic #wpadminbar::after',
+		);
+		expect( zone ).toBeDefined();
+		expect( zone!.body ).toMatch(
+			/transition\s*:\s*height\s+0s\s+linear\s+var\(\s*--os-admin-bar-slide/,
+		);
+		// The collapse rule must not override that transition.
+		const collapse = all.find(
+			( r ) =>
+				r.selector.includes( '#wpadminbar:hover::after' ) &&
+				r.selector.includes( '#wpadminbar:focus-within::after' ),
+		);
+		expect( collapse ).toBeDefined();
+		expect( collapse!.body ).toMatch( /height\s*:\s*0/ );
+		expect( collapse!.body ).not.toMatch( /transition/ );
+	} );
+
 	test( 'the revealed bar returns to the top edge, also with !important', () => {
 		const revealed = BAR_RULES.find(
 			( r ) =>
