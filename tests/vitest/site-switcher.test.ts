@@ -152,6 +152,27 @@ describe( 'the site switcher', () => {
 		await settle();
 		expect( hop ).not.toHaveBeenCalled();
 
+		// Focus on another control of the top bar (a tile's close, the
+		// "+") keeps the browser's Tab, so those stay reachable; focus
+		// back on the switcher hands Tab back to the sites.
+		const bar = document.createElement( 'div' );
+		bar.className = 'os-overview-top-bar';
+		bar.innerHTML = '<div class="os-site-switcher"><button class="segment">Main</button></div><button class="tile">Close</button>';
+		document.body.appendChild( bar );
+		( bar.querySelector( '.tile' ) as HTMLElement ).focus();
+		e = press();
+		await settle();
+		expect( e.defaultPrevented ).toBe( false );
+		expect( hop ).not.toHaveBeenCalled();
+		( bar.querySelector( '.segment' ) as HTMLElement ).focus();
+		multisite = config();
+		e = press();
+		await settle();
+		expect( e.defaultPrevented ).toBe( true );
+		expect( hop ).toHaveBeenCalledWith( SHOP_SHELL + '&openstation_overview=1&openstation_hop_from=next' );
+		hop.mockClear();
+		bar.remove();
+
 		teardown();
 		press();
 		await settle();

@@ -65,8 +65,11 @@ array( 'site' => $id ) )`, which is how the Network window's Open buttons
 switch); a value the row does not offer is ignored. **While the row is
 displayed, Tab moves to the next site and Shift+Tab to the previous**,
 wrapping at the ends, the same switch a pick takes
-(`installSiteSwitcherKeys()`); anywhere else, and while a field is being
-typed in, Tab stays the browser's. Pinned by
+(`installSiteSwitcherKeys()`); anywhere else, while a field is being
+typed in, and while focus is on another control of the top bar (a
+tile's rename, close or edit, the "+"), Tab stays the browser's, so
+those stay reachable by keyboard; a click on the switcher, or Shift+Tab
+back onto it, hands Tab back to the sites. Pinned by
 `tests/vitest/site-switcher.test.ts` and `Tests_OpenStation_Multisite`.
 
 **Every cross-admin click takes the same hop.** The Network Admin tile

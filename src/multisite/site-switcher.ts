@@ -160,7 +160,11 @@ export function switchToSite(
  * site and Shift+Tab to the previous, wrapping at the ends, the same
  * switch a pick takes. Only then. On a desk, in a window, or in a
  * field being typed in, Tab stays the browser's, so the one place the
- * key means "next site" is the one place the row is on screen.
+ * key means "next site" is the one place the row is on screen. And
+ * only while focus is not on another control of the overview top bar
+ * (a tile's rename, close or edit, the "+"): those stay reachable by
+ * keyboard, and a click on the switcher, or Shift+Tab back onto it,
+ * hands Tab back to the sites.
  *
  * `isShown` is the shell's answer to "is the row on screen right now";
  * the listener sits on the document so it outlives every rebuild of
@@ -178,6 +182,15 @@ export function installSiteSwitcherKeys(
 		}
 		const multisite = deps.multisite();
 		if ( ! multisite || ! deps.isShown() || isTextEntryFocus( document ) ) {
+			return;
+		}
+		const doc = ( e.target as Node | null )?.ownerDocument ?? document;
+		const active = doc.activeElement;
+		if (
+			active &&
+			active.closest( '.os-overview-top-bar' ) &&
+			! active.closest( '.os-site-switcher' )
+		) {
 			return;
 		}
 		const entries = siteSwitcherEntries( multisite );
