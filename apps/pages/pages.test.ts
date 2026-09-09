@@ -105,6 +105,7 @@ describe( 'the pages view', () => {
 
 	it( 'offers public links only for published pages', () => {
 		const { root } = mount( [ row( 1, { link: 'https://example.test/home/' } ), row( 2, { status: 'draft', link: 'https://example.test/draft/' } ) ] );
+		( root.querySelector( '[data-inspect-id="1"]' ) as HTMLElement ).click();
 		expect( root.querySelector( '.os-posts-desk__inspector-actions a' )?.getAttribute( 'href' ) ).toBe( 'https://example.test/home/' );
 		( root.querySelector( '[data-inspect-id="2"]' ) as HTMLElement ).click();
 		expect( root.querySelector( '.os-posts-desk__inspector-actions a' ) ).toBeNull();

@@ -86,13 +86,14 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 	let dragChip: TagBox | null = null;
 	let dragOffset: PixiPoint = { x: 0, y: 0 };
 	let dragStart: PixiPoint | null = null;
+	let dragOrigin: PixiPoint | null = null;
 	let draft = false;
 	const positionsKey = computePositionsKey();
 	const persistedPositions = readPersistedPositions( positionsKey );
 	// tag id → co-occurring siblings; empty until the fetch lands, and
 	// then the packer becomes cluster-aware.
 	let cooccurrenceMap: Map< number, TermNeighbor[] > = new Map();
-	const themeHue = readAdminThemeHue( host );
+	let themeHue = readAdminThemeHue( host );
 	const focused = ( id: number ): boolean => fan.focusId === id;
 	const layoutChip = ( box: TagBox ): void => layoutTagChip( box, focused( box.id ), palette );
 	const paintChip = ( box: TagBox ): void => paintTagChip( box, focused( box.id ), palette );
@@ -183,6 +184,7 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 			const ev = e as PixiPointerEvent;
 			stopBubble( interaction, e );
 			dragChip = box;
+			dragOrigin = { x: box.tx, y: box.ty };
 			dragStart = { x: ev.global.x, y: ev.global.y };
 			const local = camera.stageToWorld( ev.global );
 			dragOffset = { x: box.x - local.x, y: box.y - local.y };
@@ -372,7 +374,9 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 	paintSidebar( sidebarHost );
 	canvas.start( {
 		themeChanged: () => {
+			themeHue = readAdminThemeHue( host );
 			for ( const box of tags.values() ) {
+				box.hue = tagHue( box.slug || box.name, themeHue );
 				paintChip( box );
 			}
 		},
@@ -429,7 +433,11 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 		},
 		pointerUp: dragEnd,
 		cancelGesture: () => {
-			dragChip = null; dragStart = null;
+			if ( dragChip && dragOrigin ) {
+				dragChip.x = dragChip.tx = dragOrigin.x;
+				dragChip.y = dragChip.ty = dragOrigin.y;
+			}
+			dragChip = null; dragStart = null; dragOrigin = null;
 		},
 		search: ( q ) => Array.from( tags.values() ).filter( ( t ) => t.name.toLowerCase().includes( q ) || t.slug.toLowerCase().includes( q ) ),
 	} );

@@ -50,3 +50,10 @@ export function activityModel( rows: UserListItem[], now = Date.now() ) {
 		start: start / 1000, end: end / 1000, weeks,
 	};
 }
+
+export interface ActivitySnapshot extends ReturnType< typeof activityModel > {
+	total: number;
+	onlineCount: number;
+	awayCount: number;
+	leaders: Record< ContributionKind, UserListItem[] >;
+}

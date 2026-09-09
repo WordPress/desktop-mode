@@ -98,7 +98,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 	// directly for the spotlight and restored from here on close.
 	const pinnedTargetBackup = new Map< number, { tx: number; ty: number } >();
 	let draft: { parent: number } | null = null;
-	const themeHue = readAdminThemeHue( host );
+	let themeHue = readAdminThemeHue( host );
 	const clusterColor = ( idx: number ): number => hslToInt( ( themeHue + idx * 47 ) % 360, 55, 52 );
 
 	function upsertNode( term: TermRow, facts: { tx: number; ty: number; radius: number; depth: number; color: number; pinned: boolean } ): MindNode {
@@ -405,6 +405,22 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 	preSettle( nodes, 80 );
 	canvas.start( {
 		themeChanged: () => {
+			const nextHue = readAdminThemeHue( host );
+			if ( nextHue !== themeHue ) {
+				themeHue = nextHue;
+				const roots = canvas.terms.filter( ( term ) => ! term.parent && ! isUncategorized( term ) );
+				for ( const node of nodes.values() ) {
+					let root = node;
+					const seen = new Set< number >();
+					while ( root.parent && nodes.has( root.parent ) && ! seen.has( root.id ) ) {
+						seen.add( root.id ); root = nodes.get( root.parent )!;
+					}
+					const index = roots.findIndex( ( term ) => term.id === root.id );
+					if ( index >= 0 ) {
+						node.color = clusterColor( index );
+					}
+				}
+			}
 			for ( const node of nodes.values() ) {
 				drawNodeDisc( pixi, node, fan.focusId === node.id, palette );
 				chips.relayout( node );

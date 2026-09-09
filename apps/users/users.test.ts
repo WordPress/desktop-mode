@@ -393,7 +393,7 @@ it( 'shows automatic gathering instead of partial Activity totals or a Load more
 	const { root } = mount( { tab: 'activity' }, { list: { items: [ user() ], total: 138, pages: 7, page: 1, perPage: 20 } } );
 	const panel = root.querySelector( 'os-tabpanel[for="activity"]' )!;
 	expect( panel.textContent ).toContain( 'Bringing everyone together' );
-	expect( panel.textContent ).toContain( '1 of 138 people gathered' );
+	expect( panel.textContent ).not.toContain( 'people gathered' );
 	expect( panel.textContent ).not.toContain( 'Load more' );
 	expect( panel.querySelector( '.os-community__metrics' ) ).toBeNull();
 	expect( panel.querySelector( '.os-community__spotlight' ) ).toBeNull();

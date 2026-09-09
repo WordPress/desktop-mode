@@ -99,3 +99,21 @@ describe( 'content explorer palette', () => {
 		expect( css ).not.toMatch( /background:\s*rgba\(\s*255,\s*255,\s*255/ );
 	} );
 } );
+
+it( 'composites translucent tokens and observes both theme and accent changes until disposal', async () => {
+	const { readCanvasColor, watchCanvasPalette } = await import( '../../apps/posts/parts/canvas/palette' );
+	const host = document.createElement( 'div' ); document.body.append( host );
+	let ink = 'rgba(255, 0, 0, 0.5)';
+	vi.spyOn( window, 'getComputedStyle' ).mockImplementation( () => ( { color: ink } as CSSStyleDeclaration ) );
+	expect( readCanvasColor( host, '--os-ui-accent', '#000000', 0x000000 ) ).toBe( 0x800000 );
+	ink = 'color(srgb 0 1 0 / 0.25)';
+	expect( readCanvasColor( host, '--os-ui-accent', '#000000', 0x000000 ) ).toBe( 0x004000 );
+	const changed = vi.fn(); const dispose = watchCanvasPalette( host, changed );
+	ink = 'rgb(0, 0, 255)'; document.body.style.setProperty( '--os-ui-accent', 'blue' );
+	await Promise.resolve(); expect( changed ).toHaveBeenCalledTimes( 1 );
+	ink = 'rgb(255, 0, 0)'; document.dispatchEvent( new Event( 'os-desktop-theme-changed' ) );
+	expect( changed ).toHaveBeenCalledTimes( 2 );
+	dispose(); ink = 'rgb(0, 255, 0)'; document.body.style.setProperty( '--os-ui-accent', 'green' );
+	document.dispatchEvent( new Event( 'os-desktop-theme-changed' ) ); await Promise.resolve();
+	expect( changed ).toHaveBeenCalledTimes( 2 ); document.body.style.removeProperty( '--os-ui-accent' );
+} );

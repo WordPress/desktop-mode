@@ -1,4 +1,6 @@
 /** GPU-drawn threads behind real DOM iframe sheets; both share one camera. */
+import { readCanvasColor, readCanvasPalette, watchCanvasPalette } from '../../posts/parts/canvas/palette';
+import { selectPreviews } from './atlas-previews';
 import { __, html } from '@openstation/app';
 import { routeThread, type RoutePoint } from './atlas-layout';
 import { STATUS_LABELS } from '../../posts/parts/cells/env';
@@ -13,15 +15,6 @@ export interface AtlasScene {
 	fit(): void;
 	zoom( factor: number ): void;
 	dispose(): void;
-}
-
-/** Resolve the actual inherited palette, including a changed desktop theme. */
-function colorOf( host: HTMLElement, token: string, fallback: string ): number {
-	const probe = document.createElement( 'span' );
-	probe.style.color = `var(${ token }, ${ fallback })`;
-	host.append( probe );
-	const rgb = getComputedStyle( probe ).color.match( /[\d.]+/g ); probe.remove();
-	return rgb && rgb.length >= 3 ? Number( rgb[ 0 ] ) * 65536 + Number( rgb[ 1 ] ) * 256 + Number( rgb[ 2 ] ) : 0x2271b1;
 }
 
 export async function createAtlasScene( stage: HTMLElement, data: AtlasData, frontPageId: number | undefined, onSelect: ( id: number ) => void, onZoom: ( zoom: number ) => void, signal: AbortSignal ): Promise< AtlasScene | null > {
@@ -51,8 +44,8 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 	let disposed = false;
 	let previewTimer = 0;
 	let animation = 0;
-	const accent = colorOf( stage, '--os-ui-accent', '#2271b1' );
-	const linkColor = colorOf( stage, '--os-ui-info', '#72aee6' );
+	let accent = readCanvasPalette( stage ).accent;
+	let linkColor = readCanvasColor( stage, '--os-ui-info-fg', '#72aee6', readCanvasPalette( stage ).surface );
 	for ( const node of nodes ) {
 		const card = document.createElement( 'article' ); card.className = 'os-page-atlas__sheet';
 		card.dataset.pageId = String( node.page.id ); card.style.left = `${ node.x }px`; card.style.top = `${ node.y }px`;
@@ -61,7 +54,6 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 			<footer class="os-page-atlas__sheet-foot"><span>/${ node.page.slug }</span><span>${ STATUS_LABELS[ node.page.status ] || node.page.status }</span></footer>`, card );
 		overlay.append( card ); cards.set( node.page.id, card );
 	}
-	const visibleEdges = () => data.edges.filter( ( edge ) => kind === 'all' || edge.kind === kind );
 	const stroke = ( graph: PixiGraphics, points: RoutePoint[], color: number, width: number, alpha: number ): void => {
 		graph.moveTo( points[ 0 ].x, points[ 0 ].y );
 		for ( let i = 1; i < points.length - 1; i++ ) {
@@ -78,7 +70,10 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 	const drawEdges = (): void => {
 		lines.clear();
 		const neighbors = new Set< number >();
-		for ( const [ index, edge ] of visibleEdges().entries() ) {
+		for ( const [ index, edge ] of data.edges.entries() ) {
+			if ( kind !== 'all' && edge.kind !== kind ) {
+				continue;
+			}
 			const from = byId.get( edge.from ); const to = byId.get( edge.to );
 			if ( ! from || ! to ) {
 				continue;
@@ -108,7 +103,7 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 			return;
 		}
 		const width = stage.clientWidth; const height = stage.clientHeight;
-		const visible = width && height ? nodes.filter( ( n ) => camera.zoom >= .12 && camera.x + ( n.x + SHEET_WIDTH ) * camera.zoom > 0 && camera.y + ( n.y + SHEET_HEIGHT ) * camera.zoom > 0 && camera.x + n.x * camera.zoom < width && camera.y + n.y * camera.zoom < height ).sort( ( a, b ) => {
+		const visible = width && height ? nodes.filter( ( n ) => camera.x + ( n.x + SHEET_WIDTH ) * camera.zoom > 0 && camera.y + ( n.y + SHEET_HEIGHT ) * camera.zoom > 0 && camera.x + n.x * camera.zoom < width && camera.y + n.y * camera.zoom < height ).sort( ( a, b ) => {
 			if ( a.page.id === selected ) {
 				return -1;
 			}
@@ -116,26 +111,34 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 				return 1;
 			}
 			return Math.hypot( camera.x + a.x * camera.zoom - width / 2, camera.y + a.y * camera.zoom - height / 2 ) - Math.hypot( camera.x + b.x * camera.zoom - width / 2, camera.y + b.y * camera.zoom - height / 2 );
-		} ).slice( 0, 6 ) : [];
-		const wanted = new Set( visible.map( ( n ) => n.page.id ) );
+		} ) : [];
+		const wanted = new Set( selectPreviews( visible.filter( ( n ) => previewUrl( n.page ) ).map( ( n ) => n.page.id ), [ ...frames.keys() ], selected, camera.zoom ) );
+		for ( const [ id, card ] of cards ) {
+			const placeholder = card.querySelector< HTMLElement >( '.os-page-atlas__placeholder' )!;
+			placeholder.textContent = camera.zoom < .5 ? __( 'Zoom closer for a live preview' ) : __( 'Select this page for a live preview' );
+			if ( ! previewUrl( byId.get( id )!.page ) ) {
+				placeholder.textContent = __( 'Open the editor to preview this page.' );
+			}
+		}
 		for ( const [ id, frame ] of frames ) {
 			if ( ! wanted.has( id ) ) {
 				frame.remove(); frames.delete( id );
 			}
 		}
 		for ( const node of visible ) {
-			if ( frames.has( node.page.id ) ) {
+			if ( ! wanted.has( node.page.id ) || frames.has( node.page.id ) ) {
 				continue;
 			}
 			const viewport = cards.get( node.page.id )!.querySelector< HTMLElement >( '.os-page-atlas__viewport' )!;
 			const url = previewUrl( node.page );
 			if ( ! url ) {
- viewport.querySelector( '.os-page-atlas__placeholder' )!.textContent = __( 'Open the editor to preview this page.' ); continue;
+				continue;
 			}
 			const frame = document.createElement( 'iframe' );
 			frame.title = `${ __( 'Page preview' ) }: ${ pageTitle( node.page ) }`;
 			frame.width = String( PREVIEW_WIDTH ); frame.height = String( PREVIEW_HEIGHT );
 			frame.tabIndex = -1; frame.setAttribute( 'aria-hidden', 'true' ); frame.setAttribute( 'inert', '' );
+			// Passive same-origin frontend content, not a security boundary.
 			frame.setAttribute( 'sandbox', 'allow-scripts allow-same-origin' );
 			frame.src = url; viewport.append( frame ); frames.set( node.page.id, frame );
 		}
@@ -181,6 +184,11 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 		};
 		animation = requestAnimationFrame( step );
 	};
+	const untheme = watchCanvasPalette( stage, () => {
+		accent = readCanvasPalette( stage ).accent;
+		linkColor = readCanvasColor( stage, '--os-ui-info-fg', '#72aee6', readCanvasPalette( stage ).surface );
+		drawEdges(); app.render();
+	}, () => readCanvasColor( stage, '--os-ui-info-fg', '#72aee6', readCanvasPalette( stage ).surface ) );
 	const unwire = wireAtlasCamera( stage, camera, draw );
 	let hadSize = false;
 	const resize = new ResizeObserver( () => {
@@ -206,6 +214,6 @@ export async function createAtlasScene( stage: HTMLElement, data: AtlasData, fro
 	}, zoom: ( factor ) => {
 		cancelAnimationFrame( animation ); zoomAt( camera, camera.zoom * factor, stage.clientWidth / 2, stage.clientHeight / 2 ); draw();
 	}, dispose: () => {
-		disposed = true; clearTimeout( previewTimer ); cancelAnimationFrame( animation ); unwire(); resize.disconnect(); frames.forEach( ( frame ) => frame.remove() ); destroyPixiApp( app, stage, [] );
+		disposed = true; untheme(); clearTimeout( previewTimer ); cancelAnimationFrame( animation ); unwire(); resize.disconnect(); frames.forEach( ( frame ) => frame.remove() ); destroyPixiApp( app, stage, [] );
 	} };
 }

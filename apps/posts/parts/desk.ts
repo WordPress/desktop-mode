@@ -18,7 +18,7 @@ export interface DeskState {
 	fields: Array< { key: string; label: string; node: unknown } >;
 }
 
-export const freshDesk = (): DeskState => ( { view: 'desk', filters: false, peek: true, focused: null, inspectorKey: '', fields: [] } );
+export const freshDesk = (): DeskState => ( { view: 'desk', filters: false, peek: false, focused: null, inspectorKey: '', fields: [] } );
 
 /** Excerpts are text, never executable markup from content. */
 export function excerptOf( row: PostListItem ): string {
@@ -175,7 +175,7 @@ function story( ctx: Ctx, ui: DeskState, row: PostListItem, focused: number | un
 }
 
 function inspector( ctx: Ctx, ui: DeskState, env: CellEnv, filters: ColumnFilterData, hidden: Set< string >, row?: PostListItem ): TemplateResult | string {
-	if ( ! row ) {
+	if ( ! row || ! ui.peek || ui.focused === null ) {
 		return '';
 	}
 	const key = JSON.stringify( [ row, Array.from( hidden ) ] );

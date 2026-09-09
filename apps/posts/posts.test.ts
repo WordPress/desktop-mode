@@ -707,6 +707,8 @@ describe( 'the writing desk', () => {
 			},
 		} ] : value;
 		const { root, ctx } = mount();
+		expect( root.querySelector( '[data-detail-field="review"]' ) ).toBeNull();
+		( root.querySelector( '[data-inspect-id]' ) as HTMLElement ).click();
 		const field = root.querySelector( '[data-detail-field="review"]' );
 		expect( field?.textContent ).toContain( 'Ready' );
 		ctx.repaint();

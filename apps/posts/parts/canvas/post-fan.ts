@@ -322,9 +322,13 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 
 	const fan: PostFan = {
 		repaintTheme() {
+			const tone = fan.focusId === null ? null : deps.getCenter( fan.focusId )?.tone;
 			pagerLabel.style.fill = palette.muted;
 			repaintPager();
 			for ( const post of posts.values() ) {
+				if ( tone !== null && tone !== undefined ) {
+					post.tone = tone;
+				}
 				const chip = chips.get( post.id );
 				if ( chip ) {
 					layoutChip( chip, post );

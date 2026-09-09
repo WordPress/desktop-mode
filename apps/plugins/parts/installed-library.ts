@@ -484,9 +484,9 @@ export function installedPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): 
 												variant="secondary"
 												size="small"
 												@click=${ () => {
-													ui.selected = members
+													ui.selected = [ ...new Set( [ ...ui.selected, ...members
 														.filter( ( r ) => !! r.openstation_update_available?.package )
-														.map( ( r ) => r.plugin );
+														.map( ( r ) => r.plugin ) ] ) ];
 													ctx.repaint();
 												} }
 												>${ __( 'Select updates', 'desktop-mode' ) }</os-button

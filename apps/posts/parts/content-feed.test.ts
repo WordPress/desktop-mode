@@ -36,12 +36,37 @@ describe( 'continuous content feed', () => {
 		finish( false ); await first;
 		expect( feed.error ).toBe( true ); expect( feed.items ).toHaveLength( 2 );
 	} );
-	it( 'restarts a background refresh from the beginning after scrolling', async () => {
+	it( 'refreshes the loaded range in one response without resetting pagination', () => {
 		const { ctx, feed } = setup();
-		ctx.state.page = 2; Object.assign( ctx, { data: batch( 2, [ 3, 4 ] ) } ); ctx.dispatch = vi.fn( async () => true );
-		feed.reconcile( ctx ); await Promise.resolve();
-		expect( ctx.dispatch ).toHaveBeenCalledWith( 'page', { page: 1 } );
-		expect( feed.items.map( ( p ) => p.id ) ).toEqual( [ 1, 2 ] );
+		ctx.state.page = 2; Object.assign( ctx, { data: batch( 2, [ 3, 4 ] ) } ); feed.reconcile( ctx );
+		const refreshed = batch( 2, [ 1, 2, 4, 5 ] ); refreshed.list.replace = true;
+		Object.assign( ctx, { data: refreshed } ); ctx.dispatch = vi.fn( async () => true ); feed.reconcile( ctx );
+		expect( ctx.dispatch ).not.toHaveBeenCalled();
+		expect( feed.items.map( ( p ) => p.id ) ).toEqual( [ 1, 2, 4, 5 ] );
+		expect( feed.hasMore ).toBe( true );
+	} );
+	it( 'rejects old-query rows even when the runtime preserves the new state', () => {
+		const { ctx, feed } = setup();
+		const oldQuery = { ...ctx.state };
+		ctx.state.search = 'new'; ctx.state.page = 2;
+		Object.assign( ctx, { data: { ...batch( 2, [ 3, 4 ] ), query: oldQuery } } ); feed.reconcile( ctx );
+		expect( feed.items ).toEqual( [] );
+		ctx.state.page = 1;
+		Object.assign( ctx, { data: { ...batch( 1, [ 1, 2 ] ), query: oldQuery } } ); feed.reconcile( ctx );
+		expect( feed.items ).toEqual( [] );
+		Object.assign( ctx, { data: { ...batch( 1, [ 5 ] ), query: { ...ctx.state } } } ); feed.reconcile( ctx );
+		expect( feed.items.map( ( p ) => p.id ) ).toEqual( [ 5 ] );
+	} );
+	it( 'contains rejected continuations and ignores errors belonging to an old query', async () => {
+		const { ctx, feed } = setup();
+		ctx.dispatch = vi.fn( async () => {
+			throw new Error( 'Offline' );
+		} );
+		await feed.more(); expect( feed.error ).toBe( true ); expect( feed.items ).toHaveLength( 2 );
+		ctx.dispatch = vi.fn( async () => {
+			ctx.state.search = 'new'; feed.reconcile( ctx ); throw new Error( 'Old request' );
+		} );
+		await feed.more(); expect( feed.error ).toBe( false );
 	} );
 	it( 'does not request more after window teardown or after the last batch', async () => {
 		const { ctx, feed } = setup(); ctx.dispatch = vi.fn( async () => true ); feed.dispose(); await feed.more();

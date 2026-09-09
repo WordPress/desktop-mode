@@ -16,35 +16,30 @@ export class ContentFeed {
 	private ctx: Ctx | null = null;
 	private observer: IntersectionObserver | null = null;
 	private sentinel: Element | null = null;
-	private restarting = false;
+	private generation = 0;
+	private queryKey( state: Record< string, unknown > ): string {
+		return JSON.stringify( [ state.search, state.status, state.orderby, state.order, state.author, state.tag, state.perPage ] );
+	}
 
 	/** New queries replace the collection; continuation batches append with ID deduplication. */
 	reconcile( ctx: Ctx ): Ctx {
 		this.ctx = ctx;
 		const { state, data } = ctx;
-		const key = JSON.stringify( [ state.search, state.status, state.orderby, state.order, state.author, state.tag, state.perPage ] );
+		const key = this.queryKey( state );
 		if ( key !== this.key ) {
+			this.generation++; this.expected = 0;
 			this.key = key; this.items = []; this.page = 0; this.pages = 0; this.lastData = null; this.error = false;
 		}
-		if ( ! ctx.loading && data && data !== this.lastData && data.list.page === state.page ) {
+		if ( ! ctx.loading && data && data !== this.lastData && data.list.page === state.page && ( ! data.query || this.queryKey( data.query ) === key ) ) {
 			this.lastData = data;
 			if ( data.list.error ) {
 				this.error = true;
-			} else if ( data.list.page > 1 && data.list.page !== this.expected ) {
-				// A refresh/watch after scrolling must refresh the whole query from its start.
-				if ( ! this.restarting ) {
-					this.restarting = true;
-					queueMicrotask( () => {
-						if ( this.disposed ) {
-							return;
-						}
-						void ctx.dispatch( 'page', { page: 1 } ).finally( () => {
-							this.restarting = false;
-						} );
-					} );
-				}
 			} else {
-				const combined = data.list.page === 1 ? data.list.items : [ ...this.items, ...data.list.items ];
+				// A late continuation cannot become the first batch of a new query.
+				if ( data.list.page > 1 && this.page === 0 && data.list.page !== this.expected && ! data.list.replace ) {
+					return { ...ctx, data: { ...data, list: { ...data.list, items: this.items } } };
+				}
+				const combined = data.list.page === 1 || data.list.replace ? data.list.items : [ ...this.items, ...data.list.items ];
 				this.items = Array.from( new Map( combined.map( ( row ) => [ row.id, row ] ) ).values() );
 				this.page = data.list.page; this.pages = data.list.pages; this.error = false;
 			}
@@ -62,15 +57,18 @@ export class ContentFeed {
 		if ( ! ctx || this.disposed || this.pending || ctx.loading || ! this.hasMore ) {
 			return;
 		}
+		const generation = this.generation;
 		this.pending = true; this.error = false; this.expected = this.page + 1;
 		ctx.repaint();
 		try {
 			const ok = await ctx.dispatch( 'page', { page: this.expected } );
-			if ( ! ok || ctx.data?.list.error ) {
+			if ( generation === this.generation && ( ! ok || ctx.data?.list.error ) ) {
 				this.error = true;
 			}
 		} catch {
-			this.error = true;
+			if ( generation === this.generation ) {
+				this.error = true;
+			}
 		} finally {
 			this.pending = false; this.expected = 0; this.sentinel = null;
 			if ( ! this.disposed ) {

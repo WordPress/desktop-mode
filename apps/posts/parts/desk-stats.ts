@@ -1,7 +1,8 @@
 /** Real content metrics, loaded only for cards entering the viewport. */
+import { __ } from '@openstation/app';
 import type { RestFetch } from './rest';
 
-export interface ContentMetrics { words: number | null; comments: number | null }
+export interface ContentMetrics { words: number | null; comments: number | null; errors?: Partial< Record< 'words' | 'comments', 'retry' | 'unavailable' > > }
 
 /** Count the complete rendered body; excerpts and markup are not word counts. */
 export function countWords( markup: string ): number {
@@ -14,20 +15,33 @@ export function countWords( markup: string ): number {
 }
 
 export async function fetchMetrics( fetcher: RestFetch, collection: string, id: number, signal: AbortSignal ): Promise< ContentMetrics > {
-	const results = await Promise.allSettled( [
-		fetcher( `wp/v2/${ collection }/${ id }?context=edit&_fields=content`, { signal } ).then( async ( res ) => {
+	const errors: NonNullable< ContentMetrics['errors'] > = {};
+	const read = async ( key: 'words' | 'comments', path: string, init: RequestInit, value: ( res: Response ) => Promise< number | null > ): Promise< number | null > => {
+		try {
+			const res = await fetcher( path, { ...init, signal }, { silent: true } );
 			if ( ! res.ok ) {
-				return null;
+				errors[ key ] = res.status === 429 || res.status >= 500 ? 'retry' : 'unavailable'; return null;
 			}
+			const result = await value( res );
+			if ( result === null ) {
+				errors[ key ] = 'unavailable';
+			}
+			return result;
+		} catch {
+			errors[ key ] = 'retry'; return null;
+		}
+	};
+	const [ words, comments ] = await Promise.all( [
+		read( 'words', `wp/v2/${ collection }/${ id }?context=edit&_fields=content`, {}, async ( res ) => {
 			const body = await res.json() as { content?: { rendered?: string; protected?: boolean } };
 			return typeof body.content?.rendered === 'string' && ! body.content.protected ? countWords( body.content.rendered ) : null;
 		} ),
-		fetcher( `wp/v2/comments?post=${ id }&status=approve&per_page=1`, { method: 'HEAD', signal } ).then( ( res ) => {
+		read( 'comments', `wp/v2/comments?post=${ id }&status=approve&per_page=1`, { method: 'HEAD' }, async ( res ) => {
 			const total = res.headers.get( 'X-WP-Total' );
-			return res.ok && total !== null && /^\d+$/.test( total ) ? Number( total ) : null;
+			return total !== null && /^\d+$/.test( total ) ? Number( total ) : null;
 		} ),
 	] );
-	return { words: results[ 0 ].status === 'fulfilled' ? results[ 0 ].value : null, comments: results[ 1 ].status === 'fulfilled' ? results[ 1 ].value : null };
+	return Object.keys( errors ).length ? { words, comments, errors } : { words, comments };
 }
 
 /** Two cards in flight at most. Closing a window cancels its requests. */
@@ -36,6 +50,8 @@ export function createDeskStats( root: HTMLElement, fetcher: RestFetch, collecti
 	const cache = new Map< string, ContentMetrics >();
 	const pending = new Set< string >();
 	const queue = new Map< string, number >();
+	const attempts = new Map< string, number >();
+	const timers = new Set< ReturnType< typeof setTimeout > >();
 	const observed = new WeakMap< Element, string >();
 	let active = 0;
 	const paint = (): void => {
@@ -45,8 +61,31 @@ export function createDeskStats( root: HTMLElement, fetcher: RestFetch, collecti
 				continue;
 			}
 			for ( const key of [ 'words', 'comments' ] as const ) {
-				host.querySelector( `[data-metric="${ key }"]` )?.setAttribute( 'value', metrics[ key ] === null ? '—' : metrics[ key ]!.toLocaleString() );
+				const stat = host.querySelector( `[data-metric="${ key }"]` );
+				stat?.setAttribute( 'value', metrics[ key ] === null ? '—' : metrics[ key ]!.toLocaleString() );
+				let message = metrics.errors?.[ key ] ? __( 'This count is unavailable or access is restricted.' ) : '';
+				if ( metrics.errors?.[ key ] === 'retry' ) {
+					message = __( 'Could not load this count.' );
+				}
+				stat?.setAttribute( 'title', message );
 			}
+			const key = host.dataset.contentMetrics || '';
+			let retry = host.querySelector( '[data-retry-metrics]' );
+			if ( Object.values( metrics.errors || {} ).includes( 'retry' ) && ( attempts.get( key ) || 0 ) >= 3 ) {
+				if ( ! retry ) {
+					retry = document.createElement( 'os-button' ); retry.setAttribute( 'variant', 'ghost' ); retry.setAttribute( 'data-retry-metrics', '' ); retry.textContent = __( 'Retry counts' );
+					retry.addEventListener( 'click', () => {
+						attempts.delete( key ); cache.delete( key ); retry?.remove(); enqueue( key, Number( host.dataset.postId ) ); pump();
+					} ); host.append( retry );
+				}
+			} else {
+				retry?.remove();
+			}
+		}
+	};
+	const enqueue = ( key: string, id: number ): void => {
+		if ( ! pending.has( key ) && ! controller.signal.aborted ) {
+			pending.add( key ); queue.set( key, id );
 		}
 	};
 	const pump = (): void => {
@@ -56,13 +95,18 @@ export function createDeskStats( root: HTMLElement, fetcher: RestFetch, collecti
 		while ( active < 2 && queue.size ) {
 			const [ key, id ] = queue.entries().next().value!;
 			queue.delete( key );
-			active++;
+			active++; attempts.set( key, ( attempts.get( key ) || 0 ) + 1 );
 			void fetchMetrics( fetcher, collection, id, controller.signal ).then( ( result ) => {
 				if ( ! controller.signal.aborted ) {
 					cache.set( key, result ); paint();
+					if ( Object.values( result.errors || {} ).includes( 'retry' ) && attempts.get( key )! < 3 ) {
+						const timer = setTimeout( () => {
+							timers.delete( timer ); enqueue( key, id ); pump();
+						}, 500 * attempts.get( key )! ); timers.add( timer );
+					}
 				}
 			} ).finally( () => {
-				active--; pump();
+				pending.delete( key ); active--; pump();
 			} );
 		}
 	};
@@ -73,8 +117,8 @@ export function createDeskStats( root: HTMLElement, fetcher: RestFetch, collecti
 			}
 			const node = entry.target as HTMLElement;
 			const key = node.dataset.contentMetrics || '';
-			if ( ! pending.has( key ) ) {
-				pending.add( key ); queue.set( key, Number( node.dataset.postId ) );
+			if ( ! cache.has( key ) ) {
+				enqueue( key, Number( node.dataset.postId ) );
 			}
 			observer?.unobserve( node );
 		}
@@ -91,7 +135,7 @@ export function createDeskStats( root: HTMLElement, fetcher: RestFetch, collecti
 			} );
 		},
 		dispose: () => {
-			controller.abort(); observer?.disconnect(); queue.clear(); cache.clear();
+			controller.abort(); observer?.disconnect(); timers.forEach( clearTimeout ); timers.clear(); queue.clear(); cache.clear();
 		},
 	};
 }

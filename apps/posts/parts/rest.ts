@@ -25,7 +25,7 @@ import type {
 } from './types';
 
 /** `ctx.fetch` — a relative path resolves against the REST root. */
-export type RestFetch = ( path: string, init?: RequestInit ) => Promise< Response >;
+export type RestFetch = ( path: string, init?: RequestInit, options?: { silent?: boolean } ) => Promise< Response >;
 
 interface RequestOptions extends RequestInit {
 	/** Set to `false` to skip `response.json()` (a `DELETE` with no body). */

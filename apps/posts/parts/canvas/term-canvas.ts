@@ -32,7 +32,7 @@ import {
 import { CANVAS_PREFIX, buildCanvasChrome, wireCanvasSearch, type CanvasChrome, type ChromeButton } from './chrome';
 import { createPixiApp, destroyPixiApp, loadPixi, type PixiApp, type PixiContainer, type PixiGraphics, type PixiNamespace, type PixiPoint, type PixiPointerEvent } from './pixi';
 import { mountTermDirectory } from './directory';
-import { readCanvasPalette, type CanvasPalette } from './palette';
+import { readCanvasPalette, watchCanvasPalette, type CanvasPalette } from './palette';
 import { createPostFan, type PostFan } from './post-fan';
 
 /**
@@ -181,7 +181,7 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 		fan.repaintTheme();
 		app.render();
 	};
-	document.addEventListener( 'os-desktop-theme-changed', repaintTheme );
+	const untheme = watchCanvasPalette( stage, repaintTheme );
 
 	// --- The frame loop, paused while nothing can see it --------------
 	const hidden = (): boolean => document.hidden || stage.clientWidth === 0 || stage.clientHeight === 0;
@@ -380,7 +380,7 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 			unwatch?.();
 			unsearch?.();
 			undirectory?.();
-			document.removeEventListener( 'os-desktop-theme-changed', repaintTheme );
+			untheme();
 			camera.dispose();
 			destroyPixiApp( app, host, [ CANVAS_PREFIX, spec.modifier ] );
 		},

@@ -45,6 +45,7 @@ class Tests_OpenStation_UsersRolesSummary extends WP_UnitTestCase {
 		remove_filter( 'query', $observe );
 		$groups = $this->groups( $summary );
 		$this->assertCount( 1, $queries );
+		$this->assertSame( count( openstation_users_window_all_roles_map() ) + 2, substr_count( $queries[0], "FROM {$wpdb->users} u" ), 'One shared count scan plus one bounded scan per role, including No role.' );
 		// SQLite has no parenthesised UNION members; every member must start with SELECT.
 		$this->assertSame( substr_count( $queries[0], 'UNION ALL' ), preg_match_all( '/UNION ALL\s+SELECT\b/', $queries[0] ) );
 		$this->assertStringNotContainsString( ') UNION ALL (', $queries[0] );

@@ -49,7 +49,9 @@ describe( 'live page sheets', () => {
 		expect( stage.querySelectorAll( 'iframe' ) ).toHaveLength( 6 );
 		const frame = stage.querySelector( 'iframe' )!;
 		expect( [ frame.width, frame.height ] ).toEqual( [ '1440', '900' ] );
-		expect( frame.getAttribute( 'sandbox' ) ).not.toContain( 'allow-top-navigation' );
+		expect( frame.hasAttribute( 'inert' ) ).toBe( true );
+		expect( frame.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		expect( atlasStyles.cssText ).toContain( 'pointer-events: none' );
 		expect( frame.tabIndex ).toBe( -1 );
 		scene!.zoom( 1.25 );
 		expect( [ frame.width, frame.height ] ).toEqual( [ '1440', '900' ] );

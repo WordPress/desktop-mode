@@ -4,9 +4,6 @@ import type { UsersData, UserListItem, UsersState } from './types';
 import type { ViewContext } from '@openstation/app';
 type Ctx = ViewContext< UsersState, UsersData >;
 
-/** Whether the directory is narrowed server-side; Activity only publishes the whole site. */
-const scoped = ( ctx: Ctx | null ): boolean => !! ctx && ( ctx.state.search.trim() !== '' || ctx.state.role !== '' );
-
 export class PeopleFeed {
 	items: UserListItem[] = [];
 	pending = false;
@@ -21,7 +18,6 @@ export class PeopleFeed {
 	private observer: IntersectionObserver | null = null;
 	private sentinel: Element | null = null;
 	private restarting = false;
-	private autoQueued = false;
 
 	/** New queries replace the collection; continuation batches append with ID deduplication. */
 	reconcile( ctx: Ctx ): Ctx {
@@ -64,51 +60,6 @@ export class PeopleFeed {
 
 	get hasMore(): boolean {
 		return this.page > 0 && this.page < this.pages;
-	}
-
-	/** Activity publishes only a complete, unfiltered collection. */
-	get activityComplete(): boolean {
-		return this.page > 0 && ! this.hasMore && ! this.pending && ! this.restarting && ! this.error && ! this.ctx?.loading && ! scoped( this.ctx ) && this.items.length >= ( this.ctx?.data.list.total ?? 0 );
-	}
-
-	/** Keep one request in flight while Activity is open; repaint schedules the next batch. */
-	updateActivity( ctx: Ctx ): void {
-		if ( this.disposed || this.autoQueued || this.pending || this.restarting || this.error || ctx.loading || ctx.state.tab !== 'activity' || ( ! scoped( ctx ) && ! this.hasMore ) ) {
-			return;
-		}
-		this.autoQueued = true;
-		queueMicrotask( () => {
-			this.autoQueued = false;
-			if ( this.disposed || this.pending || this.restarting || this.error || ctx.loading || ctx.state.tab !== 'activity' ) {
-				return;
-			}
-			if ( scoped( ctx ) ) {
-				void this.clearActivityScope( ctx );
-			} else {
-				void this.more();
-			}
-		} );
-	}
-
-	/** The overview is the whole site: drop the search and the role scope, then gather from the first batch. */
-	private async clearActivityScope( ctx: Ctx ): Promise< void > {
-		this.pending = true;
-		ctx.state.search = '';
-		ctx.state.role = '';
-		ctx.state.page = 1;
-		ctx.repaint();
-		try {
-			if ( ! await ctx.dispatch( 'filter', {} ) ) {
-				this.error = true;
-			}
-		} catch {
-			this.error = true;
-		} finally {
-			this.pending = false;
-			if ( ! this.disposed ) {
-				ctx.repaint();
-			}
-		}
 	}
 
 	/** Single-flight, retryable continuation; never bypasses the PHP query filters. */

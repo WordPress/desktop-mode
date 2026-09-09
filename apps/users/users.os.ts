@@ -24,6 +24,7 @@ import {
 	type ViewContext,
 } from '@openstation/app';
 import type { ListTableLike } from '@openstation/app';
+import { ActivitySummary } from './parts/activity-summary';
 import { RolesSummary } from './parts/roles-summary';
 import { PeopleFeed } from './parts/people-feed';
 import { peopleCards, rolesView, syncPeopleControls } from './parts/people';
@@ -59,6 +60,7 @@ type Ctx = ViewContext< UsersState, UsersData >;
 interface UiState {
 	feed: PeopleFeed;
 	roles: RolesSummary;
+	activity: ActivitySummary;
 	view: string;
 	contribution: ContributionKind;
 	options: boolean;
@@ -78,7 +80,7 @@ interface UiState {
 }
 
 const freshUi = (): UiState => ( {
-	feed: new PeopleFeed(), roles: new RolesSummary(),
+	feed: new PeopleFeed(), roles: new RolesSummary(), activity: new ActivitySummary(),
 	view: 'people', contribution: 'posts',
 	options: false,
 	cache: new Map(),
@@ -338,22 +340,17 @@ function insightsPanel( ctx: Ctx, ui: UiState, tab: 'roles' | 'activity' ): Temp
 			ctx.local( 'tab', { value: 'all' } ); filterByRole( ctx, role );
 		} ) : html`<p class="os-people__empty" role="status">${ summary.error ? __( 'Role groups are unavailable.' ) : __( 'Loading all roles…' ) }</p>`;
 	} else {
-		const ready = ui.feed.activityComplete;
-		scope = ready ? sprintf( /* translators: %d: all site users. */ __( '%d people across this site.' ), ui.feed.items.length ) : __( 'Gathering the complete community overview' );
-		content = ready ? activityView( ui.feed.items, actionsOf( ctx ), cfgOf( ctx ), ui.contribution, ( kind ) => {
+		const snapshot = ui.activity.data;
+		scope = snapshot ? sprintf( /* translators: %d: all site users. */ __( '%d people across this site.' ), snapshot.total ) : __( 'Gathering the complete community overview' );
+		content = snapshot ? activityView( snapshot, actionsOf( ctx ), cfgOf( ctx ), ui.contribution, ( kind ) => {
 			ui.contribution = kind; ctx.repaint();
-		} ) : html`<section class="os-community__loading" role="status" aria-live="polite">
-			<span class="dashicons dashicons-groups" aria-hidden="true"></span>
-			<h3>${ ui.feed.error ? __( 'The overview could not finish loading.' ) : __( 'Bringing everyone together…' ) }</h3>
-			<p>${ ui.feed.error ? __( 'Use Refresh to try again. Totals will appear once everyone is included.' ) : __( 'Loading every profile automatically. Your overview will appear when the full community is ready.' ) }</p>
-			${ ctx.data.list.total && ! ctx.state.search.trim() && ! ctx.state.role ? html`<os-progress-bar value=${ Math.min( 100, ui.feed.items.length / ctx.data.list.total * 100 ) }></os-progress-bar><p>${ sprintf( /* translators: 1: fetched users, 2: all users. */ __( '%1$d of %2$d people gathered' ), ui.feed.items.length, ctx.data.list.total ) }</p>` : '' }
-		</section>`;
+		} ) : html`<section class="os-community__loading" role="status"><h3>${ ui.activity.error ? __( 'The overview could not load. Use Refresh to retry.' ) : __( 'Bringing everyone together…' ) }</h3></section>`;
 	}
 	return html`<os-tabpanel for=${ tab } class="os-app-list__panel" ?hidden=${ ctx.state.tab !== tab }>
 		<header class="os-people__hero"><div><span class="os-people__eyebrow">${ isRoles ? __( 'A PLACE FOR EVERYONE' ) : __( 'THE HUMAN SIDE OF YOUR SITE' ) }</span><h2>${ isRoles ? __( 'Different roles. One community.' ) : __( 'A community, in motion.' ) }</h2><p>${ isRoles ? __( 'Explore the groups that make your site work.' ) : __( 'The people showing up, joining in, and making things happen.' ) }</p></div></header>
 		<div class="os-people__scope"><span>${ scope }</span>
-		${ isRoles ? html`<os-button variant="ghost" ?disabled=${ summary.loading } @click=${ () => void summary.load( ctx ) }>${ summary.loading ? __( 'Refreshing…' ) : __( 'Refresh' ) }</os-button>` : html`<os-button variant="ghost" os-action="refresh">${ __( 'Refresh' ) }</os-button>` }</div>
-		${ isRoles && summary.error ? html`<os-notice tone="danger">${ __( 'Could not refresh role groups. Try Refresh.' ) }</os-notice>` : '' }
+		${ isRoles ? html`<os-button variant="ghost" ?disabled=${ summary.loading } @click=${ () => void summary.load( ctx ) }>${ summary.loading ? __( 'Refreshing…' ) : __( 'Refresh' ) }</os-button>` : html`<os-button variant="ghost" ?disabled=${ ui.activity.loading } @click=${ () => void ui.activity.load( ctx ) }>${ __( 'Refresh' ) }</os-button>` }</div>
+		${ ( isRoles ? summary.error : ui.activity.error ) ? html`<os-notice tone="danger">${ __( 'Could not refresh this overview. Try Refresh.' ) }</os-notice>` : '' }
 		<div class="os-people__insights">${ content }</div>
 	</os-tabpanel>`;
 }
@@ -413,6 +410,7 @@ export default defineApp< UsersState, UsersData >( APP_ID, {
 			document.removeEventListener( 'os-mode-changed', onModeChange );
 			ctx.ui( freshUi ).feed.dispose();
 			ctx.ui( freshUi ).roles.dispose();
+			ctx.ui( freshUi ).activity.dispose();
 		};
 	},
 
@@ -435,7 +433,7 @@ export default defineApp< UsersState, UsersData >( APP_ID, {
 		syncPeopleControls( ctx.root );
 		ui.roles.update( ctx );
 		ui.feed.observe( ctx.root );
-		ui.feed.updateActivity( ctx );
+		ui.activity.update( ctx );
 		if ( state.tab !== 'all' ) {
 			return;
 		}

@@ -129,7 +129,7 @@ export interface ViewContext< S, D > {
 	 * site's REST root, the nonce and JSON Accept header ride along,
 	 * and the request is attributed to the window (its spinner shows).
 	 */
-	fetch: ( path: string, init?: RequestInit ) => Promise< Response >;
+	fetch: ( path: string, init?: RequestInit, options?: { silent?: boolean } ) => Promise< Response >;
 	/** The shell surface the runtime itself runs on — toast, confirm, menu, open. */
 	host: RuntimeHost;
 	/**

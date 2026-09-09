@@ -37,7 +37,9 @@ export interface ListState extends Record< string, unknown > {
 
 /** What `data()` returns: the current page as the paged-list envelope. */
 export interface ListData {
+	query?: Record< string, unknown >;
 	list: {
+		replace?: boolean;
 		items: PostListItem[];
 		total: number;
 		pages: number;

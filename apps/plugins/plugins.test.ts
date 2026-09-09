@@ -775,6 +775,14 @@ describe( 'the installed plugin library', () => {
 		expect( fetchMock() ).not.toHaveBeenCalled();
 	} );
 
+	it( 'adds update candidates without clearing previously selected inactive plugins', () => {
+		const { root } = mount( {}, { installed: libraryRows() } );
+		root.querySelector( '[data-plugin-card="sleep/sleep"] os-checkbox' )!.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		click( root, '[data-shelf="update"] .os-plugins__shelf-heading os-button' );
+		expect( root.querySelector( '.os-plugins__selection-count' )?.textContent ).toBe( '2 selected' );
+		expect( root.querySelector( '[data-plugin-card="sleep/sleep"] os-checkbox' )?.hasAttribute( 'checked' ) ).toBe( true );
+	} );
+
 	it( 'sorts by disk size without a request or mutating the server list', () => {
 		const rows = libraryRows();
 		const { root } = mount( {}, { installed: rows } );
