@@ -29,6 +29,7 @@ import {
 } from './types';
 import { glyph } from './helpers';
 import { longPress } from './long-press';
+import { openPreview } from './optimistic';
 import { copyIdMessage, copyLinks, copyWithToast, rowInteractions } from './rows';
 
 // ------------------------------------------------------------ columns
@@ -506,7 +507,7 @@ function renderRow(
 		} else if ( e.key === ' ' ) {
 			e.preventDefault();
 			ctx.local( 'select', { item: item.id, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, order } );
-			void ctx.dispatch( 'open', { item: item.id } );
+			openPreview( ctx, item.id );
 		} else if ( e.key === 'ArrowDown' || e.key === 'ArrowUp' ) {
 			e.preventDefault();
 			const next = e.key === 'ArrowDown' ? tr.nextElementSibling : tr.previousElementSibling;

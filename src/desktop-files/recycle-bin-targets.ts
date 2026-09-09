@@ -33,6 +33,7 @@
 
 import { __ } from '../i18n';
 import { addAction, HOOKS } from '../hooks';
+import { beginTrashChange, trashItem } from './trash-optimistic';
 import { trashByRestPath } from './rest-trash';
 import type { DragManagerApi, DragSession } from '../drag';
 import { trashManyWithUndo } from './trash';
@@ -236,12 +237,14 @@ function registerOn(
 				const set = dragShortcutItems( session.payload.data );
 				const trashing = set
 					.map( ( item ) => ( {
+						title: item.title ?? '',
+						icon: item.icon ?? '',
 						restPath: item.restPath,
 						kind: item.kind,
 						ref: Number.parseInt( item.ref, 10 ),
 					} ) )
 					.filter(
-						( t ): t is { restPath: string; kind: string; ref: number } =>
+						( t ): t is { restPath: string; kind: string; ref: number; title: string; icon: string } =>
 							!! t.restPath &&
 							Number.isFinite( t.ref ) &&
 							t.ref > 0,
@@ -249,8 +252,11 @@ function registerOn(
 				if ( trashing.length === 0 ) {
 					return;
 				}
+				const operations = trashing.map( ( t ) => beginTrashChange( trashItem( {
+					id: t.ref, type: t.kind, title: t.title, icon: t.icon,
+				} ) ) );
 				void Promise.allSettled(
-					trashing.map( ( t ) => trashByRestPath( t.restPath, t.ref ) ),
+					trashing.map( ( t, i ) => operations[ i ] ? trashByRestPath( t.restPath, t.ref ) : Promise.reject( new Error( 'Item is already moving to Trash.' ) ) ),
 				).then( ( results ) => {
 					const failed = results.filter(
 						( r ) => r.status === 'rejected',
@@ -289,6 +295,9 @@ function registerOn(
 					for ( const [ kind, ids ] of Object.entries( trashed ) ) {
 						announce?.( kind, 'trashed', ids, 'recycle-bin' );
 					}
+					results.forEach( ( result, i ) => {
+						void operations[ i ]?.finish( result.status === 'fulfilled' );
+					} );
 					const moved = trashing.length - failed.length;
 					if ( moved > 1 || failed.length > 0 ) {
 						showToast( {

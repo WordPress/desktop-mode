@@ -503,6 +503,13 @@ export interface UiState {
 		/** Picked tag tokens — labels are what the server consumes. */
 		tags: Array< { id?: number; label: string } >;
 	} | null;
+	trashHidden: Map< string, Set< number > >;
+	trashPage: ListPage | null;
+	previewTarget: number;
+	previewScope: string;
+	previewLoading: boolean;
+	previewRevision: number;
+	previewError: boolean;
 	zoom: boolean;
 	/** The list view's column chooser, open at these coordinates. */
 	columnsMenu: { x: number; y: number } | null;
@@ -549,6 +556,13 @@ function freshUi(): UiState {
 		menu: null,
 		folderSel: null,
 		quickEdit: null,
+		trashHidden: new Map(),
+		trashPage: null,
+		previewTarget: 0,
+		previewScope: '',
+		previewLoading: false,
+		previewRevision: 0,
+		previewError: false,
 		zoom: false,
 		columnsMenu: null,
 		revealSelection: false,

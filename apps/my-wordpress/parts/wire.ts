@@ -48,6 +48,7 @@ import {
 } from '../../../src/agents-dispatch';
 import { isMobileStamped } from '../../../src/mode/stamp';
 import { shell, uiOf, type Ctx } from './types';
+import { openPreview, previewDetail } from './optimistic';
 import { sectionOf } from './helpers';
 import { agentsMountIdOf, agentsRosterStamp, openChatWindow } from './agents';
 
@@ -328,7 +329,7 @@ export function wire( ctx: Ctx ): () => void {
 		} else if ( ctx.state.footprint > 0 ) {
 			void ctx.dispatch( 'back' );
 		} else if ( ctx.state.item > 0 ) {
-			void ctx.dispatch( 'open', { item: 0 } );
+			openPreview( ctx, 0 );
 		}
 	};
 	root.addEventListener( 'keydown', onKey );
@@ -584,7 +585,7 @@ export function afterRender( ctx: Ctx ): void {
 	}
 	const subContent = picked ? { id: ctx.state.item, content: pickedContent } : null;
 	for ( const [ where, source ] of [
-		[ 'detail', ctx.data.detail ],
+		[ 'detail', previewDetail( ctx ) ],
 		[ 'folder', ctx.data.folder ],
 		[ 'sub', subContent ],
 	] as Array< [ string, { id: number; content?: string } | null ] > ) {

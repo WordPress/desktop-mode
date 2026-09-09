@@ -300,6 +300,7 @@ describe( 'the table', () => {
 		const row = root.querySelector< HTMLElement >( 'tr[data-item-id="2"]' )!;
 		row.dispatchEvent( new MouseEvent( 'click', { bubbles: true } ) );
 		expect( local ).toHaveBeenCalledWith( 'select', expect.objectContaining( { item: 2, order: [ 1, 2 ] } ) );
+		expect( local ).toHaveBeenCalledWith( 'preview', { item: 2 } );
 		expect( dispatch ).toHaveBeenCalledWith( 'open', { item: 2 } );
 		row.dispatchEvent( new MouseEvent( 'dblclick', { bubbles: true } ) );
 		expect( dispatch ).toHaveBeenCalledWith( 'edit', { item: 2 } );

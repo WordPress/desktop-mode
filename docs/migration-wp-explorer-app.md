@@ -36,3 +36,9 @@ A stored desktop layout that placed the old pinned icon (`desktop-mode-my-wordpr
 ## Events
 
 `os-my-wordpress-entity-trashed` no longer fires. Trash flows broadcast the standard content-change (`os.<post-type>.changed`, action `trashed`) via `wp.os.announceContentChange()` — which is also what the app's `watch( '*' )` refreshes on, so list views everywhere stay reactive without a bespoke event.
+
+### Preview and Trash feedback
+
+Selecting a list row or icon opens its preview immediately using the title, thumbnail and excerpt already in the loaded list. Full details arrive through a background refresh. Rapid picks coalesce, and a detail response is rendered only when its identity matches the current selection; closing the preview is local and sends no request.
+
+Dropping an entity into Trash or confirming its Trash action hides its tile and open preview immediately. Failed mutations restore the previous view; successful mutations reconcile from the server. Older accumulated list pages retain a local removal marker so clearing the pending overlay cannot resurrect a trashed tile. A fresh page containing a restored row clears that marker. The existing REST collection path and content-change broadcasts retain their meaning; only successful mutations are announced.

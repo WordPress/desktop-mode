@@ -6,6 +6,8 @@
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { mockViewContext, renderedText } from '../../src/app-runtime/testing';
+import { _resetAllSharedStoresForTests } from '../../src/shared-store';
+import { beginTrashChange, trashItem, watchTrashChanges } from '../../src/desktop-files/trash-optimistic';
 import type { RecycleBinItem } from './parts/types';
 import app from './trash.os';
 
@@ -62,6 +64,7 @@ beforeEach( () => {
 } );
 
 afterEach( () => {
+	_resetAllSharedStoresForTests();
 	document.body.replaceChildren();
 	delete ( window as unknown as { wp?: unknown } ).wp;
 } );
@@ -243,5 +246,62 @@ describe( 'the trash app on a phone', () => {
 		expect( table.hasAttribute( 'stacked' ) ).toBe( false );
 		expect( root.querySelector( '.os-recycle-bin__bulk' ) ).toBeNull();
 		expect( root.querySelector( '.os-recycle-bin__toolbar-right' ) ).not.toBeNull();
+	} );
+} );
+
+describe( 'optimistic Trash rows', () => {
+	it( 'shows an incoming drop immediately and rolls it back on failure', async () => {
+		const { root, ctx } = mount( {}, { items: [], total: 0 }, { full: 'full.svg', empty: 'empty.svg' } );
+		const stop = watchTrashChanges( () => ctx.repaint() );
+		ctx.host.setIcon = vi.fn();
+		const operation = beginTrashChange( trashItem( { id: 5, type: 'post', title: 'Incoming' } ) )!;
+		const table = root.querySelector( '[data-os-trash-table]' ) as HTMLElement & { data: RecycleBinItem[] };
+		expect( table.data[ 0 ].title ).toBe( 'Incoming' );
+		expect( table.data[ 0 ].can_restore ).toBe( false );
+		expect( table.hasAttribute( 'hidden' ) ).toBe( false );
+		expect( ctx.host.setIcon ).toHaveBeenCalledWith( 'desktop-mode-recycle-bin', 'full.svg' );
+		await operation.finish( false );
+		expect( table.data ).toEqual( [] );
+		expect( ctx.host.setIcon ).toHaveBeenLastCalledWith( 'desktop-mode-recycle-bin', 'empty.svg' );
+		stop();
+	} );
+
+	it( 'hides Restore immediately and brings the row back when dispatch fails', async () => {
+		const { root, ctx } = mount();
+		const stop = watchTrashChanges( () => ctx.repaint() );
+		let answer!: ( ok: boolean ) => void;
+		ctx.dispatch = vi.fn( () => new Promise< boolean >( ( resolve ) => {
+			answer = resolve;
+		} ) );
+		const table = root.querySelector( '[data-os-trash-table]' ) as HTMLElement & {
+			data: RecycleBinItem[];
+			clearSelection: () => void;
+			columns: Array< { key: string; render: ( value: unknown, row: RecycleBinItem ) => HTMLElement } >;
+		};
+		table.clearSelection = vi.fn();
+		const cell = table.columns.find( ( column ) => column.key === '__actions' )!.render( null, item() );
+		cell.querySelector< HTMLButtonElement >( '[aria-label="Restore"]' )!.click();
+		expect( table.data ).toEqual( [] );
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'restore', { items: [ { id: 1, type: 'post' } ] } );
+		answer( false );
+		await vi.waitFor( () => expect( table.data ).toHaveLength( 1 ) );
+		stop();
+	} );
+
+	it( 'does not optimistically remove a permanent deletion until confirmation', async () => {
+		const { root, ctx } = mount();
+		const stop = watchTrashChanges( () => ctx.repaint() );
+		ctx.host.confirm = vi.fn( async () => false );
+		ctx.dispatch = vi.fn( async () => true );
+		const table = root.querySelector( '[data-os-trash-table]' ) as HTMLElement & {
+			data: RecycleBinItem[];
+			columns: Array< { key: string; render: ( value: unknown, row: RecycleBinItem ) => HTMLElement } >;
+		};
+		const cell = table.columns.find( ( column ) => column.key === '__actions' )!.render( null, item() );
+		cell.querySelector< HTMLButtonElement >( '[aria-label="Delete forever"]' )!.click();
+		await Promise.resolve();
+		expect( table.data ).toHaveLength( 1 );
+		expect( ctx.dispatch ).not.toHaveBeenCalled();
+		stop();
 	} );
 } );
