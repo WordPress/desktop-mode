@@ -82,17 +82,17 @@ export const STATUS_LABELS: Record< string, string > = {
 export function statusBadgeColor( status: string ): { bg: string; fg: string } {
 	switch ( status ) {
 		case 'publish':
-			return { bg: '#e6f4ea', fg: '#1d6f42' };
+			return { bg: 'var(--os-ui-surface-raised, #e6f4ea)', fg: 'var(--os-ui-success-fg, #1d6f42)' };
 		case 'draft':
-			return { bg: '#fdecea', fg: '#a02622' };
+			return { bg: 'var(--os-ui-surface-raised, #fdecea)', fg: 'var(--os-ui-danger, #a02622)' };
 		case 'pending':
-			return { bg: '#fef7e0', fg: '#8a6d00' };
+			return { bg: 'var(--os-ui-warning-bg, #fef7e0)', fg: 'var(--os-ui-warning-fg, #8a6d00)' };
 		case 'private':
-			return { bg: '#e8f0fe', fg: '#1a52a8' };
+			return { bg: 'var(--os-ui-info-bg, #e8f0fe)', fg: 'var(--os-ui-info-fg, #1a52a8)' };
 		case 'future':
-			return { bg: '#ede7f6', fg: '#5b3aa0' };
+			return { bg: 'var(--os-ui-surface-raised, #ede7f6)', fg: 'var(--os-ui-accent, #5b3aa0)' };
 		default:
-			return { bg: '#f1f1f2', fg: '#50575e' };
+			return { bg: 'var(--os-ui-surface-raised, #f1f1f2)', fg: 'var(--os-ui-fg-muted, #50575e)' };
 	}
 }
 

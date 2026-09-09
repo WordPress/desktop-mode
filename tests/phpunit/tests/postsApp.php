@@ -53,6 +53,20 @@ class Tests_OpenStation_PostsApp extends WP_UnitTestCase {
 		);
 	}
 
+	/** @covers ::openstation_posts_app_data */
+	public function test_refresh_preserves_loaded_prefix_and_returns_query_identity() {
+		self::factory()->post->create_many( 45, array( 'post_title' => 'Refresh range', 'post_status' => 'publish' ) );
+		$page = $this->dispatch( 'page', array( 'search' => 'Refresh range' ), array( 'page' => 2 ) );
+		$this->assertCount( 20, $page['data']['list']['items'] );
+		$this->assertFalse( $page['state']['feedAppend'] );
+		$refresh = $this->dispatch( 'mount', $page['state'] );
+		$this->assertCount( 40, $refresh['data']['list']['items'] );
+		$this->assertSame( 2, $refresh['state']['page'] );
+		$this->assertTrue( $refresh['data']['list']['replace'] );
+		$this->assertSame( 'Refresh range', $refresh['data']['query']['search'] );
+		$this->assertSame( 20, $refresh['data']['query']['perPage'] );
+	}
+
 	// --------------------------------------------------------- manifest
 
 	/**

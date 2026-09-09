@@ -8,7 +8,8 @@
  * @public
  */
 
-import { _n, sprintf } from '@openstation/app';
+import { __, _n, sprintf } from '@openstation/app';
+import { directoryStyles } from './directory.styles';
 
 /** The class family every term canvas paints with. */
 export const CANVAS_PREFIX = 'os-term-canvas';
@@ -52,6 +53,18 @@ export function buildCanvasChrome(
 ): CanvasChrome {
 	host.replaceChildren();
 	host.classList.add( CANVAS_PREFIX, modifier );
+	const style = document.createElement( 'style' );
+	style.textContent = directoryStyles.cssText;
+	host.appendChild( style );
+
+	const intro = document.createElement( 'header' );
+	intro.className = 'os-term-canvas__intro';
+	const heading = document.createElement( 'h2' );
+	heading.textContent = modifier === 'os-mindmap' ? __( 'Give your ideas a home.' ) : __( 'Find the threads.' );
+	const description = document.createElement( 'p' );
+	description.textContent = modifier === 'os-mindmap' ? __( 'Build branches for your stories. Choose a category to explore its posts.' ) : __( 'See what connects your stories. Choose a tag to follow the conversation.' );
+	intro.append( heading, description );
+	host.appendChild( intro );
 
 	const toolbar = document.createElement( 'div' );
 	toolbar.className = `${ CANVAS_PREFIX }__toolbar`;

@@ -19,6 +19,7 @@
 import type { CanvasEnv } from '../app';
 import type { TermRow } from '../types';
 import {
+	isPinchGesture,
 	POST_RING_RADIUS,
 	createCamera,
 	createInteraction,
@@ -30,6 +31,8 @@ import {
 } from './camera';
 import { CANVAS_PREFIX, buildCanvasChrome, wireCanvasSearch, type CanvasChrome, type ChromeButton } from './chrome';
 import { createPixiApp, destroyPixiApp, loadPixi, type PixiApp, type PixiContainer, type PixiGraphics, type PixiNamespace, type PixiPoint, type PixiPointerEvent } from './pixi';
+import { mountTermDirectory } from './directory';
+import { readCanvasPalette, watchCanvasPalette, type CanvasPalette } from './palette';
 import { createPostFan, type PostFan } from './post-fan';
 
 /**
@@ -53,6 +56,8 @@ export interface TermCanvasSpec {
 }
 
 export interface TermCanvasHooks {
+	/** Repaint existing nodes after inherited palette changes. */
+	themeChanged: () => void;
 	/** Where a term sits, and its colour; null when it is gone. */
 	center: ( id: number ) => { x: number; y: number; tone: number } | null;
 	/** The authoritative post count landed for a term. */
@@ -75,11 +80,14 @@ export interface TermCanvasHooks {
 	pointerMove: ( ev: PixiPointerEvent, cursorWorld: PixiPoint ) => boolean;
 	/** A stage pointer lifted. */
 	pointerUp: ( ev?: PixiPointerEvent ) => void | Promise< void >;
+	/** Cancel a pending node drag without saving, focusing or reparenting. */
+	cancelGesture: () => void;
 	/** The search box's candidates for a lowercase query. */
 	search: ( q: string ) => Array< { id: number; count: number; name: string } >;
 }
 
 export interface TermCanvas {
+	palette: CanvasPalette;
 	pixi: PixiNamespace;
 	app: PixiApp;
 	world: PixiContainer;
@@ -132,17 +140,28 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 	const postEdgeGfx = new pixi.Graphics();
 	layers.postEdge.addChild( postEdgeGfx );
 
+	const palette = readCanvasPalette( stage );
 	const interaction = createInteraction();
-	const camera = createCamera( world, stage );
 	let hooks: TermCanvasHooks | null = null;
+	const camera = createCamera( world, stage, {
+		start: () => {
+			interaction.pinchUntil = Infinity; interaction.panActive = false; interaction.panStart = null;
+			hooks?.cancelGesture();
+		},
+		end: () => {
+			interaction.pinchUntil = performance.now() + 300;
+		},
+	} );
 	let prevView: { scale: number; x: number; y: number } | null = null;
 	let raf: number | null = null;
 	let lastTick = performance.now();
 	let unwatch: ( () => void ) | null = null;
+	let undirectory: ( () => void ) | null = null;
 	let unsearch: ( () => void ) | null = null;
 	let disposed = false;
 
 	const fan = createPostFan( {
+		palette,
 		pixi,
 		postLayer: layers.post,
 		postChipLayer: layers.postChip,
@@ -155,6 +174,14 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 		onCountReconciled: ( id, total ) => hooks?.countReconciled( id, total ),
 		onOpenPost: () => canvas.closeFocus(),
 	} );
+
+	const repaintTheme = (): void => {
+		Object.assign( palette, readCanvasPalette( stage ) );
+		hooks?.themeChanged();
+		fan.repaintTheme();
+		app.render();
+	};
+	const untheme = watchCanvasPalette( stage, repaintTheme );
 
 	// --- The frame loop, paused while nothing can see it --------------
 	const hidden = (): boolean => document.hidden || stage.clientWidth === 0 || stage.clientHeight === 0;
@@ -186,12 +213,18 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 
 	// --- Pan (the metaphor may claim the pointer for a drag) -----------
 	app.stage.on( 'pointerdown', ( e ) => {
+		if ( isPinchGesture( interaction ) ) {
+			return;
+		}
 		const ev = e as PixiPointerEvent;
 		interaction.panActive = true;
 		interaction.panStart = { x: ev.global.x, y: ev.global.y };
 		interaction.panMovedDist = 0;
 	} );
 	app.stage.on( 'pointermove', ( e ) => {
+		if ( isPinchGesture( interaction ) ) {
+			return;
+		}
 		const ev = e as PixiPointerEvent;
 		if ( hooks?.pointerMove( ev, camera.stageToWorld( ev.global ) ) ) {
 			return;
@@ -205,7 +238,9 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 		}
 	} );
 	const onPointerUp = async ( e?: unknown ): Promise< void > => {
-		await hooks?.pointerUp( e as PixiPointerEvent | undefined );
+		if ( ! isPinchGesture( interaction ) ) {
+			await hooks?.pointerUp( e as PixiPointerEvent | undefined );
+		}
 		interaction.panActive = false;
 		interaction.panStart = null;
 		// `panMovedDist` deliberately survives: the DOM click fires after
@@ -220,6 +255,7 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 	} );
 
 	const canvas: TermCanvas = {
+		palette,
 		pixi,
 		app,
 		world,
@@ -325,6 +361,7 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 				onResize: resume,
 			} );
 			document.addEventListener( 'visibilitychange', onVisibility );
+			undirectory = mountTermDirectory( chrome, () => canvas.terms, ( id ) => void canvas.focusOn( id ) );
 			unsearch = wireCanvasSearch( chrome, {
 				matches: next.search,
 				select: ( item ) => void canvas.focusOn( item.id ),
@@ -342,6 +379,8 @@ export async function createTermCanvas( host: HTMLElement, env: CanvasEnv, spec:
 			document.removeEventListener( 'visibilitychange', onVisibility );
 			unwatch?.();
 			unsearch?.();
+			undirectory?.();
+			untheme();
 			camera.dispose();
 			destroyPixiApp( app, host, [ CANVAS_PREFIX, spec.modifier ] );
 		},

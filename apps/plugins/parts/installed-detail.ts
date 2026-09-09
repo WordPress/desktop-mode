@@ -1,8 +1,8 @@
 /**
- * Plugins app — the Installed tab's expandable-row detail panel.
+ * Plugins app — the Installed library's detail inspector.
  *
  * Part of the `desktop-mode-plugins` client view. Rendered inside
- * `<os-table>`'s sub-row slot: a hero band (icon + title + author +
+ * the library inspector's shadow root: a hero band (icon + title + author +
  * status chips), a tab strip (Overview / Details / Changelog / FAQ /
  * Reviews), and the wp.org `plugin_information` payload lazy-loaded
  * the first time a row is expanded (cached per slug for the window),
@@ -15,7 +15,7 @@
  */
 
 import { __, formatBytes, formatDate, sprintf } from '@openstation/app';
-// The panel paints inside `<os-table>`'s shadow root, outside the
+// The panel paints inside the inspector's shadow root, outside the
 // runtime's on-demand component loading — the tags it builds register here.
 import '../../../src/ui/components/os-badge/os-badge';
 import '../../../src/ui/components/os-card/os-card';
@@ -198,7 +198,7 @@ function buildHero( row: InstalledPlugin ): HTMLElement {
 	return hero;
 }
 
-/** The Active / Inactive badge — the same `<os-badge>` in the table and the panel. */
+/** The Active / Inactive badge — the same `<os-badge>` in the library and the panel. */
 export function statusBadge( row: InstalledPlugin ): HTMLElement {
 	const isActive = isActiveStatus( row.status );
 	const badge = document.createElement( 'os-badge' );

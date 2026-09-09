@@ -8,6 +8,7 @@
  * @public
  */
 
+import { wirePinchInput } from '../../../../src/content-graph/pinch-input';
 import { workAreaInsetsOf } from '../../../../src/work-area';
 import type { PixiApp, PixiContainer, PixiNamespace, PixiPoint, PixiPointerEvent } from './pixi';
 
@@ -31,6 +32,7 @@ export interface Bounds {
  */
 export interface Interaction {
 	pixiInteractionAt: number;
+	pinchUntil: number;
 	lastFocusChange: number;
 	panMovedDist: number;
 	panActive: boolean;
@@ -38,12 +40,15 @@ export interface Interaction {
 }
 
 export const createInteraction = (): Interaction => ( {
-	pixiInteractionAt: 0,
+	pixiInteractionAt: 0, pinchUntil: 0,
 	lastFocusChange: 0,
 	panMovedDist: 0,
 	panActive: false,
 	panStart: null,
 } );
+
+/** A pinch owns the touch sequence and its trailing tap. */
+export const isPinchGesture = ( interaction: Interaction ): boolean => performance.now() < interaction.pinchUntil;
 
 /** Stop a Pixi pointer event and mark the interaction. */
 export function stopBubble( interaction: Interaction, e: unknown ): void {
@@ -62,7 +67,7 @@ export function pointerTravel( from: PixiPoint | null, ev?: PixiPointerEvent ): 
 /** Whether a DOM click on the canvas is a genuine "tap on empty space". */
 export function isEmptyCanvasClick( interaction: Interaction, e: MouseEvent, canvas: HTMLCanvasElement ): boolean {
 	const now = performance.now();
-	if ( now - interaction.lastFocusChange < 250 || now - interaction.pixiInteractionAt < 250 ) {
+	if ( isPinchGesture( interaction ) || now - interaction.lastFocusChange < 250 || now - interaction.pixiInteractionAt < 250 ) {
 		return false;
 	}
 	// A pan with any meaningful movement never counts as a tap.
@@ -94,7 +99,7 @@ export interface Camera {
  * any overlay), exponential so trackpads and mice both feel smooth,
  * and anchored at the cursor.
  */
-export function createCamera( world: PixiContainer, stage: HTMLElement ): Camera {
+export function createCamera( world: PixiContainer, stage: HTMLElement, gesture?: { start(): void; end(): void } ): Camera {
 	const camera: Camera = {
 		targetScale: world.scale.x,
 		targetWorldX: world.x,
@@ -184,6 +189,7 @@ export function createCamera( world: PixiContainer, stage: HTMLElement ): Camera
 		},
 		dispose() {
 			stage.removeEventListener( 'wheel', onWheel );
+			pinch.dispose();
 		},
 	};
 
@@ -209,6 +215,15 @@ export function createCamera( world: PixiContainer, stage: HTMLElement ): Camera
 		camera.targetWorldX = sx - wx * next;
 		camera.targetWorldY = sy - wy * next;
 	}
+	const pinch = wirePinchInput( stage, {
+		read: () => ( { x: world.x, y: world.y, scale: world.scale.x } ),
+		write: ( next ) => {
+			world.scale.set( next.scale ); world.x = next.x; world.y = next.y;
+			camera.targetScale = next.scale; camera.targetWorldX = next.x; camera.targetWorldY = next.y;
+		},
+		bounds: { min: .2, max: 2.5 },
+		start: () => gesture?.start(), end: () => gesture?.end(),
+	} );
 	stage.addEventListener( 'wheel', onWheel, { passive: false } );
 	return camera;
 }

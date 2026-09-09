@@ -35,6 +35,7 @@ export const OS_COMPONENT_TAGS = [
 	'os-window-button',
 	'os-menu',
 	'os-menu-item',
+	'os-action-menu',
 	'os-context-menu',
 	'os-context-menu-option',
 	'os-confirm-dialog',

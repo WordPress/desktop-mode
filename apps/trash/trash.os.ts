@@ -24,6 +24,7 @@
  */
 
 import { __, defineApp, html, sprintf, type TemplateResult } from '@openstation/app';
+import { beginTrashChange, projectTrash, trashKey, watchTrashChanges } from '../../src/desktop-files/trash-optimistic';
 import { isMobileStamped } from '../../src/mode/stamp';
 import { stackOnPhone } from '../../src/ui/components/os-table/stack-on-phone';
 import { runEmptyLoop } from './parts/empty-loop';
@@ -99,7 +100,7 @@ function fingerprint( items: RecycleBinItem[] ): string {
 		return '';
 	}
 	return items
-		.map( ( i ) => `${ i.type }:${ i.id }:${ i.deleted_at }` )
+		.map( ( i ) => JSON.stringify( i ) )
 		.sort()
 		.join( '|' );
 }
@@ -143,34 +144,56 @@ function clearSelection( ctx: Ctx ): void {
 	ctx.ui( freshUi ).selected = [];
 }
 
-async function restoreRefs( ctx: Ctx, refs: RecycleBinItemRef[] ): Promise< void > {
-	if ( refs.length === 0 ) {
+/** Remove rows immediately; the dispatch response restores any failed refs. */
+async function removeRefs( ctx: Ctx, refs: RecycleBinItemRef[], action: 'restore' | 'purge' ): Promise< void > {
+	const operations = refs.flatMap( ( ref ) => {
+		const row = ctx.data.items.find( ( item ) => trashKey( item ) === trashKey( ref ) );
+		const operation = row && beginTrashChange( row, 'out' );
+		return operation ? [ { ref, operation } ] : [];
+	} );
+	if ( operations.length === 0 ) {
 		return;
 	}
 	clearSelection( ctx );
-	await ctx.dispatch( 'restore', { items: refs } );
-	emitChanged( 'restore', refs.length );
+	try {
+		const ok = await ctx.dispatch( action, { items: operations.map( ( entry ) => entry.ref ) } );
+		const remaining = new Set( ctx.data.items.map( trashKey ) );
+		let changed = 0;
+		for ( const { ref, operation } of operations ) {
+			const removed = ok && ! remaining.has( trashKey( ref ) );
+			changed += Number( removed );
+			void operation.finish( removed );
+		}
+		if ( changed > 0 ) {
+			emitChanged( action, changed );
+		}
+	} catch {
+		for ( const { operation } of operations ) {
+			void operation.finish( false );
+		}
+	}
+}
+
+async function restoreRefs( ctx: Ctx, refs: RecycleBinItemRef[] ): Promise< void > {
+	await removeRefs( ctx, refs, 'restore' );
 }
 
 async function purgeRefs( ctx: Ctx, refs: RecycleBinItemRef[] ): Promise< void > {
 	if ( refs.length === 0 ) {
 		return;
 	}
-	const ok = await ctx.dispatch( 'purge', { items: refs }, {
-		confirm: {
-			title: __( 'Delete forever?' ),
-			message: sprintf(
-				/* translators: %d: row count. */
-				__( 'Permanently delete %d item(s)? This cannot be undone.' ),
-				refs.length,
-			),
-			label: __( 'Delete forever' ),
-			danger: true,
-		},
+	const confirmed = await ctx.host.confirm?.( {
+		title: __( 'Delete forever?' ),
+		message: sprintf(
+			/* translators: %d: row count. */
+			__( 'Permanently delete %d item(s)? This cannot be undone.' ),
+			refs.length,
+		),
+		confirmLabel: __( 'Delete forever' ),
+		danger: true,
 	} );
-	if ( ok ) {
-		clearSelection( ctx );
-		emitChanged( 'purge', refs.length );
+	if ( confirmed ) {
+		await removeRefs( ctx, refs, 'purge' );
 	}
 }
 
@@ -188,6 +211,11 @@ async function pinRefs( ctx: Ctx, refs: RecycleBinItemRef[] ): Promise< void > {
 		os?: { files?: { rest?: { createPlacement: ( body: unknown ) => Promise< unknown > } } };
 	} | undefined )?.os?.files?.rest;
 	clearSelection( ctx );
+	const optimistic = refs.flatMap( ( ref ) => {
+		const row = ctx.data.items.find( ( item ) => trashKey( item ) === trashKey( ref ) );
+		const operation = row && beginTrashChange( row, 'out' );
+		return operation ? [ operation ] : [];
+	} );
 	let placed = 0;
 	let restored = 0;
 	for ( const ref of refs ) {
@@ -229,7 +257,11 @@ async function pinRefs( ctx: Ctx, refs: RecycleBinItemRef[] ): Promise< void > {
 		placed += 1;
 	}
 	emitChanged( 'restore', restored );
-	await ctx.dispatch( 'refresh' );
+	try {
+		await ctx.dispatch( 'refresh' );
+	} finally {
+		optimistic.forEach( ( operation ) => void operation.finish( false ) );
+	}
 }
 
 /**
@@ -251,6 +283,10 @@ async function emptyAll( ctx: Ctx ): Promise< void > {
 		return;
 	}
 	const ui = ctx.ui( freshUi );
+	const optimistic = ctx.data.items.flatMap( ( item ) => {
+		const operation = beginTrashChange( item, 'out' );
+		return operation ? [ operation ] : [];
+	} );
 	ui.empty = { mode: 'starting', purged: 0, total: 0 };
 	ctx.repaint();
 	try {
@@ -287,7 +323,12 @@ async function emptyAll( ctx: Ctx ): Promise< void > {
 	} finally {
 		ui.empty = { mode: 'idle', purged: 0, total: 0 };
 		clearSelection( ctx );
-		void ctx.dispatch( 'refresh' );
+		try {
+			await ctx.dispatch( 'refresh' );
+		} finally {
+			optimistic.forEach( ( operation ) => void operation.finish( false ) );
+			ctx.repaint();
+		}
 	}
 }
 
@@ -341,7 +382,7 @@ export default defineApp< AppState, AppData >( APP_ID, {
 	view: ( ctx ) => {
 		const { state, data } = ctx;
 		const ui = ctx.ui( freshUi );
-		const hasItems = data.total > 0;
+		const hasItems = projectTrash( data.items, data.total, state.filter, state.search ).total > 0 || ui.empty.mode !== 'idle';
 		const emptying = ui.empty.mode !== 'idle';
 		const phone = isMobileStamped();
 		const selecting = ui.selected.length > 0;
@@ -419,6 +460,14 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		// broadcasts; these cover trash actions inside chromeless
 		// iframes and other tabs.
 		realtime.start();
+		let refreshing: Promise< unknown > | null = null;
+		const unwatch = watchTrashChanges( () => ctx.repaint(), () => {
+			refreshing ??= Promise.resolve().then( () => {
+				refreshing = null;
+				return ctx.dispatch( 'refresh' );
+			} );
+			return refreshing;
+		} );
 		const ui = ctx.ui( freshUi );
 		const onExternalChange = ( e: Event ): void => {
 			const detail = ( e as CustomEvent< { source?: string } > ).detail;
@@ -443,6 +492,7 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		const onModeChange = (): void => ctx.repaint();
 		document.addEventListener( 'os-mode-changed', onModeChange );
 		return () => {
+			unwatch();
 			realtime.stop();
 			document.removeEventListener( 'os-recycle-bin-changed', onExternalChange );
 			document.removeEventListener( 'os-mode-changed', onModeChange );
@@ -496,10 +546,11 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		}
 		// Assign the data only when it actually changed — same
 		// fingerprint guard the legacy bin uses to skip body repaints.
-		const next = fingerprint( ctx.data.items );
+		const projected = projectTrash( ctx.data.items, ctx.data.total, ctx.state.filter, ctx.state.search );
+		const next = fingerprint( projected.items );
 		if ( next !== ui.fingerprint ) {
 			ui.fingerprint = next;
-			el.data = ctx.data.items;
+			el.data = projected.items;
 			// Prune selection keys whose row left the visible list, so
 			// the bulk bar's count stays truthful.
 			const visible = new Set(
@@ -519,7 +570,7 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		// extra (App::config()), so crossing zero is a local swap.
 		// Deliberately no count badge — a number on the tile reads as
 		// update notifications.
-		const art = String( ctx.extra[ ctx.data.total > 0 ? 'full' : 'empty' ] ?? '' );
+		const art = String( ctx.extra[ projected.total > 0 ? 'full' : 'empty' ] ?? '' );
 		if ( art && art !== ui.lastArt ) {
 			ui.lastArt = art;
 			ctx.host.setIcon?.( APP_ID, art );

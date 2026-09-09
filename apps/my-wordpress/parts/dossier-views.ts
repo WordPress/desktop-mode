@@ -22,6 +22,7 @@ import {
 	type StatsRecentPost,
 	type UserPreviewAction,
 } from './types';
+import { openPreview, previewDetail, previewMessage, trashExplorerItems } from './optimistic';
 import { actionContext, opensOnTap, resolveActions, runAction } from './helpers';
 
 /**
@@ -223,11 +224,19 @@ function extrasSlot( slot: 'header' | 'meta' | 'footer', itemId: number ): Templ
 
 export function renderDetail( ctx: Ctx, section: SectionDef ): TemplateResult {
 	const { data } = ctx;
-	const detail = data.detail;
+	const detail = previewDetail( ctx );
 	if ( ! detail ) {
-		return html`<os-empty-state>${ __( 'This item no longer exists.' ) }</os-empty-state>`;
+		const row = uiOf( ctx ).list.items().find( ( item ) => item.id === ctx.state.item );
+		return html`<article class="os-mywp__detail" aria-busy=${ uiOf( ctx ).previewLoading ? 'true' : 'false' }>
+			<os-button variant="ghost" class="os-mywp__pane-close" aria-label=${ __( 'Close details' ) } @click=${ () => openPreview( ctx, 0 ) }>✕</os-button>
+			${ row?.thumb ? html`<img class="os-mywp__hero" src=${ row.thumb } alt=${ row.title }/>` : '' }
+			<h2 class="os-mywp__detail-title">${ row?.title ?? '' }</h2>
+			<p>${ row?.subtitle ?? '' }</p>
+			<p>${ row?.excerpt ?? '' }</p>
+			<p role="status">${ previewMessage( ctx ) }</p>
+		</article>`;
 	}
-	const item = ( data.list?.items ?? [] ).find( ( i ) => i.id === detail.id );
+	const item = uiOf( ctx ).list.items().find( ( i ) => i.id === detail.id ) ?? ( data.list?.items ?? [] ).find( ( i ) => i.id === detail.id );
 	const actions = item
 		? resolveActions( data.previewActions, actionContext( section, item, 'pane' ), shell().hooks )
 		: [];
@@ -266,7 +275,7 @@ export function renderDetail( ctx: Ctx, section: SectionDef ): TemplateResult {
 				variant="ghost"
 				class="os-mywp__pane-close"
 				aria-label=${ __( 'Close details' ) }
-				@click=${ () => void ctx.dispatch( 'open', { item: 0 } ) }
+				@click=${ () => openPreview( ctx, 0 ) }
 			>✕</os-button>
 			${ detail.avatar ? html`<os-avatar src=${ detail.avatar } name=${ detail.title } size="xl"></os-avatar>` : '' }
 			${ detail.image
@@ -328,11 +337,7 @@ export function renderDetail( ctx: Ctx, section: SectionDef ): TemplateResult {
 				${ detail.kind === 'post' && detail.canDelete
 					? html`<os-button
 						variant="danger"
-						os-action="trash"
-						os-arg-item=${ String( detail.id ) }
-						os-confirm=${ __( 'Move this to the Trash?' ) }
-						os-confirm-label=${ __( 'Trash' ) }
-						os-confirm-danger
+						@click=${ () => item && void trashExplorerItems( ctx, section, [ item ] ) }
 					>${ __( 'Trash' ) }</os-button>`
 					: '' }
 			</div>

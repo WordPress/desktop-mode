@@ -73,6 +73,7 @@ export class OsDisclosure extends Component {
 			},
 		],
 		parts: [
+			{ name: 'heading', description: 'The heading text; adjust its typography for compact surfaces.' },
 			{
 				name: 'summary',
 				description:
@@ -142,7 +143,7 @@ export class OsDisclosure extends Component {
 				@click=${ this.onToggle }
 			>
 				<span class="os-disclosure__marker" aria-hidden="true"></span>
-				<h3 class="os-disclosure__heading">${ heading }</h3>
+				<h3 part="heading" class="os-disclosure__heading">${ heading }</h3>
 				${ hint
 					? html`<span class="os-disclosure__hint">${ hint }</span>`
 					: '' }

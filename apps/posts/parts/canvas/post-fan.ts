@@ -8,8 +8,9 @@
  */
 
 import { __ } from '@openstation/app';
+import type { CanvasPalette } from './palette';
 import type { CanvasEnv } from '../app';
-import { POST_RING_RADIUS, stopBubble, type Interaction } from './camera';
+import { isPinchGesture, POST_RING_RADIUS, stopBubble, type Interaction } from './camera';
 import {
 	FONT_FAMILY,
 	stripTags,
@@ -54,6 +55,7 @@ interface PostsCacheEntry {
 }
 
 export interface PostFanDeps {
+	palette: CanvasPalette;
 	pixi: PixiNamespace;
 	postLayer: PixiContainer;
 	postChipLayer: PixiContainer;
@@ -77,6 +79,7 @@ export interface PostFanDeps {
 }
 
 export interface PostFan {
+	repaintTheme(): void;
 	focusId: number | null;
 	focusPage: number;
 	focusTotalPages: number;
@@ -95,7 +98,7 @@ export interface PostFan {
 }
 
 export function createPostFan( deps: PostFanDeps ): PostFan {
-	const { pixi, postLayer, postChipLayer, postEdgeGfx, interaction, env } = deps;
+	const { pixi, postLayer, postChipLayer, postEdgeGfx, interaction, env, palette } = deps;
 	const posts = new Map< number, PostMini >();
 	const chips = new Map< number, PostChip >();
 	const cache = new Map< string, PostsCacheEntry >();
@@ -116,7 +119,7 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 	const pagerNext = new pixi.Graphics();
 	const pagerLabel = new pixi.Text( {
 		text: '1 / 1',
-		style: { fill: 0x50575e, fontSize: deps.pagerLabelSize, fontFamily: FONT_FAMILY, fontWeight: '600' },
+		style: { fill: palette.muted, fontSize: deps.pagerLabelSize, fontFamily: FONT_FAMILY, fontWeight: '600' },
 		...( deps.pagerTextRes ? { resolution: deps.pagerTextRes } : {} ),
 	} );
 	pagerLabel.anchor.set( 0.5 );
@@ -130,6 +133,9 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 	pager.addChild( pagerLabel );
 	pager.addChild( pagerNext );
 	pagerPrev.on( 'pointertap', ( e ) => {
+		if ( isPinchGesture( interaction ) ) {
+			return;
+		}
 		stopBubble( interaction, e );
 		// The DOM click that follows must not read as "empty canvas".
 		interaction.lastFocusChange = performance.now();
@@ -139,6 +145,9 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 		}
 	} );
 	pagerNext.on( 'pointertap', ( e ) => {
+		if ( isPinchGesture( interaction ) ) {
+			return;
+		}
 		stopBubble( interaction, e );
 		interaction.lastFocusChange = performance.now();
 		if ( fan.focusPage < fan.focusTotalPages ) {
@@ -150,20 +159,20 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 	function drawPagerButton( gfx: PixiGraphics, glyph: string, disabled: boolean ): void {
 		gfx.clear();
 		gfx.circle( 0, 0, 14 );
-		gfx.fill( { color: disabled ? 0xf2f2f2 : 0xffffff, alpha: disabled ? 0.7 : 1 } );
-		gfx.stroke( { color: 0x000000, width: 1, alpha: 0.12 } );
+		gfx.fill( { color: disabled ? palette.surface : palette.raised, alpha: disabled ? 0.7 : 1 } );
+		gfx.stroke( { color: palette.border, width: 1, alpha: 1 } );
 		const label = ( ( gfx as unknown as { children?: PixiContainer[] } ).children?.[ 0 ] as PixiText | undefined ) ?? null;
 		if ( ! label ) {
 			const t = new pixi.Text( {
 				text: glyph,
-				style: { fill: disabled ? 0xb0b3b8 : 0x50575e, fontSize: deps.pagerGlyphSize, fontFamily: FONT_FAMILY, fontWeight: '600' },
+				style: { fill: disabled ? palette.faint : palette.muted, fontSize: deps.pagerGlyphSize, fontFamily: FONT_FAMILY, fontWeight: '600' },
 				...( deps.pagerTextRes ? { resolution: deps.pagerTextRes } : {} ),
 			} );
 			t.anchor.set( 0.5 );
 			gfx.addChild( t );
 		} else {
 			label.text = glyph;
-			label.style.fill = disabled ? 0xb0b3b8 : 0x50575e;
+			label.style.fill = disabled ? palette.faint : palette.muted;
 		}
 	}
 
@@ -192,6 +201,7 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 	}
 
 	function layoutChip( chip: PostChip, post: PostMini ): void {
+		chip.titleText.style.fill = palette.fg;
 		const displayTitle = truncate( post.title, POST_TITLE_MAX_CHARS );
 		if ( chip.titleText.text !== displayTitle ) {
 			chip.titleText.text = displayTitle;
@@ -209,16 +219,16 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 		chip.bg.clear();
 		chip.bg.roundRect( left, top, totalW, totalH, totalH / 2 );
 		if ( chip.cachedHover ) {
-			chip.bg.fill( { color: 0xffffff, alpha: 1 } );
+			chip.bg.fill( { color: palette.raised, alpha: 1 } );
 			chip.bg.stroke( { color: post.tone, width: 1.5, alpha: 1 } );
 		} else {
-			chip.bg.fill( { color: 0xffffff, alpha: 0.95 } );
-			chip.bg.stroke( { color: 0x000000, width: 1, alpha: 0.12 } );
+			chip.bg.fill( { color: palette.surface, alpha: 1 } );
+			chip.bg.stroke( { color: palette.border, width: 1, alpha: 1 } );
 		}
 		chip.dot.clear();
 		chip.dot.circle( left + padX + dotR, 0, dotR );
 		chip.dot.fill( { color: post.tone, alpha: 0.85 } );
-		chip.dot.stroke( { color: 0xffffff, width: 1 } );
+		chip.dot.stroke( { color: palette.border, width: 1 } );
 		chip.titleText.x = left + padX + dotR * 2 + gap;
 		chip.titleText.y = -titleH / 2;
 	}
@@ -236,7 +246,7 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 		const dot = new pixi.Graphics();
 		const titleText = new pixi.Text( {
 			text: post.title,
-			style: { fill: 0x1d2327, fontSize: deps.chipFontSize, fontFamily: FONT_FAMILY, fontWeight: '500' },
+			style: { fill: palette.fg, fontSize: deps.chipFontSize, fontFamily: FONT_FAMILY, fontWeight: '500' },
 			resolution: deps.chipTextRes,
 		} );
 		container.addChild( bg );
@@ -247,6 +257,9 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 		postChipLayer.addChild( container );
 		container.on( 'pointerdown', ( e ) => stopBubble( interaction, e ) );
 		container.on( 'pointertap', () => {
+			if ( isPinchGesture( interaction ) ) {
+				return;
+			}
 			// Open the post AND release the camera in the same gesture.
 			// Leave the list window's fullscreen first, where a normal-z
 			// window would open behind it.
@@ -308,6 +321,20 @@ export function createPostFan( deps: PostFanDeps ): PostFan {
 	}
 
 	const fan: PostFan = {
+		repaintTheme() {
+			const tone = fan.focusId === null ? null : deps.getCenter( fan.focusId )?.tone;
+			pagerLabel.style.fill = palette.muted;
+			repaintPager();
+			for ( const post of posts.values() ) {
+				if ( tone !== null && tone !== undefined ) {
+					post.tone = tone;
+				}
+				const chip = chips.get( post.id );
+				if ( chip ) {
+					layoutChip( chip, post );
+				}
+			}
+		},
 		focusId: null,
 		focusPage: 1,
 		focusTotalPages: 1,

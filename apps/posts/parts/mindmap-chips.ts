@@ -6,8 +6,9 @@
  * @public
  */
 
-import { stopBubble, type Interaction } from './canvas/camera';
+import { isPinchGesture, stopBubble, type Interaction } from './canvas/camera';
 import { CHIP_TEXT_RES, FONT_FAMILY, truncate, type PixiContainer, type PixiGraphics, type PixiNamespace, type PixiText } from './canvas/pixi';
+import { badgeInk, type CanvasPalette } from './canvas/palette';
 import type { MindNode } from './mindmap-draw';
 
 const CHIP_NAME_MAX_CHARS = 18;
@@ -41,9 +42,10 @@ export function createChipStore(
 	pixi: PixiNamespace,
 	layer: PixiContainer,
 	interaction: Interaction,
-	opts: { isFocused: ( id: number ) => boolean; onTap: ( id: number ) => void },
+	opts: { palette: CanvasPalette; isFocused: ( id: number ) => boolean; onTap: ( id: number ) => void },
 ): ChipStore {
 	const chips = new Map< number, CategoryChip >();
+	const palette = opts.palette;
 
 	function layout( chip: CategoryChip, node: MindNode ): void {
 		const focused = opts.isFocused( node.id );
@@ -80,22 +82,24 @@ export function createChipStore(
 		chip.bg.clear();
 		chip.bg.roundRect( left, 0, totalW, totalH, totalH / 2 );
 		if ( focused ) {
-			chip.bg.fill( node.color );
+			chip.bg.fill( palette.raised );
+			chip.bg.stroke( { color: node.color, width: 2 } );
 		} else if ( chip.cachedHover ) {
-			chip.bg.fill( { color: 0xffffff, alpha: 0.96 } );
+			chip.bg.fill( { color: palette.raised, alpha: 1 } );
 			chip.bg.stroke( { color: node.color, width: 1.5, alpha: 1 } );
 		} else {
-			chip.bg.fill( { color: 0xffffff, alpha: 0.88 } );
-			chip.bg.stroke( { color: 0x000000, width: 1, alpha: 0.06 } );
+			chip.bg.fill( { color: palette.surface, alpha: 1 } );
+			chip.bg.stroke( { color: palette.border, width: 1, alpha: 1 } );
 		}
 		chip.nameText.x = left + padX;
 		chip.nameText.y = ( totalH - nameH ) / 2;
-		chip.nameText.style.fill = focused ? 0xffffff : 0x1d2327;
+		chip.nameText.style.fill = palette.fg;
 		const badgeX = left + padX + nameW + gap;
 		const badgeY = ( totalH - badgeH ) / 2;
 		chip.countBg.clear();
 		chip.countBg.roundRect( badgeX, badgeY, badgeW, badgeH, badgeH / 2 );
-		chip.countBg.fill( focused ? { color: 0xffffff, alpha: 0.25 } : node.color );
+		chip.countBg.fill( node.color );
+		chip.countText.style.fill = badgeInk( node.color, palette );
 		chip.countText.x = badgeX + ( badgeW - countW ) / 2;
 		chip.countText.y = badgeY + ( badgeH - countH ) / 2;
 	}
@@ -111,13 +115,13 @@ export function createChipStore(
 		const bg = new pixi.Graphics();
 		const nameText = new pixi.Text( {
 			text: truncate( node.name, CHIP_NAME_MAX_CHARS ),
-			style: { fill: 0x1d2327, fontSize: 14, fontFamily: FONT_FAMILY, fontWeight: '600' },
+			style: { fill: palette.fg, fontSize: 14, fontFamily: FONT_FAMILY, fontWeight: '600' },
 			resolution: CHIP_TEXT_RES,
 		} );
 		const countBg = new pixi.Graphics();
 		const countText = new pixi.Text( {
 			text: String( node.count ),
-			style: { fill: 0xffffff, fontSize: 12, fontFamily: FONT_FAMILY, fontWeight: '700' },
+			style: { fill: palette.fg, fontSize: 12, fontFamily: FONT_FAMILY, fontWeight: '700' },
 			resolution: CHIP_TEXT_RES,
 		} );
 		container.addChild( bg );
@@ -139,7 +143,11 @@ export function createChipStore(
 		chips.set( node.id, chip );
 		layer.addChild( container );
 		container.on( 'pointerdown', ( e ) => stopBubble( interaction, e ) );
-		container.on( 'pointertap', () => opts.onTap( node.id ) );
+		container.on( 'pointertap', () => {
+			if ( ! isPinchGesture( interaction ) ) {
+				opts.onTap( node.id );
+			}
+		} );
 		container.on( 'pointerover', () => {
 			chip.cachedHover = true;
 			layout( chip, node );

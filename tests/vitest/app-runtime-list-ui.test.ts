@@ -3,6 +3,7 @@
  * `pager` and `mountMenuCheckboxes` from `@openstation/app`.
  */
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import '../../src/ui/components/os-select/os-select';
 import { render } from '../../src/ui/core/html';
 import { mountMenuCheckboxes, pager, statusControl } from '../../src/app-runtime/list-ui';
 
@@ -47,6 +48,17 @@ describe( 'statusControl', () => {
 		expect( control?.getAttribute( 'os-action' ) ).toBe( 'filter' );
 		expect( control?.getAttribute( 'aria-label' ) ).toBe( 'Status' );
 		expect( host.querySelectorAll( 'os-option' ).length ).toBe( 3 );
+	} );
+
+	test( 'keeps All visible and selectable when the status value is empty', async () => {
+		const host = document.createElement( 'div' );
+		document.body.appendChild( host );
+		render( statusControl( { segments, value: '', bind: 'status', action: 'filter', label: 'Status', phone: true } ), host );
+		await Promise.resolve();
+		const control = host.querySelector( 'os-select' )!;
+		expect( control.getAttribute( 'value' ) ).toBe( '' );
+		expect( control.querySelector( 'os-option' )?.getAttribute( 'value' ) ).toBe( '' );
+		expect( control.shadowRoot?.querySelector( '[role="combobox"]' )?.textContent ).toContain( 'All' );
 	} );
 
 	test( 'the shell mode stamp decides when the caller does not', () => {

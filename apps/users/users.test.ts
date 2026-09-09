@@ -1,10 +1,6 @@
 /**
- * Users app — the client view: the tab strip and its capability
- * gates, the toolbar (presence segments, search, Add new), the bulk
- * bar on a desk and as a phone footer, the pager, the columns, the
- * presence slice, and the preserved table kept in step from
- * `updated()` (selection cleared on a query change, pruned on a data
- * change, phone columns, the profile element fed its properties).
+ * Users app — capability gates, people tabs, continuous loading,
+ * selection and the preserved details table.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockViewContext } from '../../src/app-runtime/testing';
@@ -20,6 +16,14 @@ class FakeTable extends HTMLElement {
 	sort: unknown = null;
 	getRowId: unknown = null;
 	cleared = 0;
+	select( id: number ): void {
+		this.selection = [ ...this.selection, String( id ) ];
+		this.dispatchEvent( new CustomEvent( 'os-table-selection-change' ) );
+	}
+	deselect( id: number ): void {
+		this.selection = this.selection.filter( ( key ) => key !== String( id ) );
+		this.dispatchEvent( new CustomEvent( 'os-table-selection-change' ) );
+	}
 	clearSelection(): void {
 		this.selection = [];
 		this.cleared += 1;
@@ -72,6 +76,7 @@ function mount( state: Partial< UsersState > = {}, data: Partial< UsersData > = 
 			page: 1,
 			perPage: 20,
 			search: '',
+			role: '',
 			status: '',
 			orderby: 'name',
 			order: 'asc',
@@ -107,26 +112,69 @@ describe( 'the users app view', () => {
 		expect( placeholder ).toEqual( { list: { items: [], total: 0, pages: 0, page: 1, perPage: 20 } } );
 
 		const { root, table } = mount( {}, placeholder, {}, true );
-		expect( root.querySelector( 'os-segmented' ) ).not.toBeNull();
+		expect( root.querySelector( '[data-os-users-toolbar] os-segmented' ) ).not.toBeNull();
 		expect( table?.hasAttribute( 'loading' ) ).toBe( true );
 		expect( root.textContent ).not.toContain( 'Page 1 of' );
 
 		const settled = mount();
 		expect( settled.table?.hasAttribute( 'loading' ) ).toBe( false );
-		expect( settled.root.textContent ).toContain( 'Page 1 of 1' );
+		expect( settled.root.textContent ).toContain( '1 of 1 people loaded' );
 	} );
 
-	it( 'paints the three tabs, and gates Add new on create_users', () => {
+	it( 'paints the people, insights and account tabs, and gates Add new on create_users', () => {
 		const { root } = mount();
 		const tabs = Array.from( root.querySelectorAll( 'os-tab' ) ).map( ( t ) => t.getAttribute( 'value' ) );
-		expect( tabs ).toEqual( [ 'all', 'add-new', 'edit' ] );
+		expect( tabs ).toEqual( [ 'all', 'roles', 'activity', 'add-new', 'edit' ] );
 		expect( root.querySelector( '[data-os-users-add-form]' ) ).not.toBeNull();
 		expect( root.querySelector( '[data-os-users-new]' ) ).not.toBeNull();
 
 		const readOnly = mount( {}, {}, { canCreate: false } );
 		const tabs2 = Array.from( readOnly.root.querySelectorAll( 'os-tab' ) ).map( ( t ) => t.getAttribute( 'value' ) );
-		expect( tabs2 ).toEqual( [ 'all', 'edit' ] );
+		expect( tabs2 ).toEqual( [ 'all', 'roles', 'activity', 'edit' ] );
 		expect( readOnly.root.querySelector( '[data-os-users-add-form]' ) ).toBeNull();
+	} );
+
+	it( 'card selection uses the shared controller without changing card structure', () => {
+		const { root, table } = mount();
+		const card = root.querySelector( '[data-person-id="2"]' )!;
+		const checkbox = card.querySelector( 'os-checkbox' )!;
+		const structure = card.querySelectorAll( '*' ).length;
+		checkbox.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		expect( table!.selection ).toEqual( [ '2' ] );
+		expect( card.querySelectorAll( '*' ).length ).toBe( structure );
+		expect( card.classList.contains( 'is-selected' ) ).toBe( true );
+		expect( root.querySelector( '[data-os-users-bulk]' )?.hasAttribute( 'hidden' ) ).toBe( false );
+		checkbox.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: false } } ) );
+		expect( table!.selection ).toEqual( [] );
+	} );
+
+	it( 'the role filter is server state bound to filter, spelled as users.php spells it', () => {
+		const { root, ctx } = mount( { role: 'editor' } );
+		const select = root.querySelector( '[data-os-users-role]' );
+		expect( select?.getAttribute( 'os-bind' ) ).toBe( 'role' );
+		expect( select?.getAttribute( 'os-action' ) ).toBe( 'filter' );
+		expect( ( select as { value?: string } | null )?.value ).toBe( 'editor' );
+		expect( Array.from( root.querySelectorAll( '[data-os-users-role] os-option' ) ).map( ( o ) => o.getAttribute( 'value' ) ?? '' ) ).toEqual( [ '', 'none', 'administrator', 'editor', 'subscriber' ] );
+		expect( root.querySelector( '.os-people__scope' )?.textContent ).toContain( 'match filters' );
+		( root.querySelector( '[data-os-users-clear-role]' ) as HTMLElement ).click();
+		expect( ctx.state.role ).toBe( '' );
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'filter', {} );
+	} );
+
+	it( 'a Roles-tab group scopes the directory server-side, spelling No role as none', async () => {
+		const snapshot = { total: 1, groups: [ { role: '', label: 'No role', total: 1, members: [ user( { id: 9, roles: [] } ) ] } ] };
+		vi.stubGlobal( 'fetch', vi.fn( async () => new Response( JSON.stringify( snapshot ) ) ) );
+		try {
+			const { root, ctx } = mount( { tab: 'roles' } );
+			ctx.local = vi.fn();
+			await vi.waitFor( () => expect( root.querySelector( '.os-people__room os-button' ) ).not.toBeNull() );
+			( root.querySelector( '.os-people__room os-button' ) as HTMLElement ).click();
+			expect( ctx.local ).toHaveBeenCalledWith( 'tab', { value: 'all' } );
+			expect( ctx.state.role ).toBe( 'none' );
+			expect( ctx.dispatch ).toHaveBeenCalledWith( 'filter', {} );
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	} );
 
 	it( 'the root is the Users app’s, not the Posts window’s (no note→post drop target)', () => {
@@ -160,10 +208,10 @@ describe( 'the users app view', () => {
 
 	it( 'the toolbar carries the presence segments bound to filter, and the debounced search', () => {
 		const { root } = mount();
-		const control = root.querySelector( 'os-segmented' );
+		const control = root.querySelector( '[data-os-users-toolbar] os-segmented' );
 		expect( control?.getAttribute( 'os-bind' ) ).toBe( 'status' );
 		expect( control?.getAttribute( 'os-action' ) ).toBe( 'filter' );
-		expect( Array.from( root.querySelectorAll( 'os-segment' ) ).map( ( s ) => s.textContent ) ).toEqual(
+		expect( Array.from( root.querySelectorAll( '[data-os-users-toolbar] os-segment' ) ).map( ( s ) => s.textContent ) ).toEqual(
 			STATUS_SEGMENTS().map( ( s ) => s.label ),
 		);
 		const search = root.querySelector( '[data-os-users-search]' );
@@ -172,26 +220,21 @@ describe( 'the users app view', () => {
 		expect( root.querySelector( '[data-os-users-refresh]' )?.getAttribute( 'os-action' ) ).toBe( 'refresh' );
 	} );
 
-	it( 'the pager reads the page envelope, and hides the server totals while the presence slice is on', () => {
-		const { root } = mount( { page: 2 }, { list: { items: [ user() ], total: 45, pages: 3, page: 2, perPage: 20 } } );
-		expect( root.querySelector( '.os-app-list__pager-meta' )?.textContent?.trim() ).toBe( 'Page 2 of 3 · 45 users' );
-		const buttons = Array.from( root.querySelectorAll( '.os-app-list__pager os-button' ) );
-		expect( buttons[ 0 ].getAttribute( 'os-arg-page' ) ).toBe( '1' );
-		expect( buttons[ 1 ].getAttribute( 'os-arg-page' ) ).toBe( '3' );
-
-		const filtered = mount(
-			{ status: 'online' },
-			{ list: { items: [ user( { id: 1, openstation_presence: 'online' } ), user( { id: 2 } ) ], total: 45, pages: 3, page: 2, perPage: 20 } },
-		);
-		expect( filtered.root.querySelector( '.os-app-list__pager-meta' )?.textContent?.trim() ).toBe( '1 of 2 on this page match' );
+	it( 'uses continuous loading with explicit scope for filters', () => {
+		const { root } = mount( {}, { list: { items: [ user() ], total: 45, pages: 3, page: 1, perPage: 20 } } );
+		expect( root.querySelector( '.os-people__scope' )?.textContent ).toContain( '1 of 45 people loaded' );
+		expect( root.querySelector( '.os-app-list__pager' ) ).toBeNull();
+		expect( root.querySelector( '[data-users-feed-end]' )?.textContent ).toContain( 'Load more people' );
+		const filtered = mount( { status: 'online' }, { list: { items: [ user( { id: 1, openstation_presence: 'online' } ), user() ], total: 45, pages: 3, page: 1, perPage: 20 } } );
+		expect( filtered.root.querySelector( '.os-people__scope' )?.textContent ).toContain( '1 match filters' );
 	} );
 
-	it( 'the bulk bar sits in the toolbar on a desk, hidden until a selection, with the role change, the reassign picker and Delete', () => {
+	it( 'the bulk bar sits at the bottom on a desk, hidden until a selection, with the role change, the reassign picker and Delete', () => {
 		const { root, table } = mount();
 		const bar = root.querySelector( '[data-os-users-bulk]' );
 		expect( bar?.hasAttribute( 'hidden' ) ).toBe( true );
-		expect( bar?.classList.contains( 'os-app-list__bulk--footer' ) ).toBe( false );
-		expect( bar?.closest( 'header' ) ).not.toBeNull();
+		expect( bar?.classList.contains( 'os-app-list__bulk--footer' ) ).toBe( true );
+		expect( bar?.closest( 'header' ) ).toBeNull();
 		// A selection paints the count, the role pick, who inherits the
 		// content (the viewer by default), and Delete.
 		table!.selection = [ '2', '3' ];
@@ -227,7 +270,7 @@ describe( 'the users app view', () => {
 		expect( bar?.closest( 'header' ) ).toBeNull();
 		expect( bar?.previousElementSibling?.classList.contains( 'os-app-list__body' ) ).toBe( true );
 		expect( root.querySelector( 'os-select.os-app-list__status' ) ).not.toBeNull();
-		expect( root.querySelector( 'os-segmented' ) ).toBeNull();
+		expect( root.querySelector( '[data-os-users-toolbar] os-segmented' ) ).toBeNull();
 		expect( table!.hasAttribute( 'stacked' ) ).toBe( true );
 		expect( ( table!.columns as Array< { key: string } > ).map( ( c ) => c.key ) ).toEqual( [ 'identity', 'email', 'role', 'last_login', 'actions' ] );
 	} );
@@ -235,7 +278,7 @@ describe( 'the users app view', () => {
 	it( 'a list that could not load says so instead of an empty table', () => {
 		const { root } = mount( {}, { list: { items: [], total: 0, pages: 1, page: 1, perPage: 20, error: 'nope' } } );
 		expect( root.querySelector( 'os-notice[tone="danger"]' )?.textContent ).toContain( 'Could not load users' );
-		expect( root.querySelector( '[data-os-users-table]' ) ).toBeNull();
+		expect( root.querySelector( '[data-os-users-table]' ) ).not.toBeNull();
 	} );
 
 	it( 'the tab local action flips the tab without a request', () => {
@@ -265,7 +308,7 @@ describe( 'updated() keeps the preserved table in step', () => {
 		table!.selection = [ '2', '3' ];
 		table!.dispatchEvent( new CustomEvent( 'os-table-selection-change' ) );
 
-		ctx.data.list = { items: [ user( { id: 2 } ) ], total: 1, pages: 1, page: 1, perPage: 20 };
+		Object.assign( ctx, { data: { list: { items: [ user( { id: 2 } ) ], total: 1, pages: 1, page: 1, perPage: 20 } } } );
 		ctx.repaint();
 		await Promise.resolve();
 		expect( Array.from( table!.selection ) ).toEqual( [ '2' ] );
@@ -282,7 +325,7 @@ describe( 'updated() keeps the preserved table in step', () => {
 		const adaCell = identity.render( undefined, table!.data[ 0 ], 0 );
 		const bobCell = identity.render( undefined, table!.data[ 1 ], 1 );
 
-		ctx.data.list = { items: [ user( { id: 2 } ), user( { id: 3, name: 'Robert' } ) ], total: 2, pages: 1, page: 1, perPage: 20 };
+		Object.assign( ctx, { data: { list: { items: [ user( { id: 2 } ), user( { id: 3, name: 'Robert' } ) ], total: 2, pages: 1, page: 1, perPage: 20 } } } );
 		ctx.repaint();
 		expect( identity.render( undefined, table!.data[ 0 ], 0 ) ).toBe( adaCell );
 		expect( identity.render( undefined, table!.data[ 1 ], 1 ) ).not.toBe( bobCell );
@@ -344,4 +387,14 @@ describe( 'the table parts', () => {
 		expect( rowKey( user( { roles: [ 'author' ] } ) ) ).not.toBe( rowKey( user() ) );
 		expect( rowKey( user( { openstation_user_stats: { posts: 4, pages: 1, comments: 2 } } ) ) ).not.toBe( rowKey( user() ) );
 	} );
+} );
+
+it( 'shows automatic gathering instead of partial Activity totals or a Load more control', () => {
+	const { root } = mount( { tab: 'activity' }, { list: { items: [ user() ], total: 138, pages: 7, page: 1, perPage: 20 } } );
+	const panel = root.querySelector( 'os-tabpanel[for="activity"]' )!;
+	expect( panel.textContent ).toContain( 'Bringing everyone together' );
+	expect( panel.textContent ).not.toContain( 'people gathered' );
+	expect( panel.textContent ).not.toContain( 'Load more' );
+	expect( panel.querySelector( '.os-community__metrics' ) ).toBeNull();
+	expect( panel.querySelector( '.os-community__spotlight' ) ).toBeNull();
 } );

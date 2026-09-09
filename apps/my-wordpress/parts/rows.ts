@@ -11,6 +11,7 @@
  */
 
 import { __, copyText, sprintf } from '@openstation/app';
+import { openPreview } from './optimistic';
 import { opensOnTap } from './helpers';
 import { longPress, type LongPressHandlers } from './long-press';
 import { shell, uiOf, type Ctx, type ListItem, type SectionDef } from './types';
@@ -88,7 +89,7 @@ export function rowInteractions(
 				activate();
 				return;
 			}
-			void ctx.dispatch( 'open', { item: item.id } );
+			openPreview( ctx, item.id );
 		},
 		activate,
 		menu: ( e ) => {

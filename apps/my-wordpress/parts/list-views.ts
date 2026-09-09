@@ -10,6 +10,7 @@
  * @public
  */
 
+import { openPreview, trashExplorerItems } from './optimistic';
 import { __, _n, html, sprintf, type TemplateResult } from '@openstation/app';
 import { openUserEditWindow } from '../../../src/open-targets/user-edit-window';
 import {
@@ -373,7 +374,7 @@ export function renderMenu( ctx: Ctx, section: SectionDef ): TemplateResult | ''
 			if ( section.kind === 'post' && ! section.flat ) {
 				void ctx.dispatch( 'into', { item: item.id } );
 			} else {
-				void ctx.dispatch( 'open', { item: item.id } );
+				openPreview( ctx, item.id );
 			}
 		} else if ( id === 'edit' ) {
 			// A person's "Edit profile" opens the shared profile
@@ -410,26 +411,7 @@ export function renderMenu( ctx: Ctx, section: SectionDef ): TemplateResult | ''
 				copyLinks( ctx, rows, id === 'copy-link' ? 'link' : 'shortlink' );
 			}
 		} else if ( id === 'trash' ) {
-			// Same confirmation as the preview pane's Trash button — an
-			// action reached from the menu must not skip the dialog its
-			// button twin shows.
-			const confirm = {
-				message:
-					targets.length > 1
-						? sprintf(
-							/* translators: %d: selected item count. */
-							__( 'Move %d items to the Trash?' ),
-							targets.length,
-						)
-						: __( 'Move this to the Trash?' ),
-				label: __( 'Trash' ),
-				danger: true,
-			};
-			if ( targets.length > 1 ) {
-				void ctx.dispatch( 'bulk-trash', {}, { confirm } );
-			} else {
-				void ctx.dispatch( 'trash', { item: item.id }, { confirm } );
-			}
+			void trashExplorerItems( ctx, section, allItems.filter( ( row ) => targets.includes( row.id ) ) );
 		} else {
 			const action = resolveActions(
 				ctx.data.previewActions,

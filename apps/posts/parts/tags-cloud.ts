@@ -25,7 +25,7 @@
 
 import { __ } from '@openstation/app';
 import type { CanvasEnv } from './app';
-import { pointerTravel, stopBubble, type Bounds } from './canvas/camera';
+import { isPinchGesture, pointerTravel, stopBubble, type Bounds } from './canvas/camera';
 import { CHIP_TEXT_RES, readAdminThemeHue, type PixiPoint, type PixiPointerEvent } from './canvas/pixi';
 import { createTermCanvas, type TermCanvas } from './canvas/term-canvas';
 import { createTagChip, layoutTagChip, paintTagChip, tagTone, type TagBox } from './cloud-chips';
@@ -67,7 +67,7 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 			],
 			searchPlaceholder: __( 'Search tags…' ),
 			searchAria: __( 'Search tags in the cloud' ),
-			hint: __( 'Click a tag to focus + edit · drag to reposition · wheel to zoom' ),
+			hint: __( 'Click a tag to focus + edit · drag to reposition · scroll or pinch to zoom' ),
 		},
 		// Back to front: post edges → tag pills → post markers → post chips.
 		layers: [ 'postEdge', 'chip', 'post', 'postChip' ],
@@ -78,7 +78,7 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 	}
 	// A non-null binding the closures below can capture.
 	const canvas: TermCanvas = built;
-	const { pixi, layers, fan, camera, interaction, world } = canvas;
+	const { pixi, layers, fan, camera, interaction, world, palette } = canvas;
 	const { client } = env;
 
 	// --- State --------------------------------------------------------
@@ -86,16 +86,17 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 	let dragChip: TagBox | null = null;
 	let dragOffset: PixiPoint = { x: 0, y: 0 };
 	let dragStart: PixiPoint | null = null;
+	let dragOrigin: PixiPoint | null = null;
 	let draft = false;
 	const positionsKey = computePositionsKey();
 	const persistedPositions = readPersistedPositions( positionsKey );
 	// tag id → co-occurring siblings; empty until the fetch lands, and
 	// then the packer becomes cluster-aware.
 	let cooccurrenceMap: Map< number, TermNeighbor[] > = new Map();
-	const themeHue = readAdminThemeHue();
+	let themeHue = readAdminThemeHue( host );
 	const focused = ( id: number ): boolean => fan.focusId === id;
-	const layoutChip = ( box: TagBox ): void => layoutTagChip( box, focused( box.id ) );
-	const paintChip = ( box: TagBox ): void => paintTagChip( box, focused( box.id ) );
+	const layoutChip = ( box: TagBox ): void => layoutTagChip( box, focused( box.id ), palette );
+	const paintChip = ( box: TagBox ): void => paintTagChip( box, focused( box.id ), palette );
 
 	function buildCloud(): void {
 		const terms = canvas.terms;
@@ -145,7 +146,7 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 				ty: persisted?.y ?? 0,
 				width: 0,
 				height: 0,
-				chip: createTagChip( pixi, layers.chip, term, fontSize, hue ),
+				chip: createTagChip( pixi, layers.chip, term, fontSize, palette ),
 			};
 			tags.set( term.id, box );
 			layoutChip( box );
@@ -177,9 +178,13 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 	function wireChipPointer( box: TagBox ): void {
 		const c = box.chip.container;
 		c.on( 'pointerdown', ( e ) => {
+			if ( isPinchGesture( interaction ) ) {
+				return;
+			}
 			const ev = e as PixiPointerEvent;
 			stopBubble( interaction, e );
 			dragChip = box;
+			dragOrigin = { x: box.tx, y: box.ty };
 			dragStart = { x: ev.global.x, y: ev.global.y };
 			const local = camera.stageToWorld( ev.global );
 			dragOffset = { x: box.x - local.x, y: box.y - local.y };
@@ -229,9 +234,9 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 			const c = box.chip.container;
 			c.x = box.x;
 			c.y = box.y;
-			// Counter-scale only when zoomed OUT: zoomed in, the intrinsic
-			// font sizes ARE the reading.
-			c.scale.set( Math.max( 1, chipCounterScale ) );
+			// The packer reserves world-space rectangles. Keep labels in that
+			// space too, so zooming out cannot enlarge them into their neighbours.
+			c.scale.set( 1 );
 			c.rotation = box.rotation;
 			const targetAlpha = ! anyFocus || fan.focusId === box.id ? 1 : 0.32;
 			if ( Math.abs( c.alpha - targetAlpha ) > 0.005 ) {
@@ -368,6 +373,13 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 	buildCloud();
 	paintSidebar( sidebarHost );
 	canvas.start( {
+		themeChanged: () => {
+			themeHue = readAdminThemeHue( host );
+			for ( const box of tags.values() ) {
+				box.hue = tagHue( box.slug || box.name, themeHue );
+				paintChip( box );
+			}
+		},
 		center: ( id ) => {
 			const box = tags.get( id );
 			return box ? { x: box.x, y: box.y, tone: tagTone( box.hue ) } : null;
@@ -420,6 +432,13 @@ export async function mountTagsCloud( host: HTMLElement, env: CanvasEnv ): Promi
 			return true;
 		},
 		pointerUp: dragEnd,
+		cancelGesture: () => {
+			if ( dragChip && dragOrigin ) {
+				dragChip.x = dragChip.tx = dragOrigin.x;
+				dragChip.y = dragChip.ty = dragOrigin.y;
+			}
+			dragChip = null; dragStart = null; dragOrigin = null;
+		},
 		search: ( q ) => Array.from( tags.values() ).filter( ( t ) => t.name.toLowerCase().includes( q ) || t.slug.toLowerCase().includes( q ) ),
 	} );
 	void refreshCooccurrence();
