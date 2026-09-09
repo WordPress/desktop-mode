@@ -334,6 +334,11 @@ global the Electron preload injects) can answer that.
 
 ## Preference persistence
 
+The full inventory of what the plugin persists — tables, post types, meta
+keys, options, transients, disk and cron — is on the
+[Data model](./data-model.md) page; this section and the next cover the
+two per-user stores the shell itself reads at boot.
+
 User preferences (`OsSettingsState` — wallpaper, accent, dock size, layout, feature toggles, and everything else OpenStation Preferences edits) live in the `desktop_mode_os_settings` user meta and sync through `/wp-json/desktop-mode/v1/os-settings`. The client keeps a full copy in `localStorage` as a read cache, but the server snapshot in `openStationConfig.osSettings` outranks it at boot, so a change made on another device is honoured on the next load.
 
 **A save sends only what changed.** `POST /os-settings` accepts a **partial** payload: a key the request omits keeps the value already stored for that user rather than resetting to the shipped default. The shell diffs the live state against the last state the server confirmed (`src/settings/state.ts`, `_buildPayload()`) and posts just those fields; when nothing moved, no request is made at all.

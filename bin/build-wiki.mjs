@@ -6,15 +6,24 @@
  * filename alone, directories are ignored, and links must be extension-less
  * page names rather than relative .md paths. This script bridges the gap:
  *
- *   - docs/README.md            -> Home.md (the wiki front page)
- *   - docs/examples/README.md   -> Examples.md
- *   - docs/examples/<name>.md   -> example-<name>.md (prefix keeps the ~70
- *                                  example pages grouped and prevents
- *                                  basename collisions with top-level docs,
- *                                  e.g. desktop-host.md exists in both)
- *   - docs/<name>.md            -> <name>.md
- *   - docs/plans/               -> excluded (internal planning docs)
- *   - docs/assets/              -> copied verbatim; image links keep working
+ *   - docs/README.md              -> Home.md (the wiki front page)
+ *   - docs/examples/README.md     -> Examples.md
+ *   - docs/examples/<name>.md     -> example-<name>.md (prefix keeps the ~70
+ *                                    example pages grouped and prevents
+ *                                    basename collisions with top-level docs,
+ *                                    e.g. desktop-host.md exists in both)
+ *   - docs/<name>.md              -> <name>.md
+ *   - docs/<dir>/…/README.md      -> <dir>-….md (the path, dash-joined)
+ *   - docs/<dir>/…/<name>.md      -> <dir>-…-<name>.md
+ *   - docs/plans/                 -> excluded (internal planning docs)
+ *   - every non-markdown file     -> copied verbatim at the same relative
+ *                                    path (docs/assets/, screenshots, …), so
+ *                                    image links keep working
+ *
+ * Any subdirectory of docs/ therefore has a home in the flat namespace: a
+ * new folder of review captures with a README must never stop the whole
+ * sync (it did once). The only hard failure is two sources mapping to the
+ * same page name.
  *
  * Every relative link is rewritten: links between docs become wiki page
  * links (anchors preserved), links that escape docs/ into the source tree
@@ -37,7 +46,7 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = path.resolve( path.dirname( fileURLToPath( import.meta.url ) ), '..' );
 const DOCS_DIR = path.join( REPO_ROOT, 'docs' );
 const BLOB_BASE = 'https://github.com/WordPress/openstation/blob/trunk/';
-const EXCLUDED_DIRS = new Set( [ 'plans', 'assets' ] );
+const EXCLUDED_DIRS = new Set( [ 'plans' ] );
 
 const outDir = process.argv[ 2 ];
 if ( ! outDir ) {
@@ -60,34 +69,48 @@ function pageName( relPath ) {
 	if ( relPath.startsWith( 'examples/' ) ) {
 		return 'example-' + path.basename( relPath, '.md' );
 	}
-	return path.basename( relPath, '.md' );
+	const segments = relPath.replace( /\.md$/, '' ).split( '/' );
+	if ( segments.length > 1 && segments[ segments.length - 1 ] === 'README' ) {
+		segments.pop();
+	}
+	return segments.join( '-' );
+}
+
+/**
+ * Top-level docs/ directory of a docs-relative path, or null at the root.
+ */
+function topDirOf( rel ) {
+	return rel.includes( '/' ) ? rel.split( '/' )[ 0 ] : null;
 }
 
 // ---------------------------------------------------------------------------
-// Collect pages. Only docs/ root and docs/examples/ may contain markdown; a
-// new subdirectory must be mapped here deliberately, so fail loudly on one.
+// Collect pages and the files that travel with them. Every directory maps
+// into the flat namespace (see pageName), so a new folder never blocks the
+// sync; only a page-name collision does.
 // ---------------------------------------------------------------------------
 
 const sources = [];
+const verbatim = [];
 for ( const entry of readdirSync( DOCS_DIR, { withFileTypes: true, recursive: true } ) ) {
-	if ( ! entry.isFile() || ! entry.name.endsWith( '.md' ) ) {
+	if ( ! entry.isFile() ) {
 		continue;
 	}
-	const rel = path.relative( DOCS_DIR, path.join( entry.parentPath, entry.name ) );
-	const topDir = rel.includes( path.sep ) ? rel.split( path.sep )[ 0 ] : null;
+	const rel = path.relative( DOCS_DIR, path.join( entry.parentPath, entry.name ) ).split( path.sep ).join( '/' );
+	const topDir = topDirOf( rel );
 	if ( topDir && EXCLUDED_DIRS.has( topDir ) ) {
 		continue;
 	}
-	if ( topDir && topDir !== 'examples' ) {
-		console.error( `Unexpected markdown location: docs/${ rel }` );
-		console.error( 'Teach bin/build-wiki.mjs how this directory maps into the flat wiki namespace.' );
-		process.exit( 1 );
+	if ( entry.name.endsWith( '.md' ) ) {
+		sources.push( rel );
+	} else if ( topDir ) {
+		verbatim.push( rel );
 	}
-	sources.push( rel.split( path.sep ).join( '/' ) );
 }
 sources.sort();
+verbatim.sort();
 
 const pageByPath = new Map( sources.map( ( rel ) => [ rel, pageName( rel ) ] ) );
+const verbatimSet = new Set( verbatim );
 
 const collisions = new Map();
 for ( const [ rel, page ] of pageByPath ) {
@@ -150,9 +173,10 @@ function rewriteTarget( srcRel, target ) {
 		return pageByPath.get( dirReadme ) + anchor;
 	}
 
-	// Assets travel with the wiki; all pages live at the wiki root, so a
-	// root-relative assets/ path is correct from every page.
-	if ( resolved.startsWith( 'assets/' ) && existsSync( path.join( DOCS_DIR, resolved ) ) ) {
+	// Images and other non-markdown files travel with the wiki at their
+	// docs-relative path; all pages live at the wiki root, so that path is
+	// correct from every page.
+	if ( verbatimSet.has( resolved ) ) {
 		return resolved + anchor;
 	}
 
@@ -194,15 +218,18 @@ for ( const rel of sources ) {
 	writeFileSync( path.join( outDir, pageByPath.get( rel ) + '.md' ), rewriteContent( rel, content ) );
 }
 
-const assetsDir = path.join( DOCS_DIR, 'assets' );
-if ( existsSync( assetsDir ) ) {
-	cpSync( assetsDir, path.join( outDir, 'assets' ), { recursive: true } );
+for ( const rel of verbatim ) {
+	const dest = path.join( outDir, rel );
+	mkdirSync( path.dirname( dest ), { recursive: true } );
+	cpSync( path.join( DOCS_DIR, rel ), dest );
 }
 
-// Sidebar: guides, then migration notes, then the examples behind a
-// disclosure so seventy-odd entries don't drown the navigation.
+// Sidebar: guides, then migration notes, then pages from other docs/
+// subdirectories, then the examples behind a disclosure so seventy-odd
+// entries don't drown the navigation.
 const guides = [];
 const migrations = [];
+const nested = [];
 const examples = [];
 for ( const rel of sources ) {
 	const page = pageByPath.get( rel );
@@ -213,6 +240,8 @@ for ( const rel of sources ) {
 		examples.push( line );
 	} else if ( rel.startsWith( 'migration-' ) ) {
 		migrations.push( line );
+	} else if ( topDirOf( rel ) ) {
+		nested.push( line );
 	} else {
 		guides.push( line );
 	}
@@ -227,6 +256,7 @@ writeFileSync( path.join( outDir, '_Sidebar.md' ), [
 	'**Migration notes**',
 	...migrations,
 	'',
+	...( nested.length ? [ '**More**', ...nested, '' ] : [] ),
 	'**[Examples](Examples)**',
 	'<details><summary>All examples</summary>',
 	'',

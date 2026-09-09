@@ -364,14 +364,22 @@ The pipeline is two pieces:
   namespace: `docs/README.md` becomes `Home`, `docs/examples/README.md`
   becomes `Examples`, every example page gets an `example-` prefix (which
   is also what prevents basename collisions such as `desktop-host.md`
-  existing in both directories), `docs/plans/` is excluded, and
-  `docs/assets/` is copied verbatim. Relative `.md` links are rewritten to
-  wiki page names (anchors preserved); links escaping `docs/` into the
-  source tree become absolute GitHub `blob/trunk` URLs. It also generates
-  the `_Sidebar.md` navigation and a `_Footer.md` provenance note.
-  Unresolved relative links are printed as warnings — run
+  existing in both directories), any other subdirectory maps to
+  dash-joined page names (`docs/screenshots/native-workspaces/README.md`
+  becomes `screenshots-native-workspaces`, listed under **More** in the
+  sidebar), `docs/plans/` is excluded, and every non-markdown file
+  (`docs/assets/`, screenshot folders, …) is copied verbatim at its
+  docs-relative path so image links keep working. Relative `.md` links are
+  rewritten to wiki page names (anchors preserved); links escaping `docs/`
+  into the source tree become absolute GitHub `blob/trunk` URLs. It also
+  generates the `_Sidebar.md` navigation and a `_Footer.md` provenance
+  note. Unresolved relative links are printed as warnings — run
   `node bin/build-wiki.mjs /tmp/wiki-out` locally to preview a sync or
-  check links.
+  check links. The only hard failure is two sources mapping to the same
+  page name; `tests/vitest/build-wiki.test.ts` runs the script against the
+  real `docs/` tree so a new folder cannot break the sync unnoticed.
+  Mermaid fences render natively in the wiki; a chart that must look the
+  same everywhere ships as an SVG under `docs/assets/`.
 - `.github/workflows/wiki.yml` runs the script on every push to `trunk`
   that touches `docs/**` (plus `workflow_dispatch` for manual runs) and
   pushes the output to `<repo>.wiki.git` — a wiki is itself a git

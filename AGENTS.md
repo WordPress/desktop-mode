@@ -381,6 +381,7 @@ The full index lives in [`docs/README.md`](docs/README.md). Quick reference:
 | `docs/README.md` | Top-level index + status legend. |
 | `docs/getting-started.md` | The minimum-viable plugin skeleton or bootstrap hook names change. |
 | `docs/architecture.md` | A new rendering path, persistence layer, REST route, or payload shape lands; build tooling shifts. |
+| `docs/data-model.md` | A table, post type, meta key, option, transient, upload directory or cron hook is added, renamed or removed. **The inventory of every stored name lives there**; a new store without a row on that page is invisible to the next person asking "where does X live?". Read before touching a `desktop_mode_*` value (they are frozen, see above). |
 | `docs/api-index.md` | Any public API surface changes (PHP, JS, or events). |
 | `docs/hooks-reference.md` | Any `apply_filters()` / `do_action()` change: add, rename, remove, signature, default, or status. **The PHP hook contract.** |
 | `docs/javascript-reference.md` | Any CustomEvent shape, postMessage bridge message, `wp.os.*` method/property, user meta key, or query flag changes. **The JS contract.** |
