@@ -22,13 +22,21 @@ const OPENSTATION_NETWORK_HUB_OPTION = 'openstation_network_hub';
 /** How old a cached list may be before a refresh is scheduled. */
 const OPENSTATION_NETWORK_LIST_TTL = HOUR_IN_SECONDS;
 
+/**
+ * How soon a member WITHOUT a list asks again: it joined before the
+ * hub added it, or the hub was unreachable. The two steps of pairing
+ * happen in either order, and this is what makes the second one land
+ * without anyone pressing Sync.
+ */
+const OPENSTATION_NETWORK_RETRY = 5 * MINUTE_IN_SECONDS;
+
 /** The cron hook that refreshes the list. */
 const OPENSTATION_NETWORK_REFRESH_HOOK = 'openstation_network_refresh_list';
 
 /**
  * The hub this install belongs to, or null.
  *
- * @return array<string,mixed>|null `url`, `name`, `shellUrl`, `publicKey`, `joined`, `list`, `fetched`, `error`.
+ * @return array<string,mixed>|null `url`, `name`, `shellUrl`, `publicKey`, `joined`, `list`, `fetched` (the last list), `tried` (the last attempt, either way), `error`.
  */
 function openstation_network_hub() {
 	$hub = openstation_network_option_get( OPENSTATION_NETWORK_HUB_OPTION );
@@ -43,6 +51,7 @@ function openstation_network_hub() {
 		'joined'    => isset( $hub['joined'] ) ? (int) $hub['joined'] : 0,
 		'list'      => isset( $hub['list'] ) && is_array( $hub['list'] ) ? $hub['list'] : null,
 		'fetched'   => isset( $hub['fetched'] ) ? (int) $hub['fetched'] : 0,
+		'tried'     => isset( $hub['tried'] ) ? (int) $hub['tried'] : 0,
 		'error'     => isset( $hub['error'] ) ? (string) $hub['error'] : '',
 	);
 }
@@ -125,6 +134,7 @@ function openstation_network_refresh_list() {
 	if ( ! is_array( $stored ) ) {
 		$stored = array();
 	}
+	$stored['tried'] = time();
 	if ( is_wp_error( $list ) ) {
 		$stored['error'] = $list->get_error_message();
 		openstation_network_option_set( OPENSTATION_NETWORK_HUB_OPTION, $stored );
@@ -177,12 +187,23 @@ function openstation_network_refresh_list() {
 add_action( OPENSTATION_NETWORK_REFRESH_HOOK, 'openstation_network_refresh_list' );
 
 /**
- * Schedule a background refresh when the cached list is stale. Never
- * fetches on the request that paints the shell.
+ * Schedule a background refresh when the cached list is stale, or when
+ * there is none yet. Never fetches on the request that paints the shell.
+ *
+ * A member with a list refreshes it hourly. One without asks again
+ * every few minutes: it joined before the hub added it, or the hub was
+ * unreachable, and the switcher should appear once the hub answers,
+ * without anyone pressing Sync.
  */
 function openstation_network_schedule_refresh() {
 	$hub = openstation_network_hub();
-	if ( null === $hub || time() - $hub['fetched'] < OPENSTATION_NETWORK_LIST_TTL ) {
+	if ( null === $hub ) {
+		return;
+	}
+	$due = null === $hub['list']
+		? $hub['tried'] + OPENSTATION_NETWORK_RETRY
+		: $hub['fetched'] + OPENSTATION_NETWORK_LIST_TTL;
+	if ( time() < $due ) {
 		return;
 	}
 	if ( ! wp_next_scheduled( OPENSTATION_NETWORK_REFRESH_HOOK ) ) {
@@ -200,10 +221,15 @@ function openstation_network_schedule_refresh() {
  */
 function openstation_network_member_payload() {
 	$hub = openstation_network_hub();
-	if ( null === $hub || null === $hub['list'] ) {
+	if ( null === $hub ) {
 		return null;
 	}
+	// Before the list check: a member still waiting for the hub is the
+	// one that most needs to ask again.
 	openstation_network_schedule_refresh();
+	if ( null === $hub['list'] ) {
+		return null;
+	}
 
 	$me      = openstation_network_public_key();
 	$current = '';

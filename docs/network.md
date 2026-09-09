@@ -34,8 +34,10 @@ member by its address. The hub fetches the member's identity over HTTPS
 and **pins** its public key. On the member, an administrator opens the
 same app and enters the hub's address; the member pins the hub's key
 and asks for the list. The two steps can happen in either order: until
-the hub has added the member, the hub refuses the list, and the member
-shows that it is waiting.
+the hub has added the member, the hub refuses the list, the member
+shows that it is waiting, and it asks again in the background every
+five minutes when its shell is painted, so the switcher appears there
+once the hub has added it, without anyone pressing Sync now.
 
 Pinned means pinned. A key that later differs is flagged (`key-changed`
 in the registry) and everything signed with the new key is refused,

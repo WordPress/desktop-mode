@@ -336,6 +336,37 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$this->assertNull( $joined['list'] );
 		$this->assertStringContainsString( 'not a member', $joined['error'] );
 		$this->assertNull( openstation_network_member_payload(), 'No list, no switcher yet.' );
+		$this->assertFalse( wp_next_scheduled( OPENSTATION_NETWORK_REFRESH_HOOK ), 'Just tried; no point asking again this minute.' );
+
+		// Minutes later, painting the shell asks the hub again in the
+		// background, so the hub adding this site is enough on its own.
+		$stored          = openstation_network_option_get( OPENSTATION_NETWORK_HUB_OPTION );
+		$stored['tried'] = time() - OPENSTATION_NETWORK_RETRY - 1;
+		openstation_network_option_set( OPENSTATION_NETWORK_HUB_OPTION, $stored );
+		$this->assertNull( openstation_network_member_payload(), 'Still no list on this request.' );
+		$this->assertNotFalse( wp_next_scheduled( OPENSTATION_NETWORK_REFRESH_HOOK ), 'But the retry is scheduled.' );
+
+		// The hub has added this site by the time the retry runs.
+		$me           = openstation_network_public_key();
+		$this->remote = static function ( $url, $args ) use ( $hub, $me ) {
+			if ( false !== strpos( $url, '/network/identity' ) ) {
+				return self::json_response( self::member_identity( $hub['public'], array( 'url' => 'https://hub.test/', 'name' => 'The Network' ) ) );
+			}
+			return self::json_response(
+				array(
+					'name'  => 'The Network',
+					'sites' => array(
+						array( 'id' => '1', 'name' => 'Main', 'shellUrl' => 'https://hub.test/wp-admin/admin.php?page=openstation', 'kind' => 'local' ),
+						array( 'id' => 'member:abc', 'name' => 'Me', 'shellUrl' => 'https://me.test/wp-admin/admin.php?page=openstation', 'kind' => 'member', 'publicKey' => $me ),
+					),
+				)
+			);
+		};
+		do_action( OPENSTATION_NETWORK_REFRESH_HOOK );
+		wp_clear_scheduled_hook( OPENSTATION_NETWORK_REFRESH_HOOK );
+		$payload = openstation_network_member_payload();
+		$this->assertSame( array( '1', 'member:abc' ), wp_list_pluck( $payload['sites'], 'id' ), 'The switcher appears; nobody pressed Sync.' );
+		$this->assertSame( '', openstation_network_hub()['error'] );
 
 		// A site that is nobody's member shows nothing either.
 		openstation_network_leave();
