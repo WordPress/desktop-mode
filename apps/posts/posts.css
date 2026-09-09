@@ -38,7 +38,7 @@
 	background:
 		radial-gradient(
 			circle,
-			rgba( 0, 0, 0, 0.06 ) 1px,
+			var( --os-ui-border, rgba( 0, 0, 0, 0.06 ) ) 1px,
 			transparent 1.5px
 		) 0 0 / 24px 24px,
 		radial-gradient(
@@ -90,7 +90,7 @@
 	gap: 10px;
 	padding: 10px 14px;
 	border-bottom: 1px solid var( --os-ui-border, rgba( 0, 0, 0, 0.08 ) );
-	background: rgba( 255, 255, 255, 0.6 );
+	background: var( --os-ui-surface, rgba( 255, 255, 255, 0.6 ) );
 	backdrop-filter: blur( 8px );
 	/* A stacking context, so the search dropdown paints above the
 	 * pixi canvas in the layout sibling below. Without it the canvas

@@ -172,15 +172,16 @@ export function destroyPixiApp( app: PixiApp, host: HTMLElement, hostClasses: st
 	host.classList.remove( ...hostClasses );
 }
 
-export function readAdminThemeHue(): number {
+export function readAdminThemeHue( host: HTMLElement = document.body ): number {
 	try {
-		const value = getComputedStyle( document.documentElement ).getPropertyValue( '--wp-admin-theme-color' ).trim();
+		const style = getComputedStyle( host );
+		const value = style.getPropertyValue( '--os-ui-accent' ).trim() || style.getPropertyValue( '--wp-admin-theme-color' ).trim();
 		if ( ! value ) {
 			return 210;
 		}
 		const c = document.createElement( 'span' );
 		c.style.color = value;
-		document.body.appendChild( c );
+		host.appendChild( c );
 		const rgb = getComputedStyle( c ).color;
 		c.remove();
 		const m = rgb.match( /\d+/g );

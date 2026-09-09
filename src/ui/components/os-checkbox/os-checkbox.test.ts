@@ -33,6 +33,22 @@ describe( '<os-checkbox>', () => {
 		expect( el.hasAttribute( 'checked' ) ).toBe( true );
 	} );
 
+	test( 'clearing selection resets a native input after the user has toggled it', async () => {
+		host.innerHTML = '<os-checkbox label="Select person"></os-checkbox>';
+		const el = host.querySelector( 'os-checkbox' )!;
+		await tick();
+		const input = el.shadowRoot!.querySelector( 'input' )!;
+		input.click();
+		await tick();
+		expect( input.checked ).toBe( true );
+		el.removeAttribute( 'checked' );
+		await tick();
+		expect( input.checked ).toBe( false );
+		el.setAttribute( 'checked', '' );
+		await tick();
+		expect( input.checked ).toBe( true );
+	} );
+
 	test( '`checked` attribute reflects into the native input', async () => {
 		host.innerHTML = `<os-checkbox checked label="Default on"></os-checkbox>`;
 		await tick();

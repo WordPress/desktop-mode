@@ -94,7 +94,7 @@ export class OsCheckbox extends Component {
 			<label>
 				<input
 					type="checkbox"
-					?checked=${ checked }
+					.checked=${ checked }
 					?disabled=${ disabled }
 					.value=${ value ?? '' }
 					@change=${ ( e: Event ) => this._onChange( e ) }

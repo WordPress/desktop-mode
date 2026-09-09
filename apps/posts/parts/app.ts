@@ -5,9 +5,8 @@
  * function of the state the `.os.php` declares and the page `data()`
  * returns: the toolbar (status control, search, bulk bar, plugin
  * extras, Refresh, Add New), the `<os-table>` kept in step through
- * `createListTableSync()`, the pager, and — for Posts — the in-body
- * tabs that mount the Categories mind map and the Tags cloud on first
- * activation.
+ * `createListTableSync()`, continuous card browsing, and lazy canvas
+ * tabs: Categories / Tags for Posts, Page atlas for Pages.
  *
  * @public
  */
@@ -18,7 +17,6 @@ import {
 	defineApp,
 	html,
 	mountMenuCheckboxes,
-	pager,
 	sprintf,
 	statusControl,
 	type ListTableSync,
@@ -49,6 +47,12 @@ import { createPostsRestClient, type PostsRestClient } from './rest';
 import type { BulkAction, ListData, ListExtra, ListState, PostListItem, PostsMode, PostsWindowContext } from './types';
 import { fireDataLoaded, postsContext, runBulkAction, tableOf, type Ctx } from './window-context';
 
+import { ContentFeed } from './content-feed';
+import { createDeskStats } from './desk-stats';
+import { paperStyles } from './paper.styles';
+import { deskStyles } from './desk.styles';
+import { deskTools, freshDesk, renderDesk, syncDeskControls, type DeskState } from './desk';
+
 const LOG = '[openstation:desktop-mode-posts]';
 
 /** A term canvas: mounts into a host, returns its teardown. */
@@ -67,6 +71,8 @@ export interface CanvasEnv {
 }
 
 interface PostsAppOptions {
+	/** Optional Pages atlas; mounted only when its tab is opened. */
+	atlas?: ( host: HTMLElement, ctx: Ctx ) => () => void;
 	/** The Categories / Tags tabs (Posts only). */
 	terms?: { categories: TermsCanvas; tags: TermsCanvas };
 	/** The taxonomy cells (Posts only) — the Pages bundle ships none. */
@@ -76,6 +82,10 @@ interface PostsAppOptions {
 const TAG_PAGE_SIZE = 50;
 
 interface UiState {
+	desk: DeskState;
+	feed: ContentFeed;
+	stats?: ReturnType< typeof createDeskStats >;
+	atlas?: () => void;
 	client: PostsRestClient | null;
 	env: CellEnv | null;
 	cellCache: CellCache;
@@ -98,6 +108,8 @@ interface UiState {
 }
 
 const freshUi = (): UiState => ( {
+	desk: freshDesk(),
+	feed: new ContentFeed(),
 	client: null,
 	env: null,
 	cellCache: new Map(),
@@ -312,6 +324,7 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 					__( '%d selected' ),
 					ui.selected,
 				) }</span>
+				<os-button variant="ghost" @click=${ () => tableOf( ctx )?.clearSelection() }>${ __( 'Clear selection' ) }</os-button>
 				<span class="os-app-list__bulk-actions" data-os-posts-bulk-actions>${ ui.bulkActions.map(
 					( action ) => html`<os-button
 						variant=${ action.variant ?? 'secondary' }
@@ -324,24 +337,13 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 	};
 
 	const listPanel = ( ctx: Ctx, ui: UiState, mode: PostsMode, phone: boolean ): TemplateResult => {
-		const { state, data } = ctx;
+		const displayCtx = ui.feed.reconcile( ctx );
+		const { state, data } = displayCtx;
 		const list = data?.list;
-		const total = list?.total ?? 0;
-		const pages = list?.pages ?? 0;
 		const isPages = mode === 'pages';
 		const extra = ctx.extra as ListExtra;
-		let summary: string;
-		if ( ctx.loading ) {
-			// The frame before the first answer: no "No posts" for a beat.
-			summary = '';
-		} else if ( total === 0 ) {
-			summary = isPages ? __( 'No pages' ) : __( 'No posts' );
-		} else {
-			const format = isPages
-				? /* translators: 1: current page, 2: total pages, 3: total pages found. */ __( 'Page %1$d of %2$d · %3$d pages' )
-				: /* translators: 1: current page, 2: total pages, 3: total posts. */ __( 'Page %1$d of %2$d · %3$d posts' );
-			summary = sprintf( format, list?.page ?? state.page, Math.max( pages, 1 ), total );
-		}
+		const env = cellEnv( ctx, ui, cells );
+		refreshParentTitleRoster( env, list?.items ?? [] );
 		const addNew = (): void =>
 			ctx.host.openUrl?.(
 				extra.newPostUrl ?? '',
@@ -353,6 +355,10 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 			ui.extras = resolveToolbarTrailing( postsContext( ctx, ui ) );
 		}
 		return html`
+			<header class="os-posts-desk__hero">
+				<div><span class="os-posts-desk__eyebrow">${ isPages ? __( 'THE SHAPE OF YOUR SITE' ) : __( 'YOUR EDITORIAL SPACE' ) }</span><h2>${ isPages ? __( 'A place for every page.' ) : __( 'Stories in motion.' ) }</h2><p>${ isPages ? __( 'Find a page. See where it belongs. Make it yours.' ) : __( 'From first thought to published story. Keep the words moving.' ) }</p></div>
+				<os-button variant="holo" data-os-posts-new @click=${ addNew }><span class="dashicons dashicons-plus" aria-hidden="true"></span>${ isPages ? __( 'New page' ) : __( 'Write a post' ) }</os-button>
+			</header>
 			<header class="os-app-list__toolbar" data-os-posts-toolbar>
 				<div class="os-app-list__toolbar-left">
 					${ statusControl( {
@@ -363,30 +369,19 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 						label: __( 'Filter by status' ),
 						phone,
 					} ) }
-					<os-text-field
-						class="os-app-list__search"
-						data-os-posts-search
-						os-bind="search"
-						os-action="filter"
-						os-debounce="250"
-						value=${ state.search }
-						placeholder=${ isPages ? __( 'Search pages…' ) : __( 'Search posts…' ) }
-					></os-text-field>
 				</div>
-				${ phone ? '' : bulkBar( ctx, ui, mode, false ) }
+
 				<div class="os-app-list__toolbar-trailing">
 					<span data-os-posts-toolbar-extras>${ ui.extras }</span>
 					<os-button variant="ghost" os-action="refresh" data-os-posts-refresh title=${ __( 'Refresh' ) }>
-						<span class="dashicons dashicons-update" aria-hidden="true"></span>
-					</os-button>
-					<os-button variant="primary" data-os-posts-new @click=${ addNew }>
-						<span class="dashicons dashicons-plus" aria-hidden="true"></span>
-						${ __( 'Add New' ) }
+						<span class="dashicons dashicons-update" aria-hidden="true"></span>${ __( 'Refresh' ) }
 					</os-button>
 				</div>
 			</header>
 			${ list?.error ? html`<os-notice tone="danger">${ list.error }</os-notice>` : '' }
-			<div class="os-app-list__body" data-os-posts-body>
+			${ deskTools( displayCtx, ui.desk ) }
+			${ renderDesk( displayCtx, ui.desk, env, ui.filterData, hiddenOf( ui ), ui.feed.tail() ) }
+			<div class="os-app-list__body" data-os-posts-body ?hidden=${ ui.desk.view !== 'table' }>
 				<os-table
 					data-os-posts-table
 					os-preserve
@@ -406,17 +401,8 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 					</div>
 				</os-table>
 			</div>
-			${ pager( {
-				page: list?.page ?? state.page,
-				pages,
-				perPage: state.perPage,
-				summary,
-				pageAction: 'page',
-				perPageBind: 'perPage',
-				perPageAction: 'filter',
-				labels: { previous: __( 'Previous' ), next: __( 'Next' ), perPage: __( 'Per page' ) },
-			} ) }
-			${ phone ? bulkBar( ctx, ui, mode, true ) : '' }
+			${ ui.desk.view === 'table' ? ui.feed.tail() : '' }
+			${ bulkBar( ctx, ui, mode, true ) }
 		`;
 	};
 
@@ -429,7 +415,7 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 		},
 
 		// The frame paints the moment the window opens — the tabs, the
-		// toolbar, the pager and the table's skeleton (the runtime's busy
+		// toolbar, the content workspace and the table's skeleton (the runtime's busy
 		// mark drives it, see `mounted`) — and the rows land with `mount`.
 		placeholder: ( state ) => ( {
 			list: { items: [], total: 0, pages: 0, page: state.page, perPage: state.perPage, error: '', code: '' },
@@ -441,37 +427,47 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 			const phone = isMobileStamped();
 			const panel = listPanel( ctx, ui, mode, phone );
 			const rootClass = `os-app-list desktop-mode-posts${ mode === 'pages' ? ' desktop-mode-pages' : '' }`;
-			if ( ! terms ) {
-				return html`<div class=${ rootClass } data-os-posts-root>
+			if ( ! terms && ! options.atlas ) {
+				return html`<div class=${ rootClass } data-os-posts-root data-desk-options=${ String( ui.desk.filters ) }><style>${ deskStyles.cssText }${ paperStyles.cssText }</style>
 					<div class="os-app-list__panel">${ panel }</div>
 				</div>`;
 			}
 			const onTab = ( e: Event ): void => {
 				const value = ( e as CustomEvent< { value: string } > ).detail?.value ?? 'posts';
 				ui.tab = value;
+				if ( value === 'atlas' && ! ui.atlas && options.atlas ) {
+					const host = ctx.root.querySelector< HTMLElement >( '[data-os-pages-atlas]' );
+					if ( host ) {
+						ui.atlas = options.atlas( host, ctx );
+					}
+				}
 				if ( value === 'categories' || value === 'tags' ) {
 					mountCanvas( ctx, ui, value );
 				}
 			};
-			return html`<div class=${ rootClass } data-os-posts-root>
+			return html`<div class=${ rootClass } data-os-posts-root data-desk-options=${ String( ui.desk.filters ) }><style>${ deskStyles.cssText }${ paperStyles.cssText }</style>
 				<os-tabs value=${ ui.tab } class="os-app-list__tabs" @os-tab-change=${ onTab }>
-					<os-tab value="posts">${ __( 'All posts' ) }</os-tab>
-					<os-tab value="categories">${ __( 'Categories' ) }</os-tab>
-					<os-tab value="tags">${ __( 'Tags' ) }</os-tab>
+					<os-tab value="posts">${ mode === 'pages' ? __( 'All pages' ) : __( 'All posts' ) }</os-tab>
+					${ options.atlas ? html`<os-tab value="atlas">${ __( 'Page atlas' ) }</os-tab>` : '' }
+					${ terms ? html`<os-tab value="categories">${ __( 'Categories' ) }</os-tab><os-tab value="tags">${ __( 'Tags' ) }</os-tab>` : '' }
 				</os-tabs>
 				<os-tabpanel for="posts" class="os-app-list__panel">${ panel }</os-tabpanel>
-				<os-tabpanel for="categories" class="os-app-list__panel">
+				${ options.atlas ? html`<os-tabpanel for="atlas" class="os-app-list__panel"><div data-os-pages-atlas class="os-pages-atlas-host" os-preserve></div></os-tabpanel>` : '' }
+				${ terms ? html`<os-tabpanel for="categories" class="os-app-list__panel">
 					<div data-os-posts-cats-host class="os-posts__terms-host" os-preserve></div>
 				</os-tabpanel>
 				<os-tabpanel for="tags" class="os-app-list__panel">
 					<div data-os-posts-tags-host class="os-posts__terms-host" os-preserve></div>
-				</os-tabpanel>
+				</os-tabpanel>` : '' }
 			</div>`;
 		},
 
 		mounted: ( ctx ) => {
 			const ui = ctx.ui( freshUi );
 			const teardowns: Array< () => void > = [];
+			ui.stats = createDeskStats( ctx.root, ctx.fetch, modeOf( ctx.extra ) );
+			ui.stats.sync();
+			teardowns.push( () => ui.stats?.dispose() );
 			const env = cellEnv( ctx, ui, cells );
 
 			// The table's skeleton while a round trip is in flight — the
@@ -564,6 +560,8 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 				for ( const off of teardowns ) {
 					off();
 				}
+				ui.feed.dispose();
+				ui.atlas?.();
 				ui.canvases.categories?.();
 				ui.canvases.tags?.();
 				ui.canvases = { categories: null, tags: null };
@@ -572,6 +570,7 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 		},
 
 		updated: ( ctx ) => {
+			syncDeskControls( ctx.root );
 			const table = tableOf( ctx );
 			if ( ! table ) {
 				return;
@@ -582,6 +581,8 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 				table.setAttribute( 'loading', '' );
 			}
 			const ui = ctx.ui( freshUi );
+			ui.stats?.sync();
+			ui.feed.observe( ctx.root );
 			const { state, data } = ctx;
 			const env = cellEnv( ctx, ui, cells );
 			// The columns rebuild when the hidden set or the filter options
@@ -592,13 +593,13 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 				ui.cellCache.clear();
 				ui.table.invalidateColumns();
 			}
-			const items = data?.list?.items ?? [];
+			const items = ui.feed.items;
 			const result = ui.table.sync( {
 				// `<os-table>` exposes `data` read-only; the sync writes through
 				// its setter, which is the one the component declares.
 				table: table as unknown as ListTableLike< PostListItem >,
 				rows: items,
-				listKey: [ state.page, state.perPage, state.search, state.status, state.orderby, state.order, state.author.join( ',' ), state.tag.join( ',' ) ].join( '|' ),
+				listKey: [ state.perPage, state.search, state.status, state.orderby, state.order, state.author.join( ',' ), state.tag.join( ',' ) ].join( '|' ),
 				fingerprint: fingerprint( items ),
 				columns: ( phone ) => {
 					ui.cellCache.clear();
@@ -610,6 +611,14 @@ export function createPostsApp( id: string, options: PostsAppOptions = {} ) {
 				},
 			} );
 			if ( result.dataChanged ) {
+				if ( ! items.some( ( row ) => row.id === ui.desk.focused ) ) {
+					ui.desk.focused = null;
+				}
+				queueMicrotask( () => {
+					if ( ! ui.disposed ) {
+						ctx.repaint();
+					}
+				} );
 				// A real data change: fresh DOM for the new rows.
 				ui.cellCache.clear();
 				refreshParentTitleRoster( env, items );

@@ -80,7 +80,7 @@ export function buildTitleCell( row: PostListItem, env: CellEnv ): HTMLElement {
 	const lock = row.openstation_lock ?? null;
 	if ( lock ) {
 		titleRow.appendChild(
-			pill( lock.userName, { fg: '#b32d2e', bg: 'rgba(179, 45, 46, 0.1)' }, {
+			pill( lock.userName, { fg: 'var(--os-ui-danger, #b32d2e)', bg: 'var(--os-ui-surface-raised, rgba(179, 45, 46, 0.1))' }, {
 				icon: lockGlyph(),
 				/* translators: %s is the user name currently editing the post. */
 				title: sprintf( __( '%s is currently editing' ), lock.userName ),
@@ -92,12 +92,12 @@ export function buildTitleCell( row: PostListItem, env: CellEnv ): HTMLElement {
 	const isPages = env.extra.mode === 'pages';
 	if ( isPages && typeof env.extra.frontPageId === 'number' && env.extra.frontPageId === row.id ) {
 		titleRow.appendChild(
-			pill( __( 'Front page' ), { fg: '#0a4b78', bg: 'rgba(34,113,177,0.12)' }, { icon: dashicon( 'dashicons-admin-home' ) } ),
+			pill( __( 'Front page' ), { fg: 'var(--os-ui-info-fg, #0a4b78)', bg: 'var(--os-ui-info-bg, rgba(34,113,177,0.12))' }, { icon: dashicon( 'dashicons-admin-home' ) } ),
 		);
 	}
 	if ( isPages && typeof env.extra.postsPageId === 'number' && env.extra.postsPageId === row.id ) {
 		titleRow.appendChild(
-			pill( __( 'Posts page' ), { fg: '#5b3aa0', bg: 'rgba(91,58,160,0.12)' }, { icon: dashicon( 'dashicons-admin-post' ) } ),
+			pill( __( 'Posts page' ), { fg: 'var(--os-ui-accent, #5b3aa0)', bg: 'var(--os-ui-surface-raised, rgba(91,58,160,0.12))' }, { icon: dashicon( 'dashicons-admin-post' ) } ),
 		);
 	}
 
@@ -164,7 +164,7 @@ export function buildDateCell( row: PostListItem ): HTMLElement {
 	if ( row.modified_gmt && row.modified_gmt !== row.date_gmt ) {
 		const meta = document.createElement( 'span' );
 		meta.textContent = __( 'modified' );
-		meta.style.cssText = 'font-size:11px;color:#646970;';
+		meta.style.cssText = 'font-size:11px;color:var(--os-ui-fg-muted, #646970);';
 		wrap.appendChild( meta );
 	}
 	return wrap;
@@ -173,7 +173,7 @@ export function buildDateCell( row: PostListItem ): HTMLElement {
 /** The expanded sub-row: featured image + plain-text excerpt. */
 export function buildSubRow( row: PostListItem ): Node {
 	const wrap = document.createElement( 'div' );
-	wrap.style.cssText = 'display:flex;gap:16px;padding:12px 16px;background:#fafafa;align-items:flex-start;';
+	wrap.style.cssText = 'display:flex;gap:16px;padding:12px 16px;background:var(--os-ui-surface-sunken, #fafafa);align-items:flex-start;';
 
 	const featured = featuredMediaOf( row );
 	if ( featured ) {
@@ -188,18 +188,18 @@ export function buildSubRow( row: PostListItem ): Node {
 	const text = document.createElement( 'div' );
 	text.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;';
 	const heading = document.createElement( 'div' );
-	heading.style.cssText = 'font-size:13px;color:#646970;text-transform:uppercase;letter-spacing:0.04em;';
+	heading.style.cssText = 'font-size:13px;color:var(--os-ui-fg-muted, #646970);text-transform:uppercase;letter-spacing:0.04em;';
 	heading.textContent = __( 'Excerpt' );
 	text.appendChild( heading );
 
 	const excerpt = document.createElement( 'div' );
-	excerpt.style.cssText = 'color:#1d2327;line-height:1.5;';
+	excerpt.style.cssText = 'color:var(--os-ui-fg, #1d2327);line-height:1.5;';
 	const raw = row.excerpt?.rendered ?? '';
 	if ( raw ) {
 		excerpt.textContent = decodeHTML( raw.replace( /<[^>]+>/g, '' ).trim() ) || __( '(no excerpt)' );
 	} else {
 		excerpt.textContent = __( '(no excerpt)' );
-		excerpt.style.color = '#a7aaad';
+		excerpt.style.color = 'var(--os-ui-fg-muted, #a7aaad)';
 	}
 	text.appendChild( excerpt );
 	wrap.appendChild( text );

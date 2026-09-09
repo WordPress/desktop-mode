@@ -5,9 +5,8 @@
  * `.os-app-list__*` classes) does not cover: the tab panels' clipping,
  * the card galleries, the detail flyout, the upload dialog, the
  * window-wide .zip drop overlay and the card drag ghost. The Installed
- * table's cells and its detail panel render inside `<os-table>`'s
- * shadow root, which this stylesheet never reaches — those rules are
- * `parts/styles.ts`, adopted onto the table once.
+ * library lives here; the inspector's rich detail content uses
+ * `parts/styles.ts`, adopted onto its own shadow root.
  */
 
 /* ─── Frame ─────────────────────────────────────────────────────── */
@@ -48,11 +47,6 @@
 	flex: 1 1 240px;
 	min-width: 200px;
 	max-width: 360px;
-}
-
-/* Row-click cue — the plugin name expands the detail panel. */
-os-table[ data-installed-rows ]::part( row ) {
-	cursor: pointer;
 }
 
 /* ─── Galleries ─────────────────────────────────────────────────── */

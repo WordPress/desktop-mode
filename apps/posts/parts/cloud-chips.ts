@@ -8,6 +8,7 @@
  */
 
 import { CHIP_TEXT_RES, FONT_FAMILY, hslToInt, truncate, type PixiContainer, type PixiGraphics, type PixiNamespace, type PixiText } from './canvas/pixi';
+import { badgeInk, type CanvasPalette } from './canvas/palette';
 import type { TermRow } from './types';
 
 const CHIP_PAD_X = 11;
@@ -47,7 +48,7 @@ export interface TagBox {
 /** The focused fill of a tag — also the tone of its post fan. */
 export const tagTone = ( hue: number ): number => hslToInt( hue, 70, 48 );
 
-export function createTagChip( pixi: PixiNamespace, layer: PixiContainer, term: TermRow, fontSize: number, hue: number ): TagChip {
+export function createTagChip( pixi: PixiNamespace, layer: PixiContainer, term: TermRow, fontSize: number, palette: CanvasPalette ): TagChip {
 	const container = new pixi.Container();
 	container.eventMode = 'static';
 	container.cursor = 'pointer';
@@ -55,9 +56,9 @@ export function createTagChip( pixi: PixiNamespace, layer: PixiContainer, term: 
 	const bg = new pixi.Graphics();
 	const text = ( value: string, fill: number, size: number, weight: string ): PixiText =>
 		new pixi.Text( { text: value, style: { fill, fontSize: size, fontFamily: FONT_FAMILY, fontWeight: weight }, resolution: CHIP_TEXT_RES } );
-	const hashText = text( '#', hslToInt( hue, 65, 42 ), fontSize, '700' );
-	const nameText = text( truncate( term.name, CHIP_NAME_MAX_CHARS ), 0x1d2327, fontSize, '600' );
-	const countText = text( String( term.count ), 0xffffff, Math.max( 10, Math.round( fontSize * 0.55 ) ), '700' );
+	const hashText = text( '#', palette.accent, fontSize, '700' );
+	const nameText = text( truncate( term.name, CHIP_NAME_MAX_CHARS ), palette.fg, fontSize, '600' );
+	const countText = text( String( term.count ), palette.fg, Math.max( 10, Math.round( fontSize * 0.55 ) ), '700' );
 	for ( const child of [ shadow, bg, hashText, nameText, countText ] ) {
 		container.addChild( child );
 	}
@@ -66,7 +67,7 @@ export function createTagChip( pixi: PixiNamespace, layer: PixiContainer, term: 
 }
 
 /** Measure the chip for its intrinsic font size, then paint it. */
-export function layoutTagChip( box: TagBox, focused: boolean ): void {
+export function layoutTagChip( box: TagBox, focused: boolean, palette: CanvasPalette ): void {
 	const chip = box.chip;
 	const displayName = truncate( box.name, CHIP_NAME_MAX_CHARS );
 	const countStr = String( box.count );
@@ -84,26 +85,19 @@ export function layoutTagChip( box: TagBox, focused: boolean ): void {
 	const countBadgeH = Math.max( 14, chip.countText.height + 4 );
 	box.width = CHIP_PAD_X + chip.hashText.width + CHIP_GAP_HASH + chip.nameText.width + CHIP_GAP_COUNT + countBadgeW + CHIP_PAD_X;
 	box.height = Math.max( nameH, countBadgeH ) + CHIP_PAD_Y * 2;
-	paintTagChip( box, focused );
+	paintTagChip( box, focused, palette );
 }
 
-export function paintTagChip( box: TagBox, focused: boolean ): void {
+export function paintTagChip( box: TagBox, focused: boolean, palette: CanvasPalette ): void {
 	const chip = box.chip;
 	const totalW = box.width;
 	const totalH = box.height;
 	const left = -totalW / 2;
 	const top = -totalH / 2;
 	const radius = totalH / 2;
-	let fillBg: number;
-	if ( focused ) {
-		fillBg = tagTone( box.hue );
-	} else if ( chip.cachedHover ) {
-		fillBg = hslToInt( box.hue, 70, 92 );
-	} else {
-		fillBg = hslToInt( box.hue, 60, 95 );
-	}
-	const borderColor = focused ? hslToInt( box.hue, 70, 38 ) : hslToInt( box.hue, 50, 70 );
-	const countBg = focused ? hslToInt( box.hue, 80, 30 ) : hslToInt( box.hue, 70, 50 );
+	const fillBg = focused || chip.cachedHover ? palette.raised : palette.surface;
+	const borderColor = focused ? palette.accent : palette.border;
+	const countBg = tagTone( box.hue );
 
 	// A soft drop shadow — paper stickers pinned to a corkboard.
 	chip.shadow.clear();
@@ -129,10 +123,10 @@ export function paintTagChip( box: TagBox, focused: boolean ): void {
 	const countBadgeH = Math.max( 14, countH + 4 );
 	chip.hashText.x = left + CHIP_PAD_X;
 	chip.hashText.y = ( totalH - nameH ) / 2 + top;
-	chip.hashText.style.fill = focused ? 0xffffff : hslToInt( box.hue, 65, 42 );
+	chip.hashText.style.fill = palette.accent;
 	chip.nameText.x = left + CHIP_PAD_X + hashW + CHIP_GAP_HASH;
 	chip.nameText.y = ( totalH - nameH ) / 2 + top;
-	chip.nameText.style.fill = focused ? 0xffffff : 0x1d2327;
+	chip.nameText.style.fill = palette.fg;
 	const badgeX = left + CHIP_PAD_X + hashW + CHIP_GAP_HASH + nameW + CHIP_GAP_COUNT;
 	const badgeY = ( totalH - countBadgeH ) / 2 + top;
 	// The count badge is a second roundRect on bg with its own fill.
@@ -140,5 +134,5 @@ export function paintTagChip( box: TagBox, focused: boolean ): void {
 	chip.bg.fill( countBg );
 	chip.countText.x = badgeX + ( countBadgeW - countW ) / 2;
 	chip.countText.y = badgeY + ( countBadgeH - countH ) / 2;
-	chip.countText.style.fill = 0xffffff;
+	chip.countText.style.fill = badgeInk( countBg, palette );
 }

@@ -27,7 +27,7 @@ export const STATUS_SEGMENTS = (): Array< { value: string; label: string } > => 
 	{ value: '', label: __( 'All' ) },
 	{ value: 'online', label: __( 'Online' ) },
 	{ value: 'recent', label: __( 'Active 30d' ) },
-	{ value: 'never', label: __( 'Never logged in' ) },
+	{ value: 'never', label: __( 'No sign-in recorded' ) },
 ];
 
 export function applyStatusFilter( rows: UserListItem[], status: string ): UserListItem[] {

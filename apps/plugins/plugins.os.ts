@@ -2,8 +2,8 @@
  * Plugins — the client view of the Plugins app.
  *
  * The body of the Plugins window: the tab strip (Installed / Add
- * Plugin / OpenStation plugins), the Installed toolbar, `<os-table>`
- * and bulk bar on the framework's list furniture, the Browse toolbar
+ * Plugin / OpenStation plugins), the Installed plugin library
+ * and its selection tray, the Browse toolbar
  * and card gallery with the .zip upload and the window-wide drop
  * overlay, the curated gallery, and the detail flyout. The framework
  * owns the registration and template, the config blob, the installed
@@ -13,7 +13,7 @@
  * the parts reach through {@link PluginsHost}.
  *
  * What stays imperative, under `os-preserve` hosts driven from
- * `updated()`: the table (`parts/installed-table.ts`), the galleries
+ * `updated()`: the galleries
  * (`parts/gallery.ts`), the flyout (`parts/flyout-detail.ts`) and the
  * upload dialog (`parts/upload-dialog.ts`) — DOM the kit renders
  * itself, fed from the live `data()`.
@@ -21,13 +21,12 @@
  * @public
  */
 
-import { __, defineApp, html, sprintf, statusControl, type TemplateResult } from '@openstation/app';
+import { __, defineApp, html, statusControl, type TemplateResult } from '@openstation/app';
 import { isMobileStamped } from '../../src/mode/stamp';
-import type { OsTable } from '../../src/ui/components/os-table/os-table';
-import { bulkButtons, freshBusy } from './parts/actions';
+import { freshBusy } from './parts/actions';
 import { installPluginDropTargets } from './parts/card-drag';
 import { createBrowseGallery, createFeaturedGallery, type BrowseGallery, type FeaturedGallery } from './parts/gallery';
-import { countUpdates, freshInstalledUi, syncInstalledTable, type InstalledUi } from './parts/installed-table';
+import { installedPanel, freshInstalledUi, syncLibraryControls, type InstalledUi } from './parts/installed-library';
 import { createPluginsRest } from './parts/rest';
 import {
 	PLUGINS_CHANGED_SOURCE,
@@ -39,7 +38,6 @@ import {
 	type AppState,
 	type BrowseFilter,
 	type Ctx,
-	type InstalledPlugin,
 	type PluginsChangedPayload,
 	type PluginsExtra,
 	type PluginsHost,
@@ -149,107 +147,8 @@ const uiOf = ( ctx: Ctx ): UiState =>
 		};
 	} );
 
-const table = ( ctx: Ctx ): OsTable< InstalledPlugin > | null =>
-	ctx.root.querySelector< OsTable< InstalledPlugin > >( '[data-os-plugins-table]' );
-
 const flyout = ( ctx: Ctx ): HTMLElement | null =>
 	ctx.root.querySelector< HTMLElement >( '[data-os-plugins-flyout]' );
-
-/** The selection's actions — in the toolbar on a desk, a bar along the bottom on a phone. */
-function bulkBar( ctx: Ctx, ui: UiState, footer: boolean ): TemplateResult {
-	const clear = (): void => {
-		table( ctx )?.clearSelection();
-		ui.installed.selected = [];
-		ctx.repaint();
-	};
-	const buttons = bulkButtons( ui.host, ui.installed.selected, clear );
-	return html`<div
-		class="os-app-list__toolbar-right${ footer ? ' os-app-list__bulk--footer' : '' }"
-		?hidden=${ ui.installed.selected.length === 0 }
-	>
-		<span class="os-app-list__count">${ sprintf(
-			/* translators: %d: number of selected plugins */
-			__( '%d selected', 'desktop-mode' ),
-			ui.installed.selected.length,
-		) }</span>
-		<span class="os-app-list__bulk-actions">
-			${ buttons.map(
-				( b ) => html`<os-button variant=${ b.variant } size="small" @click=${ b.run }>${ b.label }</os-button>`,
-			) }
-		</span>
-	</div>`;
-}
-
-function installedPanel( ctx: Ctx, ui: UiState, phone: boolean ): TemplateResult {
-	const { state, data } = ctx;
-	const updates = countUpdates( data.installed );
-	const segments = [
-		{ value: '', label: __( 'All', 'desktop-mode' ) },
-		{ value: 'active', label: __( 'Active', 'desktop-mode' ) },
-		{ value: 'inactive', label: __( 'Inactive', 'desktop-mode' ) },
-		{
-			value: 'update',
-			label:
-				updates > 0
-					? sprintf(
-						/* translators: %d: number of plugins with a pending update */
-						__( 'Update available (%d)', 'desktop-mode' ),
-						updates,
-					)
-					: __( 'Update available', 'desktop-mode' ),
-		},
-	];
-	return html`
-		<header class="os-app-list__toolbar">
-			<div class="os-app-list__toolbar-left">
-				${ statusControl( {
-					segments,
-					value: state.status,
-					bind: 'status',
-					action: 'set',
-					label: __( 'Filter by status', 'desktop-mode' ),
-					phone,
-				} ) }
-				<os-text-field
-					class="os-app-list__search"
-					os-bind="search"
-					os-debounce="200"
-					placeholder=${ __( 'Search installed plugins…', 'desktop-mode' ) }
-				></os-text-field>
-			</div>
-			${ phone ? '' : bulkBar( ctx, ui, false ) }
-			<div class="os-app-list__toolbar-trailing">
-				<os-button variant="ghost" os-action="reload" title=${ __( 'Refresh', 'desktop-mode' ) }>
-					<span class="dashicons dashicons-update" aria-hidden="true"></span>
-				</os-button>
-			</div>
-		</header>
-		<div class="os-app-list__body">
-			${ data.error ? html`<p class="os-plugins__gallery-status">${ sprintf(
-				/* translators: %s: error message */
-				__( 'Could not load plugins: %s', 'desktop-mode' ),
-				data.error,
-			) }</p>` : '' }
-			<os-table
-				data-os-plugins-table
-				data-installed-rows
-				os-preserve
-				selectable="multi"
-				sticky-header
-				sticky-columns="1"
-				hover
-				striped
-				bordered
-			>
-				<div slot="empty" class="os-app-list__empty">
-					<span class="dashicons dashicons-admin-plugins" aria-hidden="true"></span>
-					<p>${ __( 'No plugins match your filters.', 'desktop-mode' ) }</p>
-				</div>
-			</os-table>
-		</div>
-		${ phone ? bulkBar( ctx, ui, true ) : '' }
-	`;
-}
 
 const BROWSE_FILTERS: ReadonlyArray< { value: BrowseFilter; label: () => string } > = [
 	{ value: 'featured', label: () => __( 'Featured', 'desktop-mode' ) },
@@ -323,7 +222,7 @@ export default defineApp< AppState, AppData >( APP_ID, {
 	},
 
 	// The frame paints the moment the window opens — the tabs, the
-	// toolbar, the table's skeleton — and the rows land with `mount`.
+	// library header and loading state — and the rows land with `mount`.
 	placeholder: () => ( { installed: [], error: '' } ),
 
 	view: ( ctx ) => {
@@ -342,7 +241,7 @@ export default defineApp< AppState, AppData >( APP_ID, {
 				</os-tabs>
 				<os-tabpanel for="installed" class="os-app-list__panel os-plugins__panel" ?hidden=${ tab !== 'installed' }>
 					<div class="os-plugins__installed" data-os-plugins-installed-host>
-						${ installedPanel( ctx, ui, phone ) }
+						${ installedPanel( ctx, ui.host, ui.installed ) }
 					</div>
 				</os-tabpanel>
 				${ caps.install
@@ -459,15 +358,9 @@ export default defineApp< AppState, AppData >( APP_ID, {
 	},
 
 	updated: ( ctx ) => {
+		syncLibraryControls( ctx.root );
 		const ui = uiOf( ctx );
 		const { host } = ui;
-
-		const el = table( ctx );
-		if ( el ) {
-			syncInstalledTable( el, host, ui.installed, { status: ctx.state.status, search: ctx.state.search } );
-			// The frame before the first answer paints the table's skeleton.
-			el.toggleAttribute( 'loading', ctx.loading );
-		}
 
 		if ( host.extra.caps.install ) {
 			const galleryEl = ( kind: string ): HTMLElement | null =>
