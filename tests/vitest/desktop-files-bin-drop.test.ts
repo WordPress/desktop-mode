@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { installHooksStub, clearHooksStub } from './helpers/hooks-stub';
 import { DragManager } from '../../src/drag/manager';
 import { __resetRecoveryForTests } from '../../src/drag/recovery';
-import { HOOKS } from '../../src/hooks';
+import { doAction, HOOKS } from '../../src/hooks';
 
 type StoreModule = typeof import( '../../src/desktop-files/store' );
 type RestModule = typeof import( '../../src/desktop-files/rest' );
@@ -196,6 +196,86 @@ describe( 'recycle-bin dock icon drop (user regression)', () => {
 		expect(
 			dockTile.hasAttribute( 'data-os-trash-drop-active' ),
 		).toBe( false );
+	} );
+
+	test( 'an uploaded file from a folder drops into the asynchronously mounted Trash app', async () => {
+		const { store, rest, binTargets } = await load();
+		store.__resetFilesStoreForTests();
+		rest.installRestDeps( { baseUrl: 'https://example.test/files', nonce: 'n' } );
+		let respond!: ( response: Response ) => void;
+		const fetchSpy = vi.fn( () => new Promise< Response >( ( resolve ) => {
+			respond = resolve;
+		} ) );
+		vi.stubGlobal( 'fetch', fetchSpy );
+		const manager = new DragManager();
+		installManagerOnWindow( manager );
+		const area = document.createElement( 'div' );
+		area.id = 'os-area';
+		document.body.appendChild( area );
+		binTargets.installRecycleBinDropTargets( manager );
+		const win = document.createElement( 'div' );
+		win.className = 'os-window';
+		area.appendChild( win );
+		doAction( HOOKS.WINDOW_OPENED, { windowId: 'desktop-mode-recycle-bin' } );
+		await Promise.resolve();
+		expect( manager.debug().listTargets().find( ( t ) => t.id === 'recycle-bin-window' ) ).toBeUndefined();
+
+		// The client view and initial server data arrive after the open event.
+		const body = document.createElement( 'div' );
+		body.setAttribute( 'data-os-recycle-bin-root', '' );
+		const tableCell = document.createElement( 'div' );
+		body.appendChild( tableCell );
+		win.appendChild( body );
+		await Promise.resolve();
+		expect( manager.debug().listTargets().find( ( t ) => t.id === 'recycle-bin-window' )?.element ).toBe( body );
+
+		const p = { ...placement( 701, 'upload' ), parentId: 42 };
+		store.setFolderPlacements( 42, [ p ] );
+		const source = document.createElement( 'div' );
+		area.appendChild( source );
+		document.elementFromPoint = () => tableCell;
+		const onCommit = vi.fn();
+		manager.start( {
+			payload: { type: 'desktop-file', source, data: { placement: p, sourceFolderId: 42 } },
+			origin: pointerEvent( 'pointerdown', 100, 100, source ),
+			onCommit,
+		} );
+		document.dispatchEvent( pointerEvent( 'pointermove', 300, 300 ) );
+		expect( body.hasAttribute( 'data-os-trash-drop-active' ) ).toBe( true );
+		document.dispatchEvent( pointerEvent( 'pointerup', 300, 300 ) );
+		expect( onCommit ).toHaveBeenCalledTimes( 1 );
+		expect( store.getFilesState().placementsByFolder.get( 42 ) ).toEqual( [] );
+		expect( fetchSpy ).toHaveBeenCalledWith(
+		'https://example.test/files/placements/701', expect.objectContaining( { method: 'DELETE' } ),
+		);
+		respond( new Response( JSON.stringify( { deleted: true } ), { status: 200 } ) );
+		await Promise.resolve();
+	} );
+
+	test( 'Trash body registration follows replacements, close and reopen without another open event', async () => {
+		const { binTargets } = await load();
+		const manager = new DragManager();
+		installManagerOnWindow( manager );
+		const area = document.createElement( 'div' );
+		area.id = 'os-area';
+		document.body.appendChild( area );
+		const body = document.createElement( 'div' );
+		body.setAttribute( 'data-os-recycle-bin-root', '' );
+		area.appendChild( body );
+		binTargets.installRecycleBinDropTargets( manager );
+		const target = () => manager.debug().listTargets().find( ( t ) => t.id === 'recycle-bin-window' );
+		expect( target()?.element ).toBe( body );
+		const replacement = body.cloneNode() as HTMLElement;
+		body.replaceWith( replacement );
+		await Promise.resolve();
+		expect( target()?.element ).toBe( replacement );
+		expect( manager.debug().listTargets().filter( ( t ) => t.id === 'recycle-bin-window' ) ).toHaveLength( 1 );
+		replacement.remove();
+		await Promise.resolve();
+		expect( target() ).toBeUndefined();
+		area.appendChild( body );
+		await Promise.resolve();
+		expect( target()?.element ).toBe( body );
 	} );
 
 	test( 'dropping a SET on the bin trashes every item in it', async () => {
