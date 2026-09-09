@@ -824,10 +824,14 @@ describe( 'the installed plugin library', () => {
 
 	it( 'resets an empty search and distinguishes a load error from an empty result', () => {
 		const { root, ctx } = mount( { search: 'not-a-plugin' } );
+		const field = root.querySelector( '.os-plugins__library-tools os-text-field' );
 		expect( root.querySelectorAll( '[data-plugin-card]' ) ).toHaveLength( 0 );
+		expect( field?.getAttribute( 'value' ) ).toBe( 'not-a-plugin' );
 		click( root, '.os-plugins__library-empty os-button' );
 		expect( ctx.state.search ).toBe( '' );
 		expect( root.querySelectorAll( '[data-plugin-card]' ) ).toHaveLength( 1 );
+		// The field follows the state it is bound to, or the next keystroke re-filters on stale text.
+		expect( field?.getAttribute( 'value' ) ?? '' ).toBe( '' );
 		const failed = mount( {}, { installed: [], error: 'Connection lost' } );
 		expect( failed.root.querySelector( 'os-notice' )?.textContent ).toContain( 'Connection lost' );
 		expect( failed.root.querySelector( '.os-plugins__library-empty' ) ).toBeNull();

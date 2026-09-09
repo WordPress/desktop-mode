@@ -422,6 +422,7 @@ export function installedPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): 
 					class="os-app-list__search"
 					os-bind="search"
 					os-debounce="200"
+					value=${ state.search }
 					aria-label=${ __( 'Search installed plugins', 'desktop-mode' ) }
 					placeholder=${ __( 'Find a plugin or author…', 'desktop-mode' ) }
 				></os-text-field>
