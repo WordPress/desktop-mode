@@ -83,7 +83,7 @@ describe( 'bin/build-wiki.mjs', () => {
 
 	test( 'the data-model page keeps its mermaid diagrams and its chart image resolves', () => {
 		const page = readFileSync( join( out, 'data-model.md' ), 'utf8' );
-		expect( ( page.match( /```mermaid/g ) ?? [] ).length ).toBeGreaterThanOrEqual( 3 );
+		expect( ( page.match( /```mermaid/g ) ?? [] ).length ).toBeGreaterThanOrEqual( 2 );
 		expect( page ).toContain( '](assets/data-model/storage-overview.svg)' );
 		expect( existsSync( join( out, 'assets/data-model/storage-overview.svg' ) ) ).toBe( true );
 		// Cross-doc links become bare page names, not .md paths.

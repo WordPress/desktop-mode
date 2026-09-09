@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-label="Where OpenStation persists data: eight custom tables, two post types, twenty-six user meta keys, fourteen post and comment meta keys, fourteen options, nine transient families, two upload directories, two cron hooks.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-label="Where OpenStation persists data: eight custom tables, two post types, twenty-six user meta keys, fourteen post and comment meta keys, fourteen options, nine transient families, three upload directories, two cron hooks.">
 	<rect x="0" y="0" width="760" height="340" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
 	<text x="24" y="34" font-family="IBM Plex Sans, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="600" fill="#1f2328">Where OpenStation keeps its data</text>
 	<text x="24" y="54" font-family="IBM Plex Sans, Helvetica Neue, Arial, sans-serif" font-size="12" fill="#59636e">Distinct tables, keys or families per store, counted from includes/ and apps/</text>
@@ -30,8 +30,8 @@
 		<text x="384" y="230" fill="#59636e">9</text>
 
 		<text x="24" y="258">Upload directories</text>
-		<rect x="250" y="246" width="28" height="16" rx="2" fill="#a3641a"/>
-		<text x="286" y="258" fill="#59636e">2</text>
+		<rect x="250" y="246" width="42" height="16" rx="2" fill="#a3641a"/>
+		<text x="300" y="258" fill="#59636e">3</text>
 
 		<text x="24" y="286">Cron hooks</text>
 		<rect x="250" y="274" width="28" height="16" rx="2" fill="#a3641a"/>

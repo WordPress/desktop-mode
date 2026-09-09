@@ -184,61 +184,31 @@ erDiagram
     }
 ```
 
-### Modules and the stores they write
+## Modules and the stores they write
 
-```mermaid
-flowchart LR
-    subgraph modules [Modules]
-        Files
-        Sharing[Folder sharing]
-        Games
-        Agents
-        Notes
-        RecycleBin[Recycle Bin]
-        Presence
-        Prefs[Preferences and session]
-        Themes[Desktop themes]
-        Media[Media Library]
-        AI[AI Copilot]
-        Caches[Content graph, Woo, feeds]
-    end
-    subgraph own [Plugin-owned tables]
-        T1[stored_files, folders, file_placements, file_tombstones]
-        T2[folder_shares, share_user_decisions]
-        T3[game_scores, game_challenges]
-    end
-    subgraph core [WordPress core tables]
-        Users[wp_users + wp_usermeta]
-        Posts[wp_posts + wp_postmeta]
-        Comments[wp_commentmeta]
-        Options[wp_options]
-    end
-    subgraph outside [Outside tables]
-        Disk[uploads/]
-        Transients
-    end
-    Files --> T1
-    Files --> Disk
-    Files --> Posts
-    Sharing --> T2
-    Games --> T3
-    Games --> Users
-    Agents --> Users
-    Agents --> Posts
-    Notes --> Posts
-    Notes --> Users
-    RecycleBin --> Posts
-    RecycleBin --> Comments
-    RecycleBin --> Options
-    Presence --> Options
-    Prefs --> Users
-    Themes --> Options
-    Themes --> Disk
-    Media --> Posts
-    AI --> Comments
-    AI --> Options
-    Caches --> Transients
-```
+A module per row, a store per column. Read down a column to answer "who
+writes to options?"; read along a row to see everything a module touches.
+The sections below name the exact tables and keys.
+
+| Module | Own tables | `wp_users` + usermeta | `wp_posts` + postmeta | `wp_commentmeta` | `wp_options` | Transients | Disk |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Files | ● | ● | ● | | ● | | ● |
+| Folder sharing | ● | | | | | | |
+| Games | ● | ● | | | ● | | |
+| Agents | | ● | ● | | ● | | ● |
+| Notes | | ● | ● | | ● | | |
+| Recycle Bin | | | ● | ● | ● | | |
+| Presence | | | | | ● | | |
+| Preferences and session | | ● | | | ● | | |
+| App Framework `Store` | | ● | | | ● | | |
+| Desktop themes | | | | | ● | | ● |
+| Media Library | | | ● | | ● | | |
+| AI Copilot | | | | ● | ● | | |
+| OAuth relay | | | | | | ● | |
+| PWA | | ● | | | | ● | |
+| Content changes feed | | | | | ● | | |
+| Caches: content graph, Woo, feeds, stats | | | | | ● | ● | |
+| Migrations | | | | | ● | | |
 
 ## Plugin-owned tables
 
@@ -355,6 +325,7 @@ in-request caching.
 |---|---|---|
 | `uploads/desktop-mode-files/{owner_id}/{disk_name}` | Disk | Bytes of each stored file; `disk_name` is an extension-less UUID. |
 | `uploads/desktop-mode-themes/` | Disk | Uploaded desktop themes. |
+| `uploads/desktop-mode-agent-faces/` | Disk | Generated agent face images. |
 | `desktop_mode_files_daily_prune` | Cron (daily) | Sweeps ZIP temp files and reconciles stored files against the disk. |
 | `desktop_mode_presence_daily_prune` | Cron (daily) | Prunes the presence option. |
 | `desktop-mode-widgets-geometry`, `desktop-mode/files`, … | `localStorage` | Widget geometry and other client state; never reaches the database. |
