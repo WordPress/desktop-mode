@@ -46,6 +46,8 @@ If you are **building a plugin** that interacts with the desktop shell — opens
 37. **[Multisite](./multisite.md)** — *Experimental.* What the shell does on a network: the network admin, the Network Admin dock tile, and per-site session scoping. Read before touching anything cross-site — it opens with the constraint that decides the rest, which is that WordPress refuses to be framed cross-origin, so nothing leaving the current site can be a window.
 38. **[Mobile — the phone layer](./mobile.md)** — *Experimental.* `wp.os.mode` (`desktop | tablet | mobile`) and what the shell does when it says `mobile`: a home screen of the same navigation items, one full-screen window at a time under a slim top bar, a swipeable app switcher, a five-slot tab bar, an edge-swipe Back — and a session that a phone visit never rearranges. Covers the `data-os-mode` CSS hook, the head stamp that makes the first paint right, the `os.session.snapshot` filter, and what a phone does and does not pay for. See also [examples/mobile-tab-bar.md](./examples/mobile-tab-bar.md).
 
+- **[Presence storage migration](./migration-presence-storage.md)** — atomic per-user storage, deployment bridge, failure recovery and rollback.
+
 ## Conventions used in this docs folder
 
 - **Status labels** — every hook, event, or API surface carries one of:

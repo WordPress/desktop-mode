@@ -37,6 +37,7 @@ require_once OPENSTATION_DIR . 'includes/desktop-files/schema.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/store.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/folders-store.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/stored-files-store.php';
+require_once OPENSTATION_DIR . 'includes/desktop-files/reconcile.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/shares-store.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/file-shares.php';
 require_once OPENSTATION_DIR . 'includes/desktop-files/trash.php';

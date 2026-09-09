@@ -6,7 +6,7 @@ The framework keeps a running map of who's currently in the
 OpenStation WP-Admin. Three states — `online`, `inactive`,
 `offline` — derived from the WordPress Heartbeat plus a
 pointerdown / keydown listener. Storage is server-side
-(`_desktop_mode_presence` option) so every tab in every browser
+(`{$wpdb->prefix}openstation_presence`, one row per user) so every tab in every browser
 sees the same map.
 
 This example builds a tiny "Who's online" widget on the desktop

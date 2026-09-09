@@ -159,7 +159,9 @@ is said where the desks are, above their tiles, and nowhere else.
 ## Storage scoping
 
 OS settings, wallpaper, theme and accent are user meta, so network-wide;
-desktop files and folders are per-blog tables, so per site. **The session
+desktop files, folders and presence are per-blog tables, so per site. Presence
+uses the same user IDs independently in each site and is included in subsite
+table cleanup. **The session
 is per ADMIN, and that is the one that changed** — one per site, plus one
 of the network admin's own. See `openstation_session_meta_key()` for why,
 and for why the main site keeps the bare key. The network admin cannot

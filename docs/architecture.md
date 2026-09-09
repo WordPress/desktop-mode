@@ -712,3 +712,25 @@ Never edit Core's `common.css` or color scheme files. Everything we need is expo
 - **The North Star — cross-window drag & drop** — extend the existing cross-frame drag bridge beyond Media Library attachments: pluggable mime-type negotiation (`openstation_drag_mime_types` / `openstation_drag_payload` / `openstation_drop_accepts`), Gutenberg block-insertion target, visual lift-and-drop feedback.
 
 See [Hooks Reference](./hooks-reference.md) for the filter/action names each phase will introduce.
+
+
+## Presence persistence
+
+Presence uses `{$wpdb->prefix}openstation_presence`, scoped to the current site.
+Each user has `last_seen_ms` and `last_active_ms`; atomic upserts merge maxima
+without reading or rewriting another user's record. An internal `inactive_at_ms`
+fence preserves the explicit "set away" operation: public reads report activity
+as zero until activity newer than that intent arrives. All public timestamps
+remain epoch milliseconds and all response/event shapes stay unchanged.
+
+`openstation_presence_storage` is a non-autoloaded per-site migration checkpoint.
+The migration runner invokes the presence migrator on `init`; helpers also ensure
+storage on demand. The checkpoint is written only after creation, import and
+verification succeed. It is independent of the general migration version so a
+presence failure cannot advance unrelated migrations. Failed setup retains the
+legacy option path; established-table write failures are reported, not redirected
+to a competing store. Single-user lookups use the primary key. Full snapshots
+still scale with tracked users. Daily pruning conditionally deletes entries
+older than 14 days using the indexed heartbeat timestamp.
+
+See [presence migration and rollback](./migration-presence-storage.md).

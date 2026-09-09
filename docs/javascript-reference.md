@@ -2096,6 +2096,10 @@ The server-side `openstation_presence_visible_users` filter gates which users su
 
 **Companion CustomEvent:** [`os-presence-changed`](#os-presence-changed--stable) fires once per status transition per user, with a `null` oldStatus on first sighting.
 
+Presence persistence is site-scoped and uses atomic per-user rows. The JS API,
+Heartbeat payloads and timestamp units are unchanged. See
+[migration and rollback](./migration-presence-storage.md) for server-side storage.
+
 **See also:** [`docs/examples/presence.md`](./examples/presence.md) for an end-to-end recipe.
 
 ---

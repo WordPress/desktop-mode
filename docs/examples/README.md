@@ -90,4 +90,6 @@ defined( 'ABSPATH' ) || exit;
 - [Show a banner at the top of a window — `openstation_register_window_notice()`](./window-notice.md)
 - [Catch files dragged in from the host OS — `os.drop.*`](./os-file-drop.md)
 
+- [Observe safely aborted stored-file cleanup](./storage-cleanup-diagnostics.md)
+
 If your use case isn't here, check [Hooks Reference](../hooks-reference.md) and [JavaScript Reference](../javascript-reference.md) — everything we fire is documented there.

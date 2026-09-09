@@ -970,7 +970,7 @@ Uploaded files are **owner-locked**: only the stored file's owner may move, rena
 
 ### Lifecycle
 
-Reconciliation runs on the existing daily prune: placement-less rows and row-less bytes older than a day are removed in both directions. `deleted_user` purges the user's entire storage. Zip temp files are cleaned on stream end, shutdown, and by the daily sweep.
+Reconciliation runs on the existing daily prune: placement-less rows and row-less bytes older than a day are removed in both directions. Trashed placements still protect their bytes. Every required lookup must succeed; a failed lookup aborts the remaining sweep. Candidates are revalidated under the same short, site-scoped database lock used by upload registration and placement creation. Final reference checks use current locking reads, so an older transaction snapshot cannot justify deleting newly registered bytes; a database conflict stops cleanup. Database-row deletion must succeed before bytes are removed. Failed unlinks leave row-less bytes for a later sweep. A lock failure returns a retryable `openstation_storage_busy` error (503) to writers; cleanup stops safely. Third-party upload integrations must use the store APIs rather than inserting rows directly to participate in this coordination. See [cleanup diagnostics](./examples/storage-cleanup-diagnostics.md). `deleted_user` purges the user's entire storage. Zip temp files are cleaned on stream end, shutdown, and by the daily sweep.
 
 ### PHP surface
 

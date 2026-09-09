@@ -36,6 +36,40 @@ defined( 'ABSPATH' ) || exit;
  * @return int|WP_Error Placement id on success, `WP_Error` otherwise.
  */
 function openstation_files_place( $user_id, $parent_id, $type, $ref, $args = array() ) {
+	if ( 'upload' === (string) $type ) {
+		return openstation_stored_files_locked(
+			static function () use ( $user_id, $parent_id, $type, $ref, $args ) {
+				global $wpdb;
+				$tables = openstation_files_table_names();
+				// Current read: a caller's older transaction snapshot must not
+				// resurrect a file that cleanup deleted before acquiring this lock.
+				$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$tables['stored_files']} WHERE id = %d FOR UPDATE", (int) $ref ) );
+				if ( '' !== $wpdb->last_error ) {
+					return new WP_Error( 'openstation_storage_unavailable', __( 'File storage is unavailable. Please try again.', 'desktop-mode' ), array( 'status' => 503 ) );
+				}
+				if ( ! $exists ) {
+					return new WP_Error( 'openstation_stored_files_not_found', __( 'Stored file not found.', 'desktop-mode' ), array( 'status' => 404 ) );
+				}
+				return openstation_files_place_locked( $user_id, $parent_id, $type, $ref, $args );
+			}
+		);
+	}
+	return openstation_files_place_locked( $user_id, $parent_id, $type, $ref, $args );
+}
+
+/**
+ * Create a placement after the upload reconciliation lock is acquired.
+ * Other file types do not need the lock.
+ *
+ * @internal
+ * @param int    $user_id Owner.
+ * @param int    $parent_id Parent folder.
+ * @param string $type File type.
+ * @param string $ref File reference.
+ * @param array  $args Placement attributes.
+ * @return int|WP_Error
+ */
+function openstation_files_place_locked( $user_id, $parent_id, $type, $ref, $args = array() ) {
 	global $wpdb;
 
 	$user_id   = (int) $user_id;

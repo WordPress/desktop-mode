@@ -4423,8 +4423,9 @@ The recent-traffic hormone (drives the wind — canopy sway amplitude and freque
 ## Presence
 
 Framework-level presence tracking. Storage in
-`_desktop_mode_presence` (autoload=false, single row keyed by user
-id). The WordPress Heartbeat carries the bumps + visibility
+`{$wpdb->prefix}openstation_presence`, one row per user with atomic
+timestamp merges. The legacy option is retained for recovery; see
+[migration and rollback](./migration-presence-storage.md). The WordPress Heartbeat carries the bumps + visibility
 snapshot; the JS API at `wp.os.presence.*` fans out to
 plugin code. See [`examples/presence.md`](./examples/presence.md)
 for a copy-pasteable recipe.
@@ -4466,6 +4467,11 @@ do_action( 'openstation_presence_changed',  $user_id, $new_status, $old_status )
 - **`openstation_presence_changed`** — fires only on real status
   transitions (`online ↔ inactive ↔ offline`). The right hook
   for "user came online → notify a slack channel" type work.
+
+The recorded/changed actions retain their signatures. A rejected write does not
+announce success; `openstation_presence_record()` returns false on storage failure
+as well as invalid IDs or tracking vetoes. Events report transitions observed by
+the current request; concurrent requests do not provide exactly-once delivery.
 
 ### PHP helpers
 
@@ -4933,6 +4939,7 @@ All Experimental.
 | `openstation_stored_file_uploaded` | `( int $file_id, int $placement_id, int $user_id )` | After a full upload lands (bytes + row + placement). |
 | `openstation_stored_file_renamed` | `( int $file_id, string $new_name, string $old_name )` | After a display-name rename. |
 | `openstation_stored_file_deleted` | `( int $file_id, array $row )` | After bytes + row are deleted. |
+| `openstation_stored_files_reconcile_failed` | `( WP_Error $error )` | **Experimental.** Cleanup stopped safely. Error code `openstation_reconcile_failed`; error data contains `stage`: `orphan_rows`, `delete_row`, `known_bytes`, or `delete_bytes`. No SQL or paths are included. |
 | `openstation_stored_file_downloaded` | `( int $file_id, int $user_id )` | Download audit — just before a file streams. |
 | `openstation_folder_zip_downloaded` | `( int $folder_id, int $user_id, int $count )` | Just before a folder zip streams. |
 | `openstation_stored_file_added_to_media` | `( int $attachment_id, int $file_id, int $user_id )` | After a stored file has been copied into the Media Library. Fires once per stored file — a repeat "Add" returns the existing attachment silently. |

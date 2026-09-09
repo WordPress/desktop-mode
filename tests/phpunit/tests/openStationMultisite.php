@@ -143,7 +143,7 @@ class Tests_OpenStation_Multisite extends WP_UnitTestCase {
 	 */
 	public function test_drop_tables_list_covers_every_schema_helper_table() {
 		global $wpdb;
-		$helper_tables = array_values( openstation_files_table_names() );
+		$helper_tables = array_merge( array_values( openstation_files_table_names() ), array( openstation_presence_table() ) );
 		if ( function_exists( 'openstation_games_table_names' ) ) {
 			$helper_tables = array_merge( $helper_tables, array_values( openstation_games_table_names() ) );
 		}

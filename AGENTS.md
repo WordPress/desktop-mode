@@ -304,7 +304,7 @@ Canonical examples in-tree: `src/desktop-files/recycle-bin-icon-state.ts` (state
 
 Presence tracking (`online | inactive | offline`) lives in `includes/presence.php` and `src/presence/index.ts`. Any plugin can read `wp.os.presence.*` or `openstation_presence_*()` without depending on a particular feature plugin being installed (chat, collaboration, …).
 
-Storage: `_desktop_mode_presence` option (autoload=false). The WordPress Heartbeat handler in `includes/presence.php` records bumps at priority 5; the framework client (`src/presence/index.ts`) sends `openstation_presence_active: true` + `openstation_user_active: <bool>` on every tick and ingests the snapshot from the response.
+Storage: `{$wpdb->prefix}openstation_presence`, one row per user with atomic timestamp merges. The legacy `_desktop_mode_presence` option is retained for recovery; see `docs/migration-presence-storage.md`. The WordPress Heartbeat handler in `includes/presence.php` records bumps at priority 5; the framework client (`src/presence/index.ts`) sends `openstation_presence_active: true` + `openstation_user_active: <bool>` on every tick and ingests the snapshot from the response.
 
 Public surface, see `docs/javascript-reference.md` (`wp.os.presence`), `docs/hooks-reference.md` (filters / actions), and `docs/examples/presence.md` (recipe). Plugins with a faster delivery channel (an SSE stream, a WebSocket) can push updates straight into the framework store via `wp.os.presence.applyBatch()`.
 
