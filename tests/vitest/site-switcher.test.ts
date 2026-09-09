@@ -8,6 +8,7 @@ import {
 	HOP_FROM_ARG,
 	OVERVIEW_ARG,
 	buildSiteSwitcher,
+	installSiteSwitcherKeys,
 	isOtherOrigin,
 	shellUrlInOverview,
 	siteSwitcherEntries,
@@ -93,6 +94,66 @@ describe( 'the site switcher', () => {
 		// This very shell, and a value the switcher never offered: no hop.
 		expect( switchToSite( config(), '1', { hop } ) ).toBe( false );
 		expect( switchToSite( config(), 'member:nope', { hop } ) ).toBe( false );
+		await settle();
+		expect( hop ).not.toHaveBeenCalled();
+	} );
+
+	test( 'Tab moves to the next site and Shift+Tab to the previous, only while the row is displayed', async () => {
+		const hop = vi.fn();
+		let shown = true;
+		let multisite = config();
+		const teardown = installSiteSwitcherKeys( { multisite: () => multisite, isShown: () => shown, hop } );
+		const settle = () => new Promise( ( r ) => setTimeout( r, 0 ) );
+		const press = ( shiftKey = false ): KeyboardEvent => {
+			const e = new KeyboardEvent( 'keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true } );
+			document.dispatchEvent( e );
+			return e;
+		};
+
+		// The row: Network Admin, Main (this one), Shop.
+		let e = press();
+		await settle();
+		expect( e.defaultPrevented ).toBe( true );
+		expect( hop ).toHaveBeenCalledWith( SHOP_SHELL + '&openstation_overview=1&openstation_hop_from=next' );
+
+		hop.mockClear();
+		e = press( true );
+		await settle();
+		expect( hop ).toHaveBeenCalledWith( NETWORK_SHELL + '&openstation_overview=1&openstation_hop_from=prev' );
+
+		// The ends wrap.
+		hop.mockClear();
+		multisite = config( { current: '2' } );
+		press();
+		await settle();
+		expect( hop ).toHaveBeenCalledWith( expect.stringContaining( NETWORK_SHELL ) );
+
+		// Not displayed: the browser keeps its Tab.
+		hop.mockClear();
+		shown = false;
+		e = press();
+		await settle();
+		expect( e.defaultPrevented ).toBe( false );
+		expect( hop ).not.toHaveBeenCalled();
+
+		// Displayed, but the user is typing (a desk being renamed).
+		shown = true;
+		const field = document.createElement( 'input' );
+		document.body.appendChild( field );
+		field.focus();
+		e = press();
+		await settle();
+		expect( e.defaultPrevented ).toBe( false );
+		expect( hop ).not.toHaveBeenCalled();
+		field.remove();
+
+		// Modified Tab is not this key.
+		document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Tab', ctrlKey: true, bubbles: true, cancelable: true } ) );
+		await settle();
+		expect( hop ).not.toHaveBeenCalled();
+
+		teardown();
+		press();
 		await settle();
 		expect( hop ).not.toHaveBeenCalled();
 	} );

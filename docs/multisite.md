@@ -62,7 +62,11 @@ and then the ones that joined it. `switchToSite( multisite, value )` in
 the same module is the switch itself, the one a pick takes, and the shell
 also runs it for an app's `hop` effect (`$os->effects->add( 'hop',
 array( 'site' => $id ) )`, which is how the Network window's Open buttons
-switch); a value the row does not offer is ignored. Pinned by
+switch); a value the row does not offer is ignored. **While the row is
+displayed, Tab moves to the next site and Shift+Tab to the previous**,
+wrapping at the ends, the same switch a pick takes
+(`installSiteSwitcherKeys()`); anywhere else, and while a field is being
+typed in, Tab stays the browser's. Pinned by
 `tests/vitest/site-switcher.test.ts` and `Tests_OpenStation_Multisite`.
 
 **Every cross-admin click takes the same hop.** The Network Admin tile

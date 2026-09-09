@@ -26,6 +26,7 @@
 import type { MultisiteConfig } from '../types';
 import { hopToAdmin, wantsBrowserTab, type HopMinter } from './hop';
 import { leaveInstance, type HopDirection } from './instance-transition';
+import { isTextEntryFocus } from '../window-manager/switcher';
 import { __ } from '../i18n';
 // The switcher is a kit component; the shell bundle registers only
 // what it uses, so the definition rides in with its one user.
@@ -152,6 +153,45 @@ export function switchToSite(
 		( [ , url ] ) => hop( url ?? plain ),
 	);
 	return true;
+}
+
+/**
+ * The Tab key, while the switcher is displayed: Tab moves to the next
+ * site and Shift+Tab to the previous, wrapping at the ends, the same
+ * switch a pick takes. Only then. On a desk, in a window, or in a
+ * field being typed in, Tab stays the browser's, so the one place the
+ * key means "next site" is the one place the row is on screen.
+ *
+ * `isShown` is the shell's answer to "is the row on screen right now";
+ * the listener sits on the document so it outlives every rebuild of
+ * the row. Returns a teardown.
+ */
+export function installSiteSwitcherKeys(
+	deps: {
+		multisite: () => MultisiteConfig | null | undefined;
+		isShown: () => boolean;
+	} & SiteSwitchDeps,
+): () => void {
+	const onKey = ( e: KeyboardEvent ): void => {
+		if ( e.key !== 'Tab' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented ) {
+			return;
+		}
+		const multisite = deps.multisite();
+		if ( ! multisite || ! deps.isShown() || isTextEntryFocus( document ) ) {
+			return;
+		}
+		const entries = siteSwitcherEntries( multisite );
+		if ( entries.length < 2 ) {
+			return;
+		}
+		const at = entries.findIndex( ( x ) => x.value === ( multisite.current ?? '' ) );
+		const step = e.shiftKey ? -1 : 1;
+		const next = entries[ ( at + step + entries.length ) % entries.length ];
+		e.preventDefault();
+		switchToSite( multisite, next.value, deps );
+	};
+	document.addEventListener( 'keydown', onKey );
+	return () => document.removeEventListener( 'keydown', onKey );
 }
 
 /** The mark an external site wears before its name. */

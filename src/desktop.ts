@@ -44,7 +44,7 @@ import { OS_SETTINGS_WINDOW_ID } from './settings/constants';
 import { getExitOpenStationTileDef } from './exit-openstation';
 import { getNetworkAdminTileDef } from './multisite/dock-tiles';
 import { createHopMinter, hopToAdmin, type HopMinter } from './multisite/hop';
-import { buildSiteSwitcher, switchToSite } from './multisite/site-switcher';
+import { buildSiteSwitcher, installSiteSwitcherKeys, switchToSite } from './multisite/site-switcher';
 import { revealInstance, stampArrival } from './multisite/instance-transition';
 import { installOverviewHeader, refreshOverviewTopBar } from './window-manager/overview';
 import { deriveWindowId, urlMatchKey } from './utils';
@@ -2975,6 +2975,13 @@ function init(): void {
 		if ( effect?.type === 'hop' && config.multisite && typeof effect.site === 'string' ) {
 			switchToSite( config.multisite, effect.site, { mint: hopMinter } );
 		}
+	} );
+	// Tab and Shift+Tab move between sites while the switcher is on
+	// screen — overview, on a network — and nowhere else.
+	installSiteSwitcherKeys( {
+		multisite: () => config.multisite,
+		isShown: () => !! document.querySelector( '.os-area--overview .os-site-switcher' ),
+		mint: hopMinter,
 	} );
 
 	bindAdminLinkDispatch( {
