@@ -4,6 +4,9 @@ import type { UsersData, UserListItem, UsersState } from './types';
 import type { ViewContext } from '@openstation/app';
 type Ctx = ViewContext< UsersState, UsersData >;
 
+/** Whether the directory is narrowed server-side; Activity only publishes the whole site. */
+const scoped = ( ctx: Ctx | null ): boolean => !! ctx && ( ctx.state.search.trim() !== '' || ctx.state.role !== '' );
+
 export class PeopleFeed {
 	items: UserListItem[] = [];
 	pending = false;
@@ -24,7 +27,7 @@ export class PeopleFeed {
 	reconcile( ctx: Ctx ): Ctx {
 		this.ctx = ctx;
 		const { state, data } = ctx;
-		const key = JSON.stringify( [ state.search, state.orderby, state.order, state.perPage ] );
+		const key = JSON.stringify( [ state.search, state.role, state.orderby, state.order, state.perPage ] );
 		if ( key !== this.key ) {
 			this.key = key; this.items = []; this.page = 0; this.pages = 0; this.lastData = null; this.error = false;
 		}
@@ -65,12 +68,12 @@ export class PeopleFeed {
 
 	/** Activity publishes only a complete, unfiltered collection. */
 	get activityComplete(): boolean {
-		return this.page > 0 && ! this.hasMore && ! this.pending && ! this.restarting && ! this.error && ! this.ctx?.loading && ! this.ctx?.state.search.trim() && this.items.length >= ( this.ctx?.data.list.total ?? 0 );
+		return this.page > 0 && ! this.hasMore && ! this.pending && ! this.restarting && ! this.error && ! this.ctx?.loading && ! scoped( this.ctx ) && this.items.length >= ( this.ctx?.data.list.total ?? 0 );
 	}
 
 	/** Keep one request in flight while Activity is open; repaint schedules the next batch. */
 	updateActivity( ctx: Ctx ): void {
-		if ( this.disposed || this.autoQueued || this.pending || this.restarting || this.error || ctx.loading || ctx.state.tab !== 'activity' || ( ! ctx.state.search.trim() && ! this.hasMore ) ) {
+		if ( this.disposed || this.autoQueued || this.pending || this.restarting || this.error || ctx.loading || ctx.state.tab !== 'activity' || ( ! scoped( ctx ) && ! this.hasMore ) ) {
 			return;
 		}
 		this.autoQueued = true;
@@ -79,17 +82,19 @@ export class PeopleFeed {
 			if ( this.disposed || this.pending || this.restarting || this.error || ctx.loading || ctx.state.tab !== 'activity' ) {
 				return;
 			}
-			if ( ctx.state.search.trim() ) {
-				void this.clearActivitySearch( ctx );
+			if ( scoped( ctx ) ) {
+				void this.clearActivityScope( ctx );
 			} else {
 				void this.more();
 			}
 		} );
 	}
 
-	private async clearActivitySearch( ctx: Ctx ): Promise< void > {
+	/** The overview is the whole site: drop the search and the role scope, then gather from the first batch. */
+	private async clearActivityScope( ctx: Ctx ): Promise< void > {
 		this.pending = true;
 		ctx.state.search = '';
+		ctx.state.role = '';
 		ctx.state.page = 1;
 		ctx.repaint();
 		try {

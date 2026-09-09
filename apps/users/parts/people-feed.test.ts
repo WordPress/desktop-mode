@@ -4,7 +4,7 @@ import type { UsersData, UsersState, UserListItem } from './types';
 import { PeopleFeed } from './people-feed';
 const batch = ( page: number, ids: number[] ): UsersData => ( { list: { page, items: ids.map( ( id ) => ( { id } as UserListItem ) ), total: 6, pages: 3, perPage: 2, error: '' } } );
 function setup() {
-	const ctx = mockViewContext< UsersState, UsersData >( { root: document.createElement( 'div' ), state: { page: 1, perPage: 2, search: '', status: '', orderby: 'date', order: 'desc', tab: 'all', createError: '', createField: '', created: 0 }, data: batch( 1, [ 1, 2 ] ) } );
+	const ctx = mockViewContext< UsersState, UsersData >( { root: document.createElement( 'div' ), state: { page: 1, perPage: 2, search: '', role: '', status: '', orderby: 'date', order: 'desc', tab: 'all', createError: '', createField: '', created: 0 }, data: batch( 1, [ 1, 2 ] ) } );
 	const feed = new PeopleFeed(); feed.reconcile( ctx );
 	return { ctx, feed };
 }
@@ -81,6 +81,15 @@ describe( 'complete Activity collection', () => {
 		feed.updateActivity( ctx );
 		await vi.waitFor( () => expect( feed.activityComplete ).toBe( true ) );
 		expect( ctx.state.search ).toBe( '' );
+		expect( ctx.dispatch ).toHaveBeenNthCalledWith( 1, 'filter', {} );
+		expect( feed.items ).toHaveLength( 6 );
+	} );
+	it( 'clears a role filter before gathering the whole community', async () => {
+		const { ctx, feed } = automatic();
+		ctx.state.role = 'editor'; feed.reconcile( ctx );
+		feed.updateActivity( ctx );
+		await vi.waitFor( () => expect( feed.activityComplete ).toBe( true ) );
+		expect( ctx.state.role ).toBe( '' );
 		expect( ctx.dispatch ).toHaveBeenNthCalledWith( 1, 'filter', {} );
 		expect( feed.items ).toHaveLength( 6 );
 	} );

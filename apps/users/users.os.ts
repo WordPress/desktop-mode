@@ -61,7 +61,6 @@ interface UiState {
 	roles: RolesSummary;
 	view: string;
 	contribution: ContributionKind;
-	role: string | null;
 	options: boolean;
 	cache: UserCellCache;
 	sync: ListTableSync< UserListItem >;
@@ -81,7 +80,6 @@ interface UiState {
 const freshUi = (): UiState => ( {
 	feed: new PeopleFeed(), roles: new RolesSummary(),
 	view: 'people', contribution: 'posts',
-	role: null,
 	options: false,
 	cache: new Map(),
 	sync: createListTableSync< UserListItem >(),
@@ -277,9 +275,15 @@ function actionsOf( ctx: Ctx ): RowActions {
 	return { onSendReset: ( row ) => sendReset( ctx, row ), onResendWelcome: ( row ) => resendWelcome( ctx, row ), toast: ( message ) => say( ctx, message ) };
 }
 
+/** The presence slice over the loaded collection; the role is the server's, so the collection already answers it. */
 function visiblePeople( ctx: Ctx, ui: UiState ): UserListItem[] {
-	const rows = applyStatusFilter( ui.feed.items, ctx.state.status );
-	return ui.role === null ? rows : rows.filter( ( row ) => ui.role === '' ? ! row.roles.length : row.roles.includes( ui.role! ) );
+	return applyStatusFilter( ui.feed.items, ctx.state.status );
+}
+
+/** Scope the directory to one role — `''` (the Roles tab's No role group) is `none`, as users.php spells it. */
+function filterByRole( ctx: Ctx, role: string ): void {
+	ctx.state.role = role === '' ? 'none' : role;
+	void ctx.dispatch( 'filter', {} );
 }
 
 function listPanel( ctx: Ctx, ui: UiState, phone: boolean, rows: UserListItem[] ): TemplateResult {
@@ -294,10 +298,8 @@ function listPanel( ctx: Ctx, ui: UiState, phone: boolean, rows: UserListItem[] 
 			<os-button class="os-people__options" variant="secondary" @click=${ () => {
  ui.options = ! ui.options; ctx.repaint();
 } }>${ __( 'Options' ) }</os-button>
-			<os-select class="os-people__extra" aria-label=${ __( 'Filter by role' ) } .value=${ ui.role ?? '*' } @os-pick=${ ( e: Event ) => {
- const value = String( ( e as CustomEvent ).detail.value ); ui.role = value === '*' ? null : value; ctx.repaint();
-} }>
-				<os-option value="*">${ __( 'Every role' ) }</os-option><os-option .value=${ '' }>${ __( 'No role' ) }</os-option>${ Object.entries( cfg.allRoles || {} ).map( ( [ role, label ] ) => html`<os-option value=${ role }>${ label }</os-option>` ) }
+			<os-select class="os-people__extra" aria-label=${ __( 'Filter by role' ) } os-bind="role" os-action="filter" .value=${ state.role } data-os-users-role>
+				<os-option .value=${ '' }>${ __( 'Every role' ) }</os-option><os-option value="none">${ __( 'No role' ) }</os-option>${ Object.entries( cfg.allRoles || {} ).map( ( [ role, label ] ) => html`<os-option value=${ role }>${ label }</os-option>` ) }
 			</os-select>
 			<os-select class="os-people__extra" aria-label=${ __( 'Directory view' ) } value=${ ui.view } @os-pick=${ ( e: Event ) => {
  ui.view = String( ( e as CustomEvent ).detail.value ); ctx.repaint();
@@ -309,8 +311,8 @@ function listPanel( ctx: Ctx, ui: UiState, phone: boolean, rows: UserListItem[] 
 			<os-button class="os-people__extra" variant="ghost" os-action="refresh" data-os-users-refresh>${ __( 'Refresh' ) }</os-button>
 		</div>
 		${ data.list.error ? html`<os-notice tone="danger">${ __( 'Could not load users. Try Refresh.' ) } ${ data.list.error }</os-notice>` : '' }
-		<div class="os-people__scope"><span>${ sprintf( /* translators: 1: loaded users, 2: total search results. */ __( '%1$d of %2$d people loaded' ), ui.feed.items.length, data.list.total ) }${ state.status || ui.role !== null ? ` · ${ rows.length } ${ __( 'match filters' ) }` : '' }</span>${ ui.role !== null ? html`<os-button variant="ghost" @click=${ () => {
- ui.role = null; ctx.repaint();
+		<div class="os-people__scope"><span>${ sprintf( /* translators: 1: loaded users, 2: total search results. */ __( '%1$d of %2$d people loaded' ), ui.feed.items.length, data.list.total ) }${ state.status || state.role ? ` · ${ rows.length } ${ __( 'match filters' ) }` : '' }</span>${ state.role ? html`<os-button variant="ghost" data-os-users-clear-role @click=${ () => {
+ ctx.state.role = ''; void ctx.dispatch( 'filter', {} );
 } }>${ __( 'Clear role' ) }</os-button>` : '' }</div>
 		<div class="os-people__card-host" ?hidden=${ ui.view !== 'people' } style="display:flex;flex:1;min-height:0;">${ peopleCards( state.tab === 'all' ? rows : [], { cfg, actions: actionsOf( ctx ), selected: ui.selected, select: ( id, checked ) => {
  if ( checked ) {
@@ -333,7 +335,7 @@ function insightsPanel( ctx: Ctx, ui: UiState, tab: 'roles' | 'activity' ): Temp
 	if ( isRoles ) {
 		scope = summary.data ? sprintf( /* translators: %d: total unique site members. */ __( '%d people across this site. Up to 8 faces per role; people can belong to more than one group.' ), summary.data.total ) : __( 'Gathering your role groups…' );
 		content = summary.data ? rolesView( summary.data.groups, ( role ) => {
-			ui.role = role; ctx.local( 'tab', { value: 'all' } ); ctx.repaint();
+			ctx.local( 'tab', { value: 'all' } ); filterByRole( ctx, role );
 		} ) : html`<p class="os-people__empty" role="status">${ summary.error ? __( 'Role groups are unavailable.' ) : __( 'Loading all roles…' ) }</p>`;
 	} else {
 		const ready = ui.feed.activityComplete;
@@ -344,7 +346,7 @@ function insightsPanel( ctx: Ctx, ui: UiState, tab: 'roles' | 'activity' ): Temp
 			<span class="dashicons dashicons-groups" aria-hidden="true"></span>
 			<h3>${ ui.feed.error ? __( 'The overview could not finish loading.' ) : __( 'Bringing everyone together…' ) }</h3>
 			<p>${ ui.feed.error ? __( 'Use Refresh to try again. Totals will appear once everyone is included.' ) : __( 'Loading every profile automatically. Your overview will appear when the full community is ready.' ) }</p>
-			${ ctx.data.list.total && ! ctx.state.search.trim() ? html`<os-progress-bar value=${ Math.min( 100, ui.feed.items.length / ctx.data.list.total * 100 ) }></os-progress-bar><p>${ sprintf( /* translators: 1: fetched users, 2: all users. */ __( '%1$d of %2$d people gathered' ), ui.feed.items.length, ctx.data.list.total ) }</p>` : '' }
+			${ ctx.data.list.total && ! ctx.state.search.trim() && ! ctx.state.role ? html`<os-progress-bar value=${ Math.min( 100, ui.feed.items.length / ctx.data.list.total * 100 ) }></os-progress-bar><p>${ sprintf( /* translators: 1: fetched users, 2: all users. */ __( '%1$d of %2$d people gathered' ), ui.feed.items.length, ctx.data.list.total ) }</p>` : '' }
 		</section>`;
 	}
 	return html`<os-tabpanel for=${ tab } class="os-app-list__panel" ?hidden=${ ctx.state.tab !== tab }>
@@ -462,7 +464,7 @@ export default defineApp< UsersState, UsersData >( APP_ID, {
 		ui.sync.sync( {
 			table: table( ctx ) as unknown as ListTableLike< UserListItem > | null,
 			rows,
-			listKey: `${ state.perPage }|${ state.search }|${ state.status }|${ state.orderby }|${ state.order }|${ ui.role }`,
+			listKey: `${ state.perPage }|${ state.search }|${ state.role }|${ state.status }|${ state.orderby }|${ state.order }`,
 			fingerprint: Array.from( next.values() ).join( '\n' ),
 			columns: ( phone ) => buildColumns( ui.cache, cfg, actions, phone ),
 			wire: ( el ) => {

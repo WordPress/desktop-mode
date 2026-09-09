@@ -76,6 +76,7 @@ function mount( state: Partial< UsersState > = {}, data: Partial< UsersData > = 
 			page: 1,
 			perPage: 20,
 			search: '',
+			role: '',
 			status: '',
 			orderby: 'name',
 			order: 'asc',
@@ -145,6 +146,35 @@ describe( 'the users app view', () => {
 		expect( root.querySelector( '[data-os-users-bulk]' )?.hasAttribute( 'hidden' ) ).toBe( false );
 		checkbox.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: false } } ) );
 		expect( table!.selection ).toEqual( [] );
+	} );
+
+	it( 'the role filter is server state bound to filter, spelled as users.php spells it', () => {
+		const { root, ctx } = mount( { role: 'editor' } );
+		const select = root.querySelector( '[data-os-users-role]' );
+		expect( select?.getAttribute( 'os-bind' ) ).toBe( 'role' );
+		expect( select?.getAttribute( 'os-action' ) ).toBe( 'filter' );
+		expect( ( select as { value?: string } | null )?.value ).toBe( 'editor' );
+		expect( Array.from( root.querySelectorAll( '[data-os-users-role] os-option' ) ).map( ( o ) => o.getAttribute( 'value' ) ?? '' ) ).toEqual( [ '', 'none', 'administrator', 'editor', 'subscriber' ] );
+		expect( root.querySelector( '.os-people__scope' )?.textContent ).toContain( 'match filters' );
+		( root.querySelector( '[data-os-users-clear-role]' ) as HTMLElement ).click();
+		expect( ctx.state.role ).toBe( '' );
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'filter', {} );
+	} );
+
+	it( 'a Roles-tab group scopes the directory server-side, spelling No role as none', async () => {
+		const snapshot = { total: 1, groups: [ { role: '', label: 'No role', total: 1, members: [ user( { id: 9, roles: [] } ) ] } ] };
+		vi.stubGlobal( 'fetch', vi.fn( async () => new Response( JSON.stringify( snapshot ) ) ) );
+		try {
+			const { root, ctx } = mount( { tab: 'roles' } );
+			ctx.local = vi.fn();
+			await vi.waitFor( () => expect( root.querySelector( '.os-people__room os-button' ) ).not.toBeNull() );
+			( root.querySelector( '.os-people__room os-button' ) as HTMLElement ).click();
+			expect( ctx.local ).toHaveBeenCalledWith( 'tab', { value: 'all' } );
+			expect( ctx.state.role ).toBe( 'none' );
+			expect( ctx.dispatch ).toHaveBeenCalledWith( 'filter', {} );
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	} );
 
 	it( 'the root is the Users app’s, not the Posts window’s (no note→post drop target)', () => {

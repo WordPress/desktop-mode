@@ -11,6 +11,7 @@ const state = ( over: Partial< UsersState > = {} ): UsersState => ( {
 	page: 1,
 	perPage: 20,
 	search: '',
+	role: '',
 	status: '',
 	orderby: 'name',
 	order: 'asc',
