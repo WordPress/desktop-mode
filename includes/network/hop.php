@@ -223,12 +223,46 @@ function openstation_network_verify_hop( $token ) {
 	if ( ! openstation_network_verify( $json, sodium_bin2base64( $sig, SODIUM_BASE64_VARIANT_ORIGINAL ), $key ) ) {
 		return new WP_Error( 'openstation_hop_signature', __( 'That hop token is not signed by the site it names.', 'desktop-mode' ) );
 	}
-	$seen = 'openstation_hop_' . md5( $data['jti'] );
-	if ( false !== get_transient( $seen ) ) {
+	if ( ! openstation_network_hop_claim( $data['jti'], $exp ) ) {
 		return new WP_Error( 'openstation_hop_replay', __( 'That hop token was already spent.', 'desktop-mode' ) );
 	}
-	set_transient( $seen, 1, OPENSTATION_NETWORK_HOP_TTL + 2 * OPENSTATION_NETWORK_HOP_SKEW );
 	return $data;
+}
+
+/**
+ * Claim a token's id, once, install-wide. An INSERT IGNORE into the
+ * main site's options table: its unique key on `option_name` is the one
+ * atomic primitive every WordPress install has, so two requests racing
+ * on the same token cannot both win, and on a multisite every site
+ * shares that one table, where a per-site transient would let each
+ * site of the origin spend the same token once more. Ids no token
+ * could still carry are swept on the way; a row nothing reads back
+ * needs no cache.
+ *
+ * @param string $jti Token id.
+ * @param int    $exp The token's expiry, kept so the sweep knows when the row is dead.
+ * @return bool Whether this request claimed it.
+ */
+function openstation_network_hop_claim( $jti, $exp ) {
+	global $wpdb;
+	$dead = time() - OPENSTATION_NETWORK_HOP_SKEW;
+	// phpcs:disable WordPress.DB.DirectDatabaseQuery -- The unique key IS the check; there is no option cache to keep in step for rows nothing reads.
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM {$wpdb->base_prefix}options WHERE option_name LIKE %s AND option_value < %d",
+			$wpdb->esc_like( 'openstation_hop_' ) . '%',
+			$dead
+		)
+	);
+	$won = $wpdb->query(
+		$wpdb->prepare(
+			"INSERT IGNORE INTO {$wpdb->base_prefix}options (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
+			'openstation_hop_' . md5( (string) $jti ),
+			(string) (int) $exp
+		)
+	);
+	// phpcs:enable WordPress.DB.DirectDatabaseQuery
+	return 1 === (int) $won;
 }
 
 /**
@@ -251,7 +285,12 @@ function openstation_network_hop_user( array $payload ) {
  * @return string
  */
 function openstation_network_hop_landing( $direction = '' ) {
-	$args = array( OPENSTATION_NETWORK_HOP_ARG => false );
+	// The direction on the landing URL is the token's, never the
+	// request's: a caller-supplied one goes with the token.
+	$args = array(
+		OPENSTATION_NETWORK_HOP_ARG      => false,
+		OPENSTATION_NETWORK_HOP_FROM_ARG => false,
+	);
 	if ( in_array( $direction, array( 'next', 'prev' ), true ) ) {
 		$args[ OPENSTATION_NETWORK_HOP_FROM_ARG ] = $direction;
 	}

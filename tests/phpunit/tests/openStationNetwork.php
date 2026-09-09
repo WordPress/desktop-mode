@@ -476,6 +476,15 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$this->assertSame( 'visitor@example.org', $payload['sub'] );
 		$this->assertSame( $visitor, openstation_network_hop_user( $payload )->ID );
 		$this->assertSame( 'openstation_hop_replay', openstation_network_verify_hop( $token )->get_error_code(), 'Once.' );
+		if ( is_multisite() ) {
+			// Spent on one site of the origin, spent on every site: the
+			// claim lives in the main site's table, not a per-site transient.
+			$fresh = self::foreign_token( $pair );
+			$this->assertIsArray( openstation_network_verify_hop( $fresh ) );
+			switch_to_blog( self::factory()->blog->create() );
+			$this->assertSame( 'openstation_hop_replay', openstation_network_verify_hop( $fresh )->get_error_code(), 'Install-wide.' );
+			restore_current_blog();
+		}
 
 		$this->assertNull( openstation_network_hop_user( array( 'sub' => 'nobody@example.org' ) ), 'A URL never creates a user.' );
 		$this->assertSame( 'openstation_hop_expired', openstation_network_verify_hop( self::foreign_token( $pair, array( 'exp' => time() - 3600, 'iat' => time() - 3700 ) ) )->get_error_code() );
@@ -503,6 +512,13 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'openstation_overview=1', $landing );
 		$this->assertStringContainsString( 'openstation_hop_from=prev', $landing );
 		$this->assertStringNotContainsString( 'openstation_hop_from', openstation_network_hop_landing( '' ) );
+
+		// A direction the request carried goes with the token: only the
+		// token's own direction reaches the landing URL.
+		$_SERVER['REQUEST_URI'] = '/wp-admin/admin.php?page=openstation&openstation_hop_from=next&openstation_hop=abc.def';
+		$this->assertStringNotContainsString( 'openstation_hop_from', openstation_network_hop_landing( '' ) );
+		$this->assertStringContainsString( 'openstation_hop_from=prev', openstation_network_hop_landing( 'prev' ) );
+		$this->assertStringNotContainsString( 'openstation_hop_from=next', openstation_network_hop_landing( 'prev' ) );
 
 		unset( $_GET[ OPENSTATION_NETWORK_HOP_ARG ], $_GET[ OPENSTATION_SHELL_OVERVIEW_ARG ] );
 	}

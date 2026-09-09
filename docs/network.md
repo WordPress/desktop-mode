@@ -103,8 +103,10 @@ send an anonymous request to the login screen
 (`openstation_network_redeem_hop()`): it looks up the key it pinned for
 `iss` (its own, its hub's, or a member's from the list), verifies the
 signature, checks `aud` against its own admin origin and `exp` against
-its clock (a minute of skew), records `jti` in a transient so the
-token is spent once, then finds the local user with that email and, if
+its clock (a minute of skew), claims `jti` with one `INSERT IGNORE`
+into the main site's options table so the token is spent once, on any
+site of the install and by only one of two racing requests, then finds
+the local user with that email and, if
 nobody is logged in there, sets its own auth cookie. It redirects to
 the same URL without the token and with `openstation_hop_from` carrying
 the direction, so the desk slides in from the right side even though

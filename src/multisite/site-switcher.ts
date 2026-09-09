@@ -271,7 +271,26 @@ export function buildSiteSwitcher(
 		}
 		e.preventDefault();
 		e.stopPropagation();
-		hop( shellUrlInOverview( entry.shellUrl ), e );
+		const plain = shellUrlInOverview( entry.shellUrl );
+		if ( ! deps.mint || ! isOtherOrigin( entry.shellUrl ) ) {
+			hop( plain, e );
+			return;
+		}
+		// Another origin beside this one still wants the login token,
+		// but a tab opened after an await is a popup to the browser. So
+		// the tab opens inside the click, empty, and gets the minted URL
+		// once signed, the plain one when the mint fails; a blocked tab
+		// falls back to the same hop a plain click takes.
+		const tab = window.open( '', '_blank' );
+		void deps.mint( entry.shellUrl, 'next' )
+			.catch( () => null )
+			.then( ( url ) => {
+				if ( tab ) {
+					tab.location.href = url ?? plain;
+				} else {
+					hop( plain, e );
+				}
+			} );
 	};
 	group.addEventListener( 'click', openBeside, true );
 	group.addEventListener( 'auxclick', openBeside, true );

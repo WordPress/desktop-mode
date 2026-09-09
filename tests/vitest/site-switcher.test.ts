@@ -216,6 +216,41 @@ describe( 'the site switcher', () => {
 		el?.remove();
 	} );
 
+	test( 'a modifier click on another origin opens the tab at once and hands it the minted URL', async () => {
+		const hop = vi.fn();
+		const mint = vi.fn().mockResolvedValue( 'https://studio.test/wp-admin/admin.php?page=openstation&openstation_hop=tok' );
+		const tab = { location: { href: '' } };
+		const open = vi.spyOn( window, 'open' ).mockReturnValue( tab as unknown as Window );
+		const el = buildSiteSwitcher(
+			config( {
+				sites: [
+					{ id: '1', name: 'Main', shellUrl: MAIN_SHELL },
+					{ id: 'member:abc', name: 'Studio', shellUrl: 'https://studio.test/wp-admin/admin.php?page=openstation', kind: 'member' },
+				],
+			} ),
+			{ hop, mint },
+		);
+		document.body.appendChild( el as HTMLElement );
+
+		el?.querySelector( 'os-segment[value="member:abc"]' )?.dispatchEvent( new MouseEvent( 'click', { metaKey: true, bubbles: true, cancelable: true } ) );
+		// The tab is open before anything awaits: that is what keeps it from being a popup.
+		expect( open ).toHaveBeenCalledWith( '', '_blank' );
+		expect( tab.location.href ).toBe( '' );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+		expect( tab.location.href ).toContain( 'openstation_hop=tok' );
+		expect( hop ).not.toHaveBeenCalled();
+
+		// A mint that fails still lands the tab on the plain shell.
+		mint.mockRejectedValueOnce( new Error( 'no' ) );
+		tab.location.href = '';
+		el?.querySelector( 'os-segment[value="member:abc"]' )?.dispatchEvent( new MouseEvent( 'click', { metaKey: true, bubbles: true, cancelable: true } ) );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+		expect( tab.location.href ).toBe( shellUrlInOverview( 'https://studio.test/wp-admin/admin.php?page=openstation' ) );
+
+		open.mockRestore();
+		el?.remove();
+	} );
+
 	test( 'the overview flag is one-shot: the shell strips it like the boot target', () => {
 		const url = shellUrlInOverview( MAIN_SHELL );
 		expect( new URL( url ).searchParams.get( OVERVIEW_ARG ) ).toBe( '1' );
