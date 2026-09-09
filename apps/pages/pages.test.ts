@@ -65,7 +65,7 @@ afterEach( () => {
 } );
 
 describe( 'the pages view', () => {
-	it( 'has no taxonomy tabs and reads as pages everywhere', () => {
+	it( 'has the pages and atlas tabs, no taxonomy tabs, and reads as pages everywhere', () => {
 		const { root, ctx } = mount( [ row( 1 ), row( 2 ) ] );
 		expect( Array.from( root.querySelectorAll( 'os-tab' ) ).map( ( tab ) => tab.textContent ) ).toEqual( [ 'All pages', 'Page atlas' ] );
 		expect( root.querySelector( '[data-os-pages-atlas]' )?.childElementCount ).toBe( 0 );

@@ -187,7 +187,7 @@ you relabel the host, e.g. Maximize ⇄ Restore.
 | Tag | Class | Source | Purpose |
 | --- | --- | --- | --- |
 | `<os-menu>` / `<os-menu-item>` | `OsMenu`, `OsMenuItem` | `os-menu/os-menu.ts` | Dropdown menu surface. |
-| `<os-action-menu>` | `src/ui/components/os-action-menu/os-action-menu.ts` | Button-anchored dropdown with top-layer placement, arrow/Home/End navigation, Escape/outside dismissal and focus restoration. Accepts translated `text` and accessible `label`; wraps context-menu options and their `os-context-menu-pick` event. |
+| `<os-action-menu>` | `OsActionMenu` | `os-action-menu/os-action-menu.ts` | Button-anchored dropdown with top-layer placement, arrow/Home/End navigation, Escape/outside dismissal and focus restoration. Accepts translated `text` and accessible `label`; wraps context-menu options and their `os-context-menu-pick` event. |
 | `<os-context-menu>` / `<os-context-menu-option>` | `OsContextMenu`, `OsContextMenuOption` | `os-context-menu/os-context-menu.ts` | Right-click / long-press menu. |
 | `<os-flyout>` | `OsFlyout` | `os-flyout/os-flyout.ts` | Anchored popover. Supports placement strategies. |
 | `<os-modal>` | `OsModal` | `os-modal/os-modal.ts` | Full-overlay modal with focus trap. |

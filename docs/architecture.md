@@ -640,6 +640,23 @@ fixed in `prepare_links()` instead. `wp:featuredmedia` needs no fixing —
 it is built from the attachment's route, and `attachment` is
 REST-exposed.
 
+## Native workspaces — Users, Posts, Pages
+
+The native Users, Posts and Pages apps (`apps/users/`, `apps/posts/`, `apps/pages/`) are App Framework client views; the contracts below are theirs alone.
+
+### Users role summary
+
+The Users app's Roles tab reads `GET /desktop-mode/v1/users/roles-summary` through the app's tracked REST client. The route and reader require `list_users`; cookie-authenticated calls require WordPress's REST nonce. It returns complete current-site role totals and at most eight avatar/name samples per role, without paging the directory. A single prepared SQL statement combines exact counts and limited samples over the current site's serialized capabilities keys. No user-supplied SQL identifiers or ordering expressions are accepted. Multi-role accounts count in each role but once in the site total. Registered empty roles remain available; No role is included when populated. The endpoint deliberately covers the whole site independently of the directory search and query-args filter. The `openstation_users_window_roles_summary` filter extends its result; see the hooks reference for the payload.
+
+### Content cards and touch exploration
+
+Post and page cards show a compact `#ID` copy button alongside their status. Activating it copies the numeric WordPress ID without the hash prefix, with a toast and screen-reader announcement on success or failure. It does not change selection or open the editor.
+
+Page Atlas, Categories and Tags share Corkboard's midpoint-anchored pinch math. Two touch pointers zoom and pan the canvas even when the gesture starts on a sheet or term. The second finger cancels a pending node drag; lifting the fingers cannot reparent a category, open a satellite post, or activate a sheet action. One-finger panning resumes on a fresh gesture. Atlas previews retain their fixed iframe viewport and zoom through the outer camera transform.
+
+The content workspace uses the inherited surface, text, border and semantic status tokens in both its cards and details table. Notebook rules read the declared subtle-surface token. Taxonomy canvases resolve those same tokens inside their stage for Pixi labels, cards and controls, then repaint existing objects on `os-desktop-theme-changed` without refetching content or resetting the camera. Term hues still distinguish groups; count badges choose the more legible theme ink against each hue. Tag cards scale with their world-space layout so zooming out preserves the gaps between cards.
+
+
 ## CSS layering
 
 Core layering only — feature windows ship their own per-feature sheets
@@ -688,16 +705,3 @@ Never edit Core's `common.css` or color scheme files. Everything we need is expo
 - **The North Star — cross-window drag & drop** — extend the existing cross-frame drag bridge beyond Media Library attachments: pluggable mime-type negotiation (`openstation_drag_mime_types` / `openstation_drag_payload` / `openstation_drop_accepts`), Gutenberg block-insertion target, visual lift-and-drop feedback.
 
 See [Hooks Reference](./hooks-reference.md) for the filter/action names each phase will introduce.
-
-
-### Users role summary
-
-The Users app's Roles tab reads `GET /desktop-mode/v1/users/roles-summary` through the app's tracked REST client. The route and reader require `list_users`; cookie-authenticated calls require WordPress's REST nonce. It returns complete current-site role totals and at most eight avatar/name samples per role, without paging the directory. A single prepared SQL statement combines exact counts and limited samples over the current site's serialized capabilities keys. No user-supplied SQL identifiers or ordering expressions are accepted. Multi-role accounts count in each role but once in the site total. Registered empty roles remain available; No role is included when populated. The endpoint deliberately covers the whole site independently of the directory search and query-args filter. The `openstation_users_window_roles_summary` filter extends its result; see the hooks reference for the payload.
-
-### Content cards and touch exploration
-
-Post and page cards show a compact `#ID` copy button alongside their status. Activating it copies the numeric WordPress ID without the hash prefix, with a toast and screen-reader announcement on success or failure. It does not change selection or open the editor.
-
-Page Atlas, Categories and Tags share Corkboard's midpoint-anchored pinch math. Two touch pointers zoom and pan the canvas even when the gesture starts on a sheet or term. The second finger cancels a pending node drag; lifting the fingers cannot reparent a category, open a satellite post, or activate a sheet action. One-finger panning resumes on a fresh gesture. Atlas previews retain their fixed iframe viewport and zoom through the outer camera transform.
-
-The content workspace uses the inherited surface, text, border and semantic status tokens in both its cards and details table. Notebook rules read the declared subtle-surface token. Taxonomy canvases resolve those same tokens inside their stage for Pixi labels, cards and controls, then repaint existing objects on `os-desktop-theme-changed` without refetching content or resetting the camera. Term hues still distinguish groups; count badges choose the more legible theme ink against each hue. Tag cards scale with their world-space layout so zooming out preserves the gaps between cards.
