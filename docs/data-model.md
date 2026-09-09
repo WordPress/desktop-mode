@@ -359,35 +359,6 @@ in-request caching.
 | `desktop_mode_presence_daily_prune` | Cron (daily) | Prunes the presence option. |
 | `desktop-mode-widgets-geometry`, `desktop-mode/files`, … | `localStorage` | Widget geometry and other client state; never reaches the database. |
 
-## Design notes and known trade-offs
-
-What is good, and what to watch, judged against how WordPress expects a
-plugin to store things.
-
-- **Right store per data shape.** Relational data is in indexed tables;
-  per-user preferences are user meta; site flags are options; caches are
-  transients; content is content. Nothing large is serialised into an
-  autoloaded option.
-- **Schema versioning is sound.** An option holds the installed version;
-  activation and three lazy hooks reinstall on mismatch, with an explicit
-  `CREATE TABLE IF NOT EXISTS` behind `dbDelta` for the cases where
-  `dbDelta` misdetects an existing table.
-- **Presence is one shared option row.** Every user's Heartbeat does a
-  read-modify-write of `_desktop_mode_presence`. The write is throttled and
-  the row is not autoloaded, but under many concurrent users it is still a
-  single hot row with lost-update races. A row per user (user meta or a
-  small table) aggregated on read would be the idiomatic shape.
-- **No `uninstall.php`.** Nothing drops the eight tables or deletes the
-  options and meta on uninstall; only a REST route purges the two sharing
-  tables. WordPress.org expects a plugin to clean up after itself.
-- **No foreign keys, and a `VARCHAR` polymorphic reference.** Consistent
-  with Core, but it means integrity lives in code: `cascade-cleanup.php`,
-  the tombstones table and the prune cron exist to compensate.
-- **Dead columns.** `folders.share_mode` and `folders.share_meta` are kept
-  for diagnostics only.
-- **Meta queries for agents.** Finding agents is a `meta_key` query on
-  `_desktop_mode_agent`; fine for a handful of agents, slow at scale.
-
 ## Related
 
 - [Files on the Desktop](./files-on-desktop.md) — the registry and the
