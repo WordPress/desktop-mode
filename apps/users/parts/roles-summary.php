@@ -11,7 +11,11 @@ defined( 'ABSPATH' ) || exit;
  *
  * UNION branches keep both COUNT and the eight-row sample bounded on older
  * MySQL versions too: no window functions or truncatable GROUP_CONCAT IDs.
- * Only server-owned table identifiers are interpolated. Every value is prepared.
+ * Each sample rides in a derived table rather than a parenthesised UNION
+ * member: SQLite (Playground, Studio, the SQLite integration plugin) rejects
+ * `(SELECT … LIMIT 8) UNION ALL (…)` outright, and MySQL keeps the derived
+ * table's ORDER BY + LIMIT. Only server-owned table identifiers are
+ * interpolated. Every value is prepared.
  *
  * @return array|WP_Error Summary, or a permission/database error.
  */
@@ -32,12 +36,15 @@ function openstation_users_window_roles_summary() {
 	}
 	$matches[''] = $matches ? 'NOT (' . implode( ' OR ', $matches ) . ')' : '1=1';
 	$roles['']   = __( 'No role', 'desktop-mode' );
-	$branches    = array( "(SELECT NULL AS role, COUNT(*) AS total, NULL AS id, NULL AS name, NULL AS slug, NULL AS email FROM {$wpdb->users} u WHERE {$scope})" );
+	$branches    = array( "SELECT NULL AS role, COUNT(*) AS total, NULL AS id, NULL AS name, NULL AS slug, NULL AS email FROM {$wpdb->users} u WHERE {$scope}" );
+	$sample      = 0;
 	foreach ( $matches as $role => $predicate ) {
 		// The WHERE fragments above contain only fixed SQL and prepared values.
 		$role_sql   = $wpdb->prepare( '%s', $role );
-		$branches[] = "(SELECT {$role_sql} AS role, COUNT(*) AS total, NULL AS id, NULL AS name, NULL AS slug, NULL AS email FROM {$wpdb->users} u WHERE {$scope} AND {$predicate})";
-		$branches[] = "(SELECT {$role_sql} AS role, NULL AS total, u.ID AS id, u.display_name AS name, u.user_nicename AS slug, u.user_email AS email FROM {$wpdb->users} u WHERE {$scope} AND {$predicate} ORDER BY u.display_name, u.ID LIMIT 8)";
+		$branches[] = "SELECT {$role_sql} AS role, COUNT(*) AS total, NULL AS id, NULL AS name, NULL AS slug, NULL AS email FROM {$wpdb->users} u WHERE {$scope} AND {$predicate}";
+		// A derived table is the portable way to bound one UNION member.
+		$branches[] = "SELECT * FROM (SELECT {$role_sql} AS role, NULL AS total, u.ID AS id, u.display_name AS name, u.user_nicename AS slug, u.user_email AS email FROM {$wpdb->users} u WHERE {$scope} AND {$predicate} ORDER BY u.display_name, u.ID LIMIT 8) AS sample_{$sample}";
+		++$sample;
 	}
 	$sql = implode( ' UNION ALL ', $branches );
 	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All values are prepared above; identifiers are trusted wpdb table names.
