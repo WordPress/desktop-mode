@@ -37,6 +37,11 @@ function openstation_multisite_payload() {
 		return null;
 	}
 	if ( ! is_multisite() ) {
+		// A single site has a switcher only as a hub or member of an
+		// OpenStation network, and only while that module is on.
+		if ( ! openstation_network_on() ) {
+			return null;
+		}
 		$member = openstation_network_member_payload();
 		return openstation_multisite_with_hop( null !== $member ? $member : openstation_network_hub_payload() );
 	}
@@ -69,10 +74,21 @@ function openstation_multisite_payload() {
  * @return array|null
  */
 function openstation_multisite_with_hop( $block ) {
-	if ( is_array( $block ) ) {
+	if ( is_array( $block ) && openstation_network_on() ) {
 		$block['hopUrl'] = esc_url_raw( rest_url( 'desktop-mode/v1/network/hop' ) );
 	}
 	return $block;
+}
+
+/**
+ * Whether the OpenStation Network module is on, from anywhere that
+ * runs whether or not it loaded. The bootstrap always loads; the
+ * module does not.
+ *
+ * @return bool
+ */
+function openstation_network_on() {
+	return function_exists( 'openstation_network_enabled' ) && openstation_network_enabled();
 }
 
 /**
@@ -170,7 +186,7 @@ function openstation_multisite_sites() {
 			'foreign'  => false,
 		);
 	}
-	foreach ( openstation_network_member_entries() as $member ) {
+	foreach ( openstation_network_on() ? openstation_network_member_entries() : array() as $member ) {
 		$sites[] = array(
 			'id'       => $member['id'],
 			'name'     => $member['name'],

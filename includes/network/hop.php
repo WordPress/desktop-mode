@@ -38,12 +38,6 @@ const OPENSTATION_NETWORK_HOP_TTL = 60;
 /** Clock skew tolerated between two installs, in seconds. */
 const OPENSTATION_NETWORK_HOP_SKEW = 60;
 
-/** The token's query arg on the target's shell screen. */
-const OPENSTATION_NETWORK_HOP_ARG = 'openstation_hop';
-
-/** The slide direction the target lands with, after the token is spent. */
-const OPENSTATION_NETWORK_HOP_FROM_ARG = 'openstation_hop_from';
-
 /** User meta, one row per linked source account: `<issuer id>|<source user id>`. */
 const OPENSTATION_NETWORK_LINK_META = 'openstation_network_link';
 

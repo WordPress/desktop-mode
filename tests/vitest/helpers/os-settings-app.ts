@@ -9,7 +9,7 @@ export function appData( overrides: Partial< AppData > = {} ): AppData {
 		isAdmin: true,
 		canUpload: true,
 		canManageDesktopThemes: true,
-		extendedOptions: { media_library_enhanced: true, games: false, agents: false },
+		extendedOptions: { media_library_enhanced: true, games: false, agents: false, network: false },
 		commentsAi: null,
 		aiAssistant: null,
 		...overrides,

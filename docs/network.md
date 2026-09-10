@@ -5,6 +5,17 @@ that show one site switcher and move between each other as if they were
 sites of one network. What a WordPress multisite gives sites of one
 install, this gives installs anywhere.
 
+**Off by default.** An administrator turns it on in OpenStation
+Preferences → Features → Extended options (the `network` extended
+option; filter `openstation_network_enabled`, see
+[hooks-reference.md](./hooks-reference.md#openstation_network_enabled--experimental)).
+While it is off, `includes/network/bootstrap.php` loads none of the
+module: no keypair is minted, no route registered, no Network window
+offered, no token minted or spent, and a multisite keeps the switcher
+it has on its own. Pairings already made are options that survive a
+disable and are back when the option is on again. Each install of a
+network turns it on for itself.
+
 ## The idea
 
 On a multisite, every site is its own OpenStation and the overview's

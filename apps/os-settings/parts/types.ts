@@ -30,6 +30,7 @@ export interface ExtendedOptions {
 	media_library_enhanced: boolean;
 	games: boolean;
 	agents: boolean;
+	network: boolean;
 }
 
 /** What `data()` returns — the server facts that can change mid-session. */

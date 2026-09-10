@@ -134,6 +134,28 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 
 	// ---------------------------------------------------------- identity
 
+	public function test_the_network_is_off_by_default_and_its_option_turns_it_on() {
+		remove_filter( 'openstation_network_enabled', '__return_true' );
+		try {
+			$this->assertFalse( openstation_network_enabled(), 'Off by default: opt-in.' );
+			wp_set_current_user( self::$admin_id );
+			if ( is_multisite() ) {
+				$block = openstation_multisite_payload();
+				$this->assertIsArray( $block, 'A multisite keeps the switcher it has on its own.' );
+				$this->assertArrayNotHasKey( 'hopUrl', $block, 'No token route while the module is off.' );
+				$this->assertNotContains( 'member', wp_list_pluck( $block['sites'], 'kind' ) );
+			} else {
+				$this->assertNull( openstation_multisite_payload(), 'A single site has a switcher only as part of a network.' );
+			}
+			openstation_save_extended_options( array( 'network' => true ) );
+			$this->assertTrue( openstation_network_enabled(), 'The extended option turns it on.' );
+			$this->assertTrue( openstation_get_extended_options()['network'] );
+		} finally {
+			add_filter( 'openstation_network_enabled', '__return_true' );
+			delete_option( OPENSTATION_EXTENDED_OPTIONS_KEY );
+		}
+	}
+
 	public function test_keypair_is_generated_once_and_signs_verifiably() {
 		$first  = openstation_network_public_key();
 		$second = openstation_network_public_key();
