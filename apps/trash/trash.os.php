@@ -140,6 +140,20 @@ return App::define( 'desktop-mode-recycle-bin' )
 			'search' => '',
 		)
 	)
+	// Returning to the bin must re-query even if a change notification
+	// was missed while it was hidden or another admin tab was active.
+	->action(
+		'show',
+		static function () {
+			// The dispatch recomputes data below.
+		}
+	)
+	->action(
+		'reopen',
+		static function () {
+			// The dispatch recomputes data below.
+		}
+	)
 	->action(
 		'restore',
 		static function ( State $state, Os $os, array $args ) {

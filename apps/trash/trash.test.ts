@@ -70,6 +70,22 @@ afterEach( () => {
 } );
 
 describe( 'the trash app view', () => {
+	it( 'reconciles an empty prewarmed snapshot when the bin opens', async () => {
+		const { root, ctx } = mount( {}, { items: [], total: 0 } );
+		ctx.dispatch = vi.fn( async () => {
+			ctx.data.items = [ item() ];
+			ctx.data.total = 1;
+			ctx.repaint();
+			return true;
+		} );
+		const dispose = app.mounted( ctx );
+		await Promise.resolve();
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'refresh' );
+		expect( root.querySelector( 'os-empty-state' )!.hasAttribute( 'hidden' ) ).toBe( true );
+		expect( ( root.querySelector( '[data-os-trash-table]' ) as HTMLElement & { data: RecycleBinItem[] } ).data ).toHaveLength( 1 );
+		dispose?.();
+	} );
+
 	it( 'shows the toolbar + table against items, the empty state otherwise', () => {
 		const { root } = mount();
 		expect( root.querySelector( '.os-recycle-bin__toolbar' )!.hasAttribute( 'hidden' ) ).toBe( false );

@@ -199,6 +199,8 @@ use function OpenStation\App\Html\{ esc, attr, json, tag, classes };
 
 ---
 
+The Trash app re-queries its items when a mounted window is shown or reopened, even if a change notification was missed. Its client also refreshes on mount because a hover-prewarmed response can predate a deletion. Filters and search remain in place when returning to the window.
+
 ## `$os` — the host, as a value
 
 Every callback receives an `OpenStation\App\Os`. It is the app's entire view of the host:

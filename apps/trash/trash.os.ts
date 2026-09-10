@@ -460,6 +460,10 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		// broadcasts; these cover trash actions inside chromeless
 		// iframes and other tabs.
 		realtime.start();
+		// The first mount may be a hover-prewarmed snapshot from before
+		// a deletion. Reconcile after subscribing so that snapshot cannot
+		// leave a newly opened bin empty until the next notification.
+		void ctx.dispatch( 'refresh' );
 		let refreshing: Promise< unknown > | null = null;
 		const unwatch = watchTrashChanges( () => ctx.repaint(), () => {
 			refreshing ??= Promise.resolve().then( () => {
