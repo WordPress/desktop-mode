@@ -40,6 +40,7 @@ import type {
 	DesktopThemeServerEntry,
 	DesktopWidgetServerEntry,
 	NativeWindowServerEntry,
+	MultisiteConfig,
 } from '../types';
 
 /**
@@ -92,6 +93,8 @@ export interface MenuRefreshDeps {
 	syncServerGames: ( list: DesktopGameServerEntry[] ) => Promise< void >;
 	/** See `MenuRefreshDeps.syncServerDesktopThemes` in `../menu-refresh-apply`. */
 	syncServerDesktopThemes?: ( list: DesktopThemeServerEntry[] ) => void;
+	/** The site switcher's rows from a fresh payload; see `createApplyPayload`. */
+	applyMultisite?: ( block: MultisiteConfig | null ) => void;
 	renderIcons: ( icons: DesktopIconServerEntry[] | undefined ) => void;
 	/** See `MenuRefreshDeps.refreshRootPlacements` in `../menu-refresh-apply`. */
 	refreshRootPlacements?: () => void;
@@ -121,6 +124,7 @@ export function bindMenuRefresh( deps: MenuRefreshDeps ): () => Promise< void > 
 		syncServerDockRailRenderers,
 		syncServerGames,
 		syncServerDesktopThemes,
+		applyMultisite,
 		renderIcons,
 		refreshRootPlacements,
 		syncShortcuts,
@@ -142,6 +146,7 @@ export function bindMenuRefresh( deps: MenuRefreshDeps ): () => Promise< void > 
 		syncServerDockRailRenderers,
 		syncServerGames,
 		syncServerDesktopThemes,
+		applyMultisite,
 		renderIcons,
 		// The dispatcher owns the nav model the files-layer shortcut
 		// grid reads — `renderIcons` alone only reaches the legacy

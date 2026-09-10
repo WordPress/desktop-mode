@@ -23,13 +23,27 @@ class Tests_OpenStation_Presence extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 		delete_option( OPENSTATION_PRESENCE_OPTION );
+		delete_option( OPENSTATION_PRESENCE_STORAGE_OPTION );
+		global $wpdb;
+		openstation_presence_migrate_storage();
+		$wpdb->query( 'DELETE FROM ' . openstation_presence_table() );
 	}
 
 	public function tear_down() {
 		delete_option( OPENSTATION_PRESENCE_OPTION );
+		delete_option( OPENSTATION_PRESENCE_STORAGE_OPTION );
+		global $wpdb;
+		openstation_presence_migrate_storage();
+		$wpdb->query( 'DELETE FROM ' . openstation_presence_table() );
 		delete_user_meta( self::$admin_id, 'desktop_mode_mode' );
 		delete_user_meta( self::$editor_id, 'desktop_mode_mode' );
 		parent::tear_down();
+	}
+
+	private function seed_records( $records ) {
+		foreach ( $records as $uid => $record ) {
+			openstation_presence_upsert( $uid, $record );
+		}
 	}
 
 	/**
@@ -78,7 +92,7 @@ class Tests_OpenStation_Presence extends WP_UnitTestCase {
 			'last_seen_ms'   => $now_ms - ( 61 * 1000 ),
 			'last_active_ms' => $now_ms - ( 61 * 1000 ),
 		);
-		update_option( OPENSTATION_PRESENCE_OPTION, array( self::$admin_id => $seeded ), false );
+		openstation_presence_upsert( self::$admin_id, $seeded );
 
 		openstation_presence_record( self::$admin_id, false );
 		$stored = openstation_presence_get_all()[ self::$admin_id ];
@@ -97,7 +111,7 @@ class Tests_OpenStation_Presence extends WP_UnitTestCase {
 		// Same status, timestamps moved by only ~5ms — no persist.
 		openstation_presence_record( self::$admin_id, true );
 		$second = openstation_presence_get_all()[ self::$admin_id ];
-		$this->assertSame( $first, $second, 'a redundant bump inside the throttle window must not rewrite the option' );
+		$this->assertSame( $first, $second, 'a redundant bump inside the throttle window must not rewrite the row' );
 		$this->assertSame( 'online', openstation_presence_status_for_user( self::$admin_id ) );
 	}
 
@@ -108,15 +122,13 @@ class Tests_OpenStation_Presence extends WP_UnitTestCase {
 	public function test_status_transition_persists_despite_throttle() {
 		// Stored record reads `inactive` (seen recently, idle 6 min).
 		$now_ms = (int) round( microtime( true ) * 1000 );
-		update_option(
-			OPENSTATION_PRESENCE_OPTION,
+		$this->seed_records(
 			array(
 				self::$admin_id => array(
 					'last_seen_ms'   => $now_ms - 1000,
 					'last_active_ms' => $now_ms - ( 6 * 60 * 1000 ),
 				),
 			),
-			false
 		);
 		$this->assertSame( 'inactive', openstation_presence_status_for_user( self::$admin_id ) );
 
@@ -226,9 +238,8 @@ class Tests_OpenStation_Presence extends WP_UnitTestCase {
 	 */
 	public function test_cron_prune_drops_stale_entries() {
 		$now_ms = (int) round( microtime( true ) * 1000 );
-		// Manually seed the option with a fresh + a 30-day-old entry.
-		update_option(
-			OPENSTATION_PRESENCE_OPTION,
+		// Manually seed the table with a fresh + a 30-day-old entry.
+		$this->seed_records(
 			array(
 				self::$admin_id  => array(
 					'last_seen_ms'   => $now_ms,
@@ -239,7 +250,6 @@ class Tests_OpenStation_Presence extends WP_UnitTestCase {
 					'last_active_ms' => 0,
 				),
 			),
-			false
 		);
 		openstation_presence_cron_prune();
 		$all = openstation_presence_get_all();

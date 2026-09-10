@@ -65,14 +65,16 @@ export interface StatusControlOptions {
 export function statusControl( opts: StatusControlOptions ): TemplateResult {
 	const phone = opts.phone ?? isMobileStamped();
 	if ( phone ) {
+		// Property bindings preserve the empty-string All value; ordinary
+		// attribute interpolation removes empty values, hiding that option.
 		return html`<os-select
 			class="os-app-list__status"
 			os-bind=${ opts.bind }
 			os-action=${ opts.action }
-			value=${ opts.value }
+			.value=${ opts.value }
 			aria-label=${ opts.label }
 		>${ opts.segments.map(
-			( seg ) => html`<os-option value=${ seg.value }>${ seg.label }</os-option>`,
+			( seg ) => html`<os-option .value=${ seg.value }>${ seg.label }</os-option>`,
 		) }</os-select>`;
 	}
 	return html`<os-segmented

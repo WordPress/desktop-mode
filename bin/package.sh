@@ -17,6 +17,16 @@
 # Vite build output is gitignored, so `git archive` skips it. We splice
 # those files in from the working tree after extraction. Run `npm run
 # build` first — this script packages, it does not build.
+#
+# OPENSTATION_BUILD_STAMP=1 (`npm run package:dev`) stamps the commit
+# into the version, `1.1.7+4832bd85`, so the plugins list on a test site
+# says which build it runs: two builds of the same version are
+# indistinguishable there otherwise, and an upload that did not take
+# looks like one that did. PHP orders such a version after the plain
+# one, so the site never offers the WordPress.org release as an "update"
+# to a dev build. Off by default: releases, CI's Plugin Check (which
+# compares the version to the readme's Stable tag) and the preview
+# builds all ship the plain version unless they ask for the stamp.
 
 set -euo pipefail
 
@@ -120,10 +130,19 @@ for file in "${built[@]}"; do
 	cp "$file" "$tmp/$prefix/$file"
 done
 
+# Stamp the commit into the version when asked: both the plugin header
+# and the constant every asset URL and the shell config read.
+version=$(sed -n 's/^ \* Version:[[:space:]]*\([^[:space:]]*\).*$/\1/p' "$tmp/$prefix/desktop-mode.php" | head -n 1)
+if [[ "${OPENSTATION_BUILD_STAMP:-0}" == "1" ]]; then
+	sha=$(git rev-parse --short HEAD)
+	version="$version+$sha"
+	perl -pi -e "s/^( \* Version:[ \t]*)[^ \t\r\n]+/\${1}$version/; s/(define\( 'OPENSTATION_VERSION', ')[^']+('\s*\))/\${1}$version\${2}/" "$tmp/$prefix/desktop-mode.php"
+fi
+
 # `zip -r` UPDATES an existing archive in place — entries removed from
 # the staging tree (e.g. dev bundles that no longer ship) would survive
 # from a previous run. Always start from a fresh file.
 rm -f "$root/$out"
 ( cd "$tmp" && zip -qr "$root/$out" "$prefix" )
 
-echo "Wrote $out"
+echo "Wrote $out (version $version)"

@@ -250,7 +250,7 @@ Payload shape (`openstation_build_menu_payload()` in `includes/core/payload.php`
   serverWindowSlotScripts, serverWindowSlots,
   serverWindowChromeScripts, serverWindowChromes,
   serverWindowNotices, serverGames, serverDesktopThemes,
-  desktopIcons, updateCounts }
+  desktopIcons, updateCounts, multisite }
 ```
 
 - **PHP-declared** things are in the payload: dock, native windows, widgets, wallpapers. The shell diffs them and fires `registry.subscribe` listeners → UI repaints. No F5.
@@ -304,7 +304,7 @@ Canonical examples in-tree: `src/desktop-files/recycle-bin-icon-state.ts` (state
 
 Presence tracking (`online | inactive | offline`) lives in `includes/presence.php` and `src/presence/index.ts`. Any plugin can read `wp.os.presence.*` or `openstation_presence_*()` without depending on a particular feature plugin being installed (chat, collaboration, …).
 
-Storage: `_desktop_mode_presence` option (autoload=false). The WordPress Heartbeat handler in `includes/presence.php` records bumps at priority 5; the framework client (`src/presence/index.ts`) sends `openstation_presence_active: true` + `openstation_user_active: <bool>` on every tick and ingests the snapshot from the response.
+Storage: `{$wpdb->prefix}openstation_presence`, one row per user with atomic timestamp merges. The legacy `_desktop_mode_presence` option is retained for recovery; see `docs/migration-presence-storage.md`. The WordPress Heartbeat handler in `includes/presence.php` records bumps at priority 5; the framework client (`src/presence/index.ts`) sends `openstation_presence_active: true` + `openstation_user_active: <bool>` on every tick and ingests the snapshot from the response.
 
 Public surface, see `docs/javascript-reference.md` (`wp.os.presence`), `docs/hooks-reference.md` (filters / actions), and `docs/examples/presence.md` (recipe). Plugins with a faster delivery channel (an SSE stream, a WebSocket) can push updates straight into the framework store via `wp.os.presence.applyBatch()`.
 
@@ -381,6 +381,7 @@ The full index lives in [`docs/README.md`](docs/README.md). Quick reference:
 | `docs/README.md` | Top-level index + status legend. |
 | `docs/getting-started.md` | The minimum-viable plugin skeleton or bootstrap hook names change. |
 | `docs/architecture.md` | A new rendering path, persistence layer, REST route, or payload shape lands; build tooling shifts. |
+| `docs/data-model.md` | A table, post type, meta key, option, transient, upload directory or cron hook is added, renamed or removed. **The inventory of every stored name lives there**; a new store without a row on that page is invisible to the next person asking "where does X live?". Read before touching a `desktop_mode_*` value (they are frozen, see above). |
 | `docs/api-index.md` | Any public API surface changes (PHP, JS, or events). |
 | `docs/hooks-reference.md` | Any `apply_filters()` / `do_action()` change: add, rename, remove, signature, default, or status. **The PHP hook contract.** |
 | `docs/javascript-reference.md` | Any CustomEvent shape, postMessage bridge message, `wp.os.*` method/property, user meta key, or query flag changes. **The JS contract.** |

@@ -315,4 +315,20 @@ class Tests_OpenStation_FileShares extends WP_UnitTestCase {
 		$this->assertSame( $share_id, $again );
 		$this->assertSame( 'pending', openstation_files_get_share( $share_id )['state'] );
 	}
+	/** @covers ::openstation_stored_file_share_accept */
+	public function test_accept_can_retry_when_placement_lock_was_busy() {
+		$file_id = $this->make_stored_file( self::$owner_id );
+		$share_id = openstation_stored_file_share_invite( $file_id, self::$owner_id, self::$recipient_id );
+		$filter = static function ( $sql ) { return false !== strpos( $sql, 'SELECT GET_LOCK' ) ? 'SELECT 0' : $sql; };
+		add_filter( 'query', $filter );
+		try { $failed = openstation_stored_file_share_accept( $share_id, self::$recipient_id ); } finally { remove_filter( 'query', $filter ); }
+		$this->assertWPError( $failed );
+		$this->assertSame( 'openstation_storage_busy', $failed->get_error_code() );
+		$next = openstation_stored_file_share_accept( $share_id, self::$recipient_id );
+		$this->assertSame( 'accepted', $next['state'] );
+		$this->assertCount( 1, openstation_files_get_for_user_folder( self::$recipient_id, 0 ) );
+		openstation_stored_file_share_accept( $share_id, self::$recipient_id );
+		$this->assertCount( 1, openstation_files_get_for_user_folder( self::$recipient_id, 0 ) );
+	}
+
 }

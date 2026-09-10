@@ -33,7 +33,9 @@ desktops and session (one per admin, see Storage scoping). Switching
 site is a navigation to that site's shell, animated by the
 cross-document view transition the shell's stylesheet opts into
 (`assets/css/desktop.css`; same-origin only, and reduced motion swaps
-instantly). Nothing is emulated: the site's shell is the site's shell.
+instantly). Nothing is emulated: the site's shell is the site's shell. Installs that
+live elsewhere join the same switcher through an OpenStation network;
+see [network.md](./network.md).
 
 **The site switcher** is a row above the desktop tiles in overview: an
 `<os-segmented>` naming the Network Admin (with `manage_network`) and
@@ -52,8 +54,23 @@ the user's own sites (`get_blogs_of_user()`, minus the archived, spam and
 deleted) and, for a super admin, who can reach every site whether or not
 they are a member, the network's sites by path up to the first 20, all
 through the `openstation_multisite_sites` filter, which is where a large
-network picks its own set. Pinned by `tests/vitest/site-switcher.test.ts`
-and `Tests_OpenStation_Multisite`.
+network picks its own set. An install that joined from elsewhere through
+an OpenStation network (`kind: 'member'` on its entry) is marked as
+**external**: a mark before its name, one line before the first of them,
+and a tooltip that says so, so the row reads as this network's own sites
+and then the ones that joined it. `switchToSite( multisite, value )` in
+the same module is the switch itself, the one a pick takes, and the shell
+also runs it for an app's `hop` effect (`$os->effects->add( 'hop',
+array( 'site' => $id ) )`, which is how the Network window's Open buttons
+switch); a value the row does not offer is ignored. **While the row is
+displayed, Tab moves to the next site and Shift+Tab to the previous**,
+wrapping at the ends, the same switch a pick takes
+(`installSiteSwitcherKeys()`); anywhere else, while a field is being
+typed in, and while focus is on another control of the top bar (a
+tile's rename, close or edit, the "+"), Tab stays the browser's, so
+those stay reachable by keyboard; a click on the switcher, or Shift+Tab
+back onto it, hands Tab back to the sites. Pinned by
+`tests/vitest/site-switcher.test.ts` and `Tests_OpenStation_Multisite`.
 
 **Every cross-admin click takes the same hop.** The Network Admin tile
 and its flyout rows, a site's "Dashboard" link in the network Sites list
@@ -127,11 +144,15 @@ stand in, since the directories share filenames that mean different
 things), and menu URLs, `currentPage` and `adminUrl`, which resolve
 through `self_admin_url()` rather than `admin_url()`.
 
-**Native windows are not offered there.** Every one OpenStation ships is
-site-scoped — Posts, Users and the rest read the current site's REST API
-— so a `users.php` tile meaning "everyone on the network" would have
-opened one site's user list. That server-side gate is also what disarms
-the client-side URL remaps there.
+**Site-scoped native windows are not offered there.** Every one
+OpenStation ships reads the current site's REST API — Posts, Users and
+the rest — so a `users.php` tile meaning "everyone on the network" would
+have opened one site's user list. A window says which admin offers it
+(`admin` in `openstation_register_window()`, `App::admin()` for an app:
+`site`, the default, `network`, or `any`), and the payload keeps the
+ones that belong (`openstation_native_window_offered_here()`); the
+Network app is the one that declares `network`. Dropping the site
+windows there is also what disarms the client-side URL remaps.
 
 ## The Network Admin dock tile
 
@@ -159,7 +180,9 @@ is said where the desks are, above their tiles, and nowhere else.
 ## Storage scoping
 
 OS settings, wallpaper, theme and accent are user meta, so network-wide;
-desktop files and folders are per-blog tables, so per site. **The session
+desktop files, folders and presence are per-blog tables, so per site. Presence
+uses the same user IDs independently in each site and is included in subsite
+table cleanup. **The session
 is per ADMIN, and that is the one that changed** — one per site, plus one
 of the network admin's own. See `openstation_session_meta_key()` for why,
 and for why the main site keeps the bare key. The network admin cannot

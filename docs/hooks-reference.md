@@ -1412,13 +1412,23 @@ The sites the overview's site switcher offers on a network: every site the user 
 apply_filters( 'openstation_multisite_sites', array $sites );
 ```
 
-Each entry: `id` (the blog id, as a string), `name`, `shellUrl` (that site's shell screen). Trim it on a large network, reorder it, or rename an entry; a site dropped here is not offered, though the admin bar still reaches it.
+Each entry: `id` (the blog id, as a string, or `member:<id>` for an install of an OpenStation network), `name`, `shellUrl` (that site's shell screen), `kind` (`local` for a site of this network, `member` for an install that joined from elsewhere, which the switcher marks as external). Trim it on a large network, reorder it, or rename an entry; a site dropped here is not offered, though the admin bar still reaches it.
 
 ```php
 add_filter( 'openstation_multisite_sites', function ( $sites ) {
     return array_slice( $sites, 0, 6 );
 } );
 ```
+
+### `openstation_network_request_url` — Experimental
+
+The URL one install of an OpenStation network reaches another by ([network.md](network.md)). The address a site is known by is not always the address its server can be reached at: an internal hostname behind a proxy, a container beside another container. Identity and pinned keys stay keyed by the public URL; only the wire address changes.
+
+```php
+apply_filters( 'openstation_network_request_url', string $url, string $base );
+```
+
+`$url` is the full request URL about to be made; `$base` is the install's public URL. `bin/wp-env-network-dev.sh` uses it to route two local wp-env instances through Docker's host gateway.
 
 ### `openstation_workspace_presets` — Stable
 
@@ -3216,7 +3226,11 @@ See [`docs/examples/recycle-bin.md`](./examples/recycle-bin.md) for end-to-end r
 
 ## Native Posts window
 
-`<os-table>`-driven native window that replaces the chromeless `edit.php` iframe. **Opt-in Beta** — fresh installs land on the classic iframe; users turn it on via **OpenStation Preferences → Features → Beta features → Use the native Posts window** (persisted as `OsSettingsState.nativePostsEnabled`, default `false`). The dock tile that points at `edit.php` is unchanged — every click path consults the URL → native-window remap registry first and falls back to the iframe on no-match. An [App Framework](./app-framework.md) app — `apps/posts/` — whose list is a `data()` over `openstation_app_rest_page( 'wp/v2/posts', … )` (so every REST field and the query-args filter below reach the rows exactly as they reached the old bundle), whose paging / filtering / sorting are its state, and whose "Move to trash" is a server action; the Categories mind map and the Tags cloud are its two canvases. The registration (title, size, config extra) is filterable through [`openstation_app_manifest`](#openstation_app_manifest--experimental-filter) for `$id === 'desktop-mode-posts'`. See [`examples/native-posts.md`](./examples/native-posts.md) for end-to-end recipes and [`migration-list-apps.md`](./migration-list-apps.md) for what the port removed.
+Native writing desk that replaces the chromeless `edit.php` iframe. Ruled note cards show titles, excerpts, publishing states, word counts, approved comment totals, tag counts and nearby Edit / Details actions; a companion inspector exposes the taxonomy pickers and extension fields. The Content view control opens the optional Details table. **Opt-in Beta** — fresh installs land on the classic iframe; users turn it on via **OpenStation Preferences → Features → Beta features → Use the native Posts window** (persisted as `OsSettingsState.nativePostsEnabled`, default `false`). The dock tile that points at `edit.php` is unchanged — every click path consults the URL → native-window remap registry first and falls back to the iframe on no-match. An [App Framework](./app-framework.md) app — `apps/posts/` — whose list is a `data()` over `openstation_app_rest_page( 'wp/v2/posts', … )` (so every REST field and the query-args filter below reach the rows exactly as they reached the old bundle), whose server paging / filtering / sorting are its state, and whose "Move to trash" is a server action; the Categories mind map and the Tags cloud are its two canvases. The registration (title, size, config extra) is filterable through [`openstation_app_manifest`](#openstation_app_manifest--experimental-filter) for `$id === 'desktop-mode-posts'`. See [`examples/native-posts.md`](./examples/native-posts.md) for end-to-end recipes and [`migration-list-apps.md`](./migration-list-apps.md) for what the port removed.
+
+Cards use continuous scrolling: the next server batch appends as the bottom approaches, with a retryable Load more control for keyboard access or request failures. Search and sort start a fresh collection. Selection spans the loaded cards; the optional Details table shares those rows and offers the same continuation control. A refresh after scrolling restarts at the first batch so earlier cards cannot retain stale edits. The `data-loaded` event still describes each server batch, while `ctx.table` and the selected-row methods expose the loaded collection. On phones, compact cards keep the actions visible and the additional filters live behind Options.
+
+Word counts read the complete rendered content through Core REST, and comment counts read the approved total from the comment collection header. Metrics load for cards near the viewport, with two cards in flight at most. A denied/unavailable metric stays unknown (`—`); no view counts are inferred without an analytics source.
 
 ### `openstation_posts_window_user_can_register` — Stable *(filter)*
 
@@ -3270,6 +3284,10 @@ Every JS hook below is also documented on `wp.hooks` so plugins can register wit
 | `openstation.postsWindow.opened` | action | — | `( ctx: PostsWindowContext )` — fired after the first paint with a populated table. |
 | `openstation.postsWindow.dataLoaded` | action | — | `( payload: { items, total, totalPages, page } )` — fired after every successful refresh. |
 
+The writing desk and Pages directory share selection with the mounted `<os-table>`; `ctx.table` remains populated even when the table view is hidden. Bulk actions stay below the scrollable workspace and appear only with a selection. The inspector uses independent render instances of visible columns other than Title, Author and Date; column renderers should create a node per invocation rather than returning a singleton shared with the table. The Show columns preference also controls these inspector fields. Paging and sorting remain server-driven. Page parent labels use the current result page; an absent parent is identified by its ID rather than inferred from incomplete data.
+
+Categories and Tags keep their spatial canvases, with a Browse topics directory for keyboard navigation, name search, and finding topics with no posts. Selecting a directory entry invokes the same focus and post exploration as selecting it on the canvas.
+
 `PostsWindowContext`: `{ body, table, refresh(), getSelectedIds(), getSelectedRows(), getCurrentParams() }` — see [`apps/posts/parts/types.ts`](../apps/posts/parts/types.ts) for the full TypeScript surface.
 
 ### CustomEvents (same payloads as the hook-bus actions)
@@ -3315,6 +3333,10 @@ Returning `false` from `enabled` (or `matches`) lets the click fall through. An 
 ## Native Pages window
 
 Reuses the Posts app's parts (`apps/pages/` imports them from `apps/posts/parts/`; the config extra carries `mode: 'pages'` as the client-side discriminator) to replace the chromeless `edit.php?post_type=page` iframe — parent column, menu-order default sort, Template column, "Front page" / "Posts page" badges. Per-user opt-in Beta (default `false`) via OpenStation Preferences → Features → Beta features → `nativePagesEnabled`. The registration is filterable through [`openstation_app_manifest`](#openstation_app_manifest--experimental-filter) for `$id === 'desktop-mode-pages'`.
+
+The default directory presents pages as folded sheets, with the same continuous scrolling, selection and viewport-loaded content metrics as Posts. **Page atlas** is a separate, lazily mounted tab: it reads editable pages from the existing Core REST collection (up to 500, with an explicit partial-map notice), includes drafts and private pages the current user may access, and draws two distinct directed relationships: parent → child and hyperlinks in rendered page bodies. Global menus, external destinations, links to posts and destinations outside the loaded set are excluded. Connected families occupy separate layers with neighbor ordering to reduce crossings. Rounded connections follow reserved gutters around sheets; isolated pages sit alongside the families. Isolated pages remain visible. The atlas reads Core REST independently of the list's query-args filter.
+
+PixiJS renders the connections; each visible live sheet uses a real, passive, same-origin frontend iframe at a fixed 1440 × 900 viewport, scaled with CSS transforms. Camera zoom never changes the iframe's layout dimensions. At most six nearby previews are mounted at once, and previews outside the viewport are released. Pan, wheel/pinch zoom, Fit all, connection filters and a searchable keyboard-accessible directory provide navigation; reduced motion makes focus transitions immediate. Closing the app cancels loads and destroys only its own renderer and previews. No new REST routes or PHP registration contracts are introduced.
 
 ### `openstation_pages_window_user_can_register` — Stable *(filter)*
 
@@ -3579,6 +3601,30 @@ Fires after the Comments AI moderation toggle is changed via `POST /desktop-mode
 ## Native Users window
 
 Replaces the chromeless `users.php` iframe: role filter, bulk role change / delete / remove, "Add new user" form, per-row quick actions, and a Profile tab. An [App Framework](./app-framework.md) app — `apps/users/` — whose list is a `data()` over `openstation_app_rest_page( 'wp/v2/users', … )` and whose mutations (`bulk-role`, `bulk-delete`, `send-reset`, `resend-welcome`, `create`) are server actions sharing one PHP function each with the REST routes below. Per-user opt-in Beta (default `false`) via OpenStation Preferences → Features → Beta features → `nativeUsersEnabled`. UI-side gating is UX polish only — every action and route re-validates every capability and per-target permission before mutating anything. The registration (title, size, config extra) is filterable through [`openstation_app_manifest`](#openstation_app_manifest--experimental-filter) for `$id === 'desktop-mode-users'`. See [`migration-list-apps.md`](./migration-list-apps.md).
+
+The **People** directory uses permanent card checkboxes and a bottom action tray that appears only with a selection. Landscape member ID cards show a portrait, WordPress user number, joining date, email, presence, roles, published post/page counts, approved comment totals and the last recorded sign-in. An Actions dropdown provides profile and permitted account-email actions without expanding the card. A missing login is shown as unrecorded. Search, sort and the role filter are server state (`role` is a role slug, or `none` for accounts without a role on this site, as `users.php?role=none` spells it), so picking a role, or a group on the Roles tab, starts a fresh collection; continued scrolling appends batches. The presence filter applies to the loaded collection, with the scope stated explicitly. An optional details table retains the dense view.
+
+**Roles** reads complete current-site totals plus up to eight representative faces per role from `GET /desktop-mode/v1/users/roles-summary`, independently of directory pagination, search and presence filters. There is no continuation button. Empty registered roles remain visible; a No role group appears when needed. Multi-role users appear in each applicable group; the header total counts each site member once. Opening the tab, Refresh, and user-change notifications renew the snapshot. **Activity** reads one complete server snapshot from `GET /desktop-mode/v1/users/activity-summary`. It is independent of directory pagination, search, role and presence filters and preserves those directory choices. A loading screen remains until the snapshot arrives; no profile-by-profile continuation is needed. Entering Activity, Refresh and user-change notifications renew the snapshot. Failed requests retain the last complete snapshot and offer Refresh. The overview includes: online/away presence, registrations and latest sign-ins within 30 days, contributors, all-time post/page/comment totals, switchable contribution leaders, eight weekly registration buckets, new accounts, and latest recorded sign-ins. Missing counts and sign-in records remain explicit; presence is a refresh-time snapshot, and registration means account creation (not necessarily joining this site on multisite). It is not an audit history. Existing profile, creation, account emails and bulk actions retain their capability gates and confirmations.
+
+### `openstation_users_window_roles_summary` — Experimental *(filter)*
+
+```php
+apply_filters( 'openstation_users_window_roles_summary', array $summary ): array
+```
+
+The authenticated role summary: `{ total: int, groups: [{ role: string, label: string, total: int, members: [{ id, name, slug, roles, avatar_urls }] }] }`. Each group's total covers all matching current-site accounts; `members` contains at most eight, ordered by display name then ID. Consumers extending this filter should preserve that bound. Samples carry no email, credential fields or implied presence state.
+
+The matching read-only REST route requires `list_users` in both its permission callback and the reader. Cookie authentication uses the standard REST nonce. Counts and samples use one SQL statement composed of one conditional aggregate over the site members and derived-table sample branches, a shape that parses on MySQL, MariaDB and SQLite alike; all values use `$wpdb->prepare()`, serialized role-key patterns additionally use `$wpdb->esc_like()`, and table identifiers come exclusively from `$wpdb`. Multisite membership and roles use the current blog's capabilities key. This site-wide summary is independent of `openstation_users_window_query_args`, which continues to scope the directory collection. The summary filter runs only after the permission gate.
+
+### `openstation_users_window_activity_summary` — Experimental *(filter)*
+
+```php
+apply_filters( 'openstation_users_window_activity_summary', array $summary ): array
+```
+
+The complete current-site Activity snapshot. `total` and `known` count site members; `totals` contains published `posts`, published `pages`, and approved `comments`; `contributors`, `recent`, `active30`, `unrecorded`, `unknownPresence`, `onlineCount` and `awayCount` are population counts. `start`/`end` are UTC Unix seconds delimiting eight weekly registration buckets (`weeks`, eight single-value arrays). Samples are bounded: six members each in `online`, `away` and `logins`, four in `registered`, and six per kind in `leaders.posts`, `leaders.pages` and `leaders.comments`. Profile samples contain IDs, names, slugs, roles, avatars, registration time, latest login, presence and content counts, without email or credential fields. Preserve these bounds when extending the payload.
+
+The reader and read-only REST route both require `list_users`; cookie authentication uses the REST nonce. The endpoint reduces compact site-member facts once, with grouped content and login joins, then hydrates only sampled profiles. Work and temporary server memory grow with site membership; the response size and number of browser requests remain bounded. It uses the current site's capabilities key on multisite and is independent of `openstation_users_window_query_args`. The filter runs after the permission gate and successful database read. `recent` counts account registrations within 30 days, `active30` counts members whose latest recorded login falls within 30 days; neither is an event log.
 
 ### `openstation_users_window_user_can_register` — Stable *(filter)*
 
@@ -4387,8 +4433,9 @@ The recent-traffic hormone (drives the wind — canopy sway amplitude and freque
 ## Presence
 
 Framework-level presence tracking. Storage in
-`_desktop_mode_presence` (autoload=false, single row keyed by user
-id). The WordPress Heartbeat carries the bumps + visibility
+`{$wpdb->prefix}openstation_presence`, one row per user with atomic
+timestamp merges. The legacy option is retained for recovery; see
+[migration and rollback](./migration-presence-storage.md). The WordPress Heartbeat carries the bumps + visibility
 snapshot; the JS API at `wp.os.presence.*` fans out to
 plugin code. See [`examples/presence.md`](./examples/presence.md)
 for a copy-pasteable recipe.
@@ -4430,6 +4477,11 @@ do_action( 'openstation_presence_changed',  $user_id, $new_status, $old_status )
 - **`openstation_presence_changed`** — fires only on real status
   transitions (`online ↔ inactive ↔ offline`). The right hook
   for "user came online → notify a slack channel" type work.
+
+The recorded/changed actions retain their signatures. A rejected write does not
+announce success; `openstation_presence_record()` returns false on storage failure
+as well as invalid IDs or tracking vetoes. Events report transitions observed by
+the current request; concurrent requests do not provide exactly-once delivery.
 
 ### PHP helpers
 
@@ -4897,6 +4949,7 @@ All Experimental.
 | `openstation_stored_file_uploaded` | `( int $file_id, int $placement_id, int $user_id )` | After a full upload lands (bytes + row + placement). |
 | `openstation_stored_file_renamed` | `( int $file_id, string $new_name, string $old_name )` | After a display-name rename. |
 | `openstation_stored_file_deleted` | `( int $file_id, array $row )` | After bytes + row are deleted. |
+| `openstation_stored_files_reconcile_failed` | `( WP_Error $error )` | **Experimental.** Cleanup could not complete an operation. Error code `openstation_reconcile_failed`; stages `orphan_rows`, `delete_row`, `known_bytes`, and `delete_bytes` stop the sweep after failed database/lock checks. Stages `unlink_row_bytes` and `unlink_bytes` report individual filesystem failures and allow later candidates to continue. No SQL or paths are included. |
 | `openstation_stored_file_downloaded` | `( int $file_id, int $user_id )` | Download audit — just before a file streams. |
 | `openstation_folder_zip_downloaded` | `( int $folder_id, int $user_id, int $count )` | Just before a folder zip streams. |
 | `openstation_stored_file_added_to_media` | `( int $attachment_id, int $file_id, int $user_id )` | After a stored file has been copied into the Media Library. Fires once per stored file — a repeat "Add" returns the existing attachment silently. |

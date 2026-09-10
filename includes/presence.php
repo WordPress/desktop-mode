@@ -18,9 +18,8 @@ defined( 'ABSPATH' ) || exit;
  *                    user activity within `_inactive_after`.
  *   - **offline**  — no Heartbeat in `_offline_after` (default 120s).
  *
- * Storage is a single autoload=false option (`_desktop_mode_presence`)
- * shaped `array<int user_id, array{ last_seen_ms, last_active_ms }>`.
- * Single-row keeps autoload happy and avoids per-user options.
+ * Storage uses a site-scoped table with one row per user.
+ * The legacy `_desktop_mode_presence` option is retained for recovery.
  *
  * **Public surface.** PHP helpers:
  *
@@ -60,28 +59,16 @@ defined( 'ABSPATH' ) || exit;
  */
 const OPENSTATION_PRESENCE_OPTION = '_desktop_mode_presence';
 
+require_once __DIR__ . '/presence-store.php';
+
 /**
- * Read the entire presence map. Single autoload=false option.
+ * Read the current site's presence map.
  *
  * @return array<int,array{last_seen_ms:int,last_active_ms:int}>
  */
 function openstation_presence_get_all() {
-	$raw = get_option( OPENSTATION_PRESENCE_OPTION, array() );
-	if ( ! is_array( $raw ) ) {
-		return array();
-	}
-	$out = array();
-	foreach ( $raw as $uid => $record ) {
-		$uid = (int) $uid;
-		if ( $uid <= 0 || ! is_array( $record ) ) {
-			continue;
-		}
-		$out[ $uid ] = array(
-			'last_seen_ms'   => isset( $record['last_seen_ms'] ) ? (int) $record['last_seen_ms'] : 0,
-			'last_active_ms' => isset( $record['last_active_ms'] ) ? (int) $record['last_active_ms'] : 0,
-		);
-	}
-	return $out;
+	$records = openstation_presence_read_records();
+	return is_wp_error( $records ) ? array() : $records;
 }
 
 /**
@@ -89,17 +76,11 @@ function openstation_presence_get_all() {
  * `$active` is true, also bumps `last_active_ms` (the user just
  * interacted, not just held a tab open).
  *
- * Cheap enough to call every Heartbeat tick: the option write is
- * throttled — a bump that neither transitions the computed status
- * nor moves a persisted timestamp by at least half the offline
- * threshold (capped at 60s) skips the `update_option()` call, so N
- * idle users no longer rewrite the shared row every tick. Persisted
- * timestamps can therefore lag real activity by up to the throttle
- * window — always well inside the offline threshold, so computed
- * statuses stay correct. Fires `openstation_presence_recorded` on
- * every call (with the fresh, un-throttled record) and
- * `openstation_presence_changed` only when the computed status moves
- * between `online | inactive | offline`.
+ * Writes are throttled unless status changes or a persisted timestamp is
+ * behind by half the offline threshold (capped at 60s). Each write atomically
+ * merges only this user's timestamps. Fires `openstation_presence_recorded`
+ * on every accepted bump, including throttled bumps, and
+ * `openstation_presence_changed` when this call observes a status transition.
  *
  * The `openstation_presence_can_track` filter is the per-user opt-out:
  * a plugin that hides specific accounts (compliance, "set yourself
@@ -108,12 +89,24 @@ function openstation_presence_get_all() {
  * @param int  $user_id User to record.
  * @param bool $active  Pass `true` when the heartbeat is paired with
  *                      explicit user activity (mousedown, keydown).
- * @return bool True if recorded; false if vetoed by filter or invalid id.
+ * @return bool True if accepted; false on invalid id, tracking veto or storage failure.
  */
 function openstation_presence_record( $user_id, $active = true ) {
+	return true === openstation_presence_record_result( $user_id, $active );
+}
+
+/**
+ * Record presence while preserving a distinct veto and storage failure result.
+ *
+ * @internal
+ * @param int  $user_id User to record.
+ * @param bool $active Whether this request carries activity.
+ * @return true|WP_Error
+ */
+function openstation_presence_record_result( $user_id, $active = true ) {
 	$user_id = (int) $user_id;
 	if ( $user_id <= 0 ) {
-		return false;
+		return new WP_Error( 'openstation_presence_invalid_user', __( 'A user id is required.', 'desktop-mode' ) );
 	}
 
 	/**
@@ -127,11 +120,14 @@ function openstation_presence_record( $user_id, $active = true ) {
 	 */
 	$can = (bool) apply_filters( 'openstation_presence_can_track', true, $user_id );
 	if ( ! $can ) {
-		return false;
+		return new WP_Error( 'openstation_presence_tracking_veto' );
 	}
 
-	$now_ms      = (int) round( microtime( true ) * 1000 );
-	$all         = openstation_presence_get_all();
+	$now_ms = (int) round( microtime( true ) * 1000 );
+	$all    = openstation_presence_read_records( $user_id );
+	if ( is_wp_error( $all ) ) {
+		return $all;
+	}
 	$prev        = isset( $all[ $user_id ] ) ? $all[ $user_id ] : array(
 		'last_seen_ms'   => 0,
 		'last_active_ms' => 0,
@@ -146,8 +142,17 @@ function openstation_presence_record( $user_id, $active = true ) {
 	$next_status = openstation_presence_status_from_record( $next );
 
 	if ( openstation_presence_should_persist( $all, $user_id, $prev, $prev_status, $next_status, $active, $now_ms ) ) {
-		$all[ $user_id ] = $next;
-		update_option( OPENSTATION_PRESENCE_OPTION, $all, false );
+		$write                   = $next;
+		$write['last_active_ms'] = $active ? $now_ms : 0;
+		if ( ! openstation_presence_write_record( $user_id, $write ) ) {
+			return new WP_Error( 'openstation_presence_write_failed', __( 'Could not save presence.', 'desktop-mode' ), array( 'status' => 503 ) );
+		}
+		$stored = openstation_presence_read_records( $user_id );
+		if ( is_wp_error( $stored ) ) {
+			return $stored;
+		}
+		$next        = $stored[ $user_id ] ?? $prev;
+		$next_status = openstation_presence_status_from_record( $next );
 	}
 
 	/**
@@ -179,10 +184,7 @@ function openstation_presence_record( $user_id, $active = true ) {
 /**
  * Decide whether a presence bump needs to hit the database.
  *
- * The presence map is a single shared option row: with N concurrent
- * users an unconditional write per Heartbeat tick means N full-row
- * rewrites (plus option-cache invalidations) every ~15s, almost all
- * of them recording no meaningful change. A bump must persist when:
+ * A bump must persist when:
  *
  *   - the user isn't in the map yet (first sighting),
  *   - the computed status transitioned (viewers must see it), or
@@ -275,7 +277,8 @@ function openstation_presence_status_from_record( $record ) {
  * @return string `online | inactive | offline`
  */
 function openstation_presence_status_for_user( $user_id ) {
-	$all    = openstation_presence_get_all();
+	$all    = openstation_presence_read_records( (int) $user_id );
+	$all    = is_wp_error( $all ) ? array() : $all;
 	$record = isset( $all[ (int) $user_id ] ) ? $all[ (int) $user_id ] : array();
 	return openstation_presence_status_from_record( (array) $record );
 }
@@ -358,24 +361,18 @@ function openstation_presence_visible_users( $candidate_user_ids, $viewer_id = 0
 
 /**
  * Daily cron: prune presence entries for users idle >14 days.
- * Keeps the option compact even on long-running sites.
+ * Deletes only rows still expired when the statement executes.
  */
 function openstation_presence_cron_prune() {
-	$all = openstation_presence_get_all();
-	if ( empty( $all ) ) {
+	global $wpdb;
+	// Do not rewrite the shared legacy map if migration is unavailable.
+	if ( ! openstation_presence_migrate_storage() ) {
 		return;
 	}
-	$threshold = (int) round( microtime( true ) * 1000 ) - ( 14 * DAY_IN_SECONDS * 1000 );
-	$pruned    = array();
-	foreach ( $all as $uid => $record ) {
-		if ( ( (int) $record['last_seen_ms'] ) < $threshold ) {
-			continue;
-		}
-		$pruned[ (int) $uid ] = $record;
-	}
-	if ( count( $pruned ) !== count( $all ) ) {
-		update_option( OPENSTATION_PRESENCE_OPTION, $pruned, false );
-	}
+	$table  = openstation_presence_table();
+	$cutoff = (int) round( microtime( true ) * 1000 ) - 14 * DAY_IN_SECONDS * 1000;
+	$wpdb->query( $wpdb->prepare( "DELETE FROM $table WHERE last_seen_ms < %d", $cutoff ) );
+	openstation_presence_invalidate_records();
 }
 add_action( 'desktop_mode_presence_daily_prune', 'openstation_presence_cron_prune' );
 
@@ -423,6 +420,7 @@ function openstation_presence_heartbeat_received( $response, $data ) {
 	$user_id     = (int) get_current_user_id();
 	$user_active = ! empty( $data['openstation_user_active'] );
 
+	openstation_presence_migration_tick();
 	openstation_presence_record( $user_id, $user_active );
 
 	// Snapshot the users this viewer is allowed to see — by default
@@ -488,6 +486,7 @@ add_action( 'rest_api_init', 'openstation_presence_register_rest_routes' );
  * visibility filter.
  */
 function openstation_presence_rest_get() {
+	openstation_presence_migration_tick();
 	$viewer_id = (int) get_current_user_id();
 	$all_ids   = array_keys( openstation_presence_get_all() );
 	$visible   = openstation_presence_visible_users( $all_ids, $viewer_id );
@@ -512,6 +511,7 @@ function openstation_presence_rest_get() {
  * the simplest "I'm here" call.
  */
 function openstation_presence_rest_post( WP_REST_Request $request ) {
+	openstation_presence_migration_tick();
 	$user_id  = (int) get_current_user_id();
 	$active   = $request->get_param( 'active' );
 	$inactive = (bool) $request->get_param( 'inactive' );
@@ -520,7 +520,10 @@ function openstation_presence_rest_post( WP_REST_Request $request ) {
 		// Set the user immediately to `inactive`: bump last_seen
 		// (still alive) but force last_active to zero (no recent
 		// interaction).
-		$all                   = openstation_presence_get_all();
+		$all = openstation_presence_read_records( $user_id );
+		if ( is_wp_error( $all ) ) {
+			return $all;
+		}
 		$rec                   = isset( $all[ $user_id ] ) ? $all[ $user_id ] : array(
 			'last_seen_ms'   => 0,
 			'last_active_ms' => 0,
@@ -528,8 +531,9 @@ function openstation_presence_rest_post( WP_REST_Request $request ) {
 		$prev_status           = openstation_presence_status_from_record( $rec );
 		$rec['last_seen_ms']   = (int) round( microtime( true ) * 1000 );
 		$rec['last_active_ms'] = 0;
-		$all[ $user_id ]       = $rec;
-		update_option( OPENSTATION_PRESENCE_OPTION, $all, false );
+		if ( ! openstation_presence_write_record( $user_id, $rec, true ) ) {
+			return new WP_Error( 'openstation_presence_write_failed', __( 'Could not save presence.', 'desktop-mode' ), array( 'status' => 503 ) );
+		}
 
 		$next_status = openstation_presence_status_from_record( $rec );
 		do_action( 'openstation_presence_recorded', $user_id, $rec );
@@ -537,8 +541,11 @@ function openstation_presence_rest_post( WP_REST_Request $request ) {
 			do_action( 'openstation_presence_changed', $user_id, $next_status, $prev_status );
 		}
 	} else {
-		$flag = ( null === $active ) ? true : (bool) $active;
-		openstation_presence_record( $user_id, $flag );
+		$flag   = ( null === $active ) ? true : (bool) $active;
+		$result = openstation_presence_record_result( $user_id, $flag );
+		if ( is_wp_error( $result ) && 'openstation_presence_tracking_veto' !== $result->get_error_code() ) {
+			return $result;
+		}
 	}
 
 	return rest_ensure_response( array( 'ok' => true ) );

@@ -100,11 +100,7 @@ export function pluginActionButtons(
 			const btn = button(
 				updating
 					? __( 'Updating…', 'desktop-mode' )
-					: sprintf(
-						/* translators: %s: new plugin version (e.g. "1.4.2") */
-						__( 'Update to %s', 'desktop-mode' ),
-						update.new_version ?? '',
-					),
+					: __( 'Update', 'desktop-mode' ),
 				'primary',
 				size,
 			);
@@ -128,14 +124,14 @@ export function pluginActionButtons(
 			out.push( hint );
 		}
 	}
-	if ( can.activate ) {
+	if ( host.extra.caps.activate && can.activate ) {
 		const btn = button( __( 'Activate', 'desktop-mode' ), 'primary', size );
 		btn.addEventListener( 'click', ( e ) => {
 			e.stopPropagation();
 			void runOptimistic( host, row, 'active', () => activatePlugin( host, row ) ).then( done( 'activate' ) );
 		} );
 		out.push( btn );
-	} else if ( can.deactivate ) {
+	} else if ( host.extra.caps.activate && can.deactivate ) {
 		const btn = button( __( 'Deactivate', 'desktop-mode' ), 'secondary', size );
 		btn.addEventListener( 'click', ( e ) => {
 			e.stopPropagation();
@@ -143,7 +139,7 @@ export function pluginActionButtons(
 		} );
 		out.push( btn );
 	}
-	if ( can.delete ) {
+	if ( host.extra.caps.delete && can.delete ) {
 		const btn = button( __( 'Delete', 'desktop-mode' ), 'danger', size );
 		btn.addEventListener( 'click', ( e ) => {
 			e.stopPropagation();
@@ -311,7 +307,7 @@ export function bulkButtons( host: PluginsHost, selectedIds: string[], clear: ()
 		}
 	}
 	if ( caps.activate ) {
-		const activatable = selected.filter( ( r ) => r.status === 'inactive' );
+		const activatable = selected.filter( ( r ) => r.status === 'inactive' && canManage( r ).activate );
 		if ( activatable.length > 0 ) {
 			out.push( {
 				label: __( 'Activate', 'desktop-mode' ),
@@ -319,7 +315,7 @@ export function bulkButtons( host: PluginsHost, selectedIds: string[], clear: ()
 				run: () => void runBulk( host, activatable, 'activate' ).then( clear ),
 			} );
 		}
-		const deactivatable = selected.filter( ( r ) => isActiveStatus( r.status ) );
+		const deactivatable = selected.filter( ( r ) => isActiveStatus( r.status ) && canManage( r ).deactivate );
 		if ( deactivatable.length > 0 ) {
 			out.push( {
 				label: __( 'Deactivate', 'desktop-mode' ),
@@ -329,7 +325,7 @@ export function bulkButtons( host: PluginsHost, selectedIds: string[], clear: ()
 		}
 	}
 	if ( caps.delete ) {
-		const deletable = selected.filter( ( r ) => r.status === 'inactive' );
+		const deletable = selected.filter( ( r ) => r.status === 'inactive' && canManage( r ).delete );
 		if ( deletable.length > 0 ) {
 			out.push( {
 				label: __( 'Delete', 'desktop-mode' ),

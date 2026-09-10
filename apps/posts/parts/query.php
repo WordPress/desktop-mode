@@ -68,16 +68,17 @@ function openstation_posts_window_default_query_args() {
  */
 function openstation_posts_app_state( $orderby = 'date', $order = 'desc' ) {
 	return array(
-		'page'    => 1,
-		'perPage' => 20,
-		'search'  => '',
+		'page'       => 1,
+		'feedAppend' => false,
+		'perPage'    => 20,
+		'search'     => '',
 		// `''` is the "All" sentinel — sent as `status=any`.
-		'status'  => '',
-		'orderby' => (string) $orderby,
-		'order'   => (string) $order,
+		'status'     => '',
+		'orderby'    => (string) $orderby,
+		'order'      => (string) $order,
 		// Author user ids and tag term ids to filter by; empty = no filter.
-		'author'  => array(),
-		'tag'     => array(),
+		'author'     => array(),
+		'tag'        => array(),
 	);
 }
 
@@ -183,10 +184,9 @@ function openstation_posts_app_query( array $defaults, State $state ) {
 }
 
 /**
- * The client data: the current page of rows as the paged-list
- * envelope (plus `error`), with the "page out of range → page 1"
- * recovery the legacy bundle did client-side (the typical case is
- * the user on page 7 changing per-page from 10 to 100).
+ * The client data: a continuation page or a refreshed loaded prefix,
+ * with a query identity for rejecting stale responses. Out-of-range
+ * continuations recover to page one; failed refreshes retain paging.
  *
  * @param string              $route    `wp/v2/posts` | `wp/v2/pages`.
  * @param array<string,mixed> $defaults Filtered default args.
@@ -194,8 +194,41 @@ function openstation_posts_app_query( array $defaults, State $state ) {
  * @return array<string,mixed> `list`.
  */
 function openstation_posts_app_data( $route, array $defaults, State $state ) {
-	$query = openstation_posts_app_query( $defaults, $state );
-	$list  = openstation_app_rest_page( $route, $query );
+	$query  = openstation_posts_app_query( $defaults, $state );
+	$append = (bool) $state->get( 'feedAppend' );
+	$state->set( 'feedAppend', false );
+	// Refresh the loaded prefix in one HTTP response. Core still enforces
+	// permissions, query filters and its 100-row bound for each internal batch.
+	if ( ! $append && $query['page'] > 1 ) {
+		$wanted              = $query['page'] * $query['per_page'];
+		$refresh             = $query;
+		$refresh['page']     = 1;
+		$refresh['per_page'] = min( 100, $wanted );
+		$list                = openstation_app_rest_page( $route, $refresh );
+		$wanted              = min( $wanted, $list['total'] );
+		$received            = count( $list['items'] );
+		while ( empty( $list['error'] ) && $received < $wanted ) {
+			++$refresh['page'];
+			$batch = openstation_app_rest_page( $route, $refresh );
+			if ( ! empty( $batch['error'] ) ) {
+				$list = $batch;
+				break;
+			}
+			if ( empty( $batch['items'] ) ) {
+				break;
+			}
+			$list['items'] = array_merge( $list['items'], $batch['items'] );
+			$received      = count( $list['items'] );
+		}
+		$list['items']   = array_slice( $list['items'], 0, $wanted );
+		$list['perPage'] = $query['per_page'];
+		$list['pages']   = (int) ceil( $list['total'] / $query['per_page'] );
+		$list['page']    = empty( $list['error'] ) ? min( $query['page'], max( 1, $list['pages'] ) ) : $query['page'];
+		$state->set( 'page', $list['page'] );
+		$list['replace'] = true;
+	} else {
+		$list = openstation_app_rest_page( $route, $query );
+	}
 	// A page past the end — Core's `rest_post_invalid_page_number`
 	// refusal, or an empty page on a controller that tolerates it —
 	// lands on page 1 silently rather than render an empty table. A
@@ -211,7 +244,14 @@ function openstation_posts_app_data( $route, array $defaults, State $state ) {
 		// envelope floors `pages` at 1, so hand the client the truth.
 		$list['pages'] = 0;
 	}
-	return array( 'list' => $list );
+	$identity = array();
+	foreach ( array( 'search', 'status', 'orderby', 'order', 'author', 'tag', 'perPage' ) as $key ) {
+		$identity[ $key ] = $state->get( $key );
+	}
+	return array(
+		'list'  => $list,
+		'query' => $identity,
+	);
 }
 
 /**
@@ -234,6 +274,7 @@ function openstation_posts_app_filter( State $state ) {
  */
 function openstation_posts_app_page( State $state, array $args ) {
 	$state->set( 'page', max( 1, isset( $args['page'] ) ? (int) $args['page'] : 1 ) );
+	$state->set( 'feedAppend', true );
 }
 
 /**
@@ -254,6 +295,7 @@ function openstation_posts_app_sort( State $state, array $args, $default_orderby
 		$orderby = (string) $default_orderby;
 	}
 	$order = isset( $args['order'] ) ? strtolower( (string) $args['order'] ) : (string) $default_order;
+	$state->set( 'page', 1 );
 	$state->set( 'orderby', $orderby );
 	$state->set( 'order', 'asc' === $order ? 'asc' : 'desc' );
 }

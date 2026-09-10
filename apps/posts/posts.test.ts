@@ -162,7 +162,7 @@ describe( 'the frame', () => {
 		expect( summary( root ) ).toBe( '' );
 
 		const settled = mount( {}, data( [] ) );
-		expect( summary( settled.root ) ).toBe( 'No posts' );
+		expect( settled.root.querySelector( '.os-posts-desk__empty h3' )?.textContent ).toBe( 'No posts found.' );
 	} );
 
 	it( 'paints the tabs, the toolbar bound to filter, the table and the pager', () => {
@@ -180,16 +180,15 @@ describe( 'the frame', () => {
 		expect( search.getAttribute( 'placeholder' ) ).toBe( 'Search posts…' );
 		expect( root.querySelector( '[data-os-posts-refresh]' )!.getAttribute( 'os-action' ) ).toBe( 'refresh' );
 		expect( root.querySelector( '[data-os-posts-table]' )!.hasAttribute( 'os-preserve' ) ).toBe( true );
-		expect( root.querySelector( '.os-app-list__pager-meta' )!.textContent!.trim() ).toBe( 'Page 1 of 1 · 2 posts' );
+		expect( root.querySelector( '.os-app-list__pager' ) ).toBeNull();
+		expect( root.querySelector( '[data-content-feed-end]' )?.textContent ).toContain( 'caught up' );
 		expect( root.querySelector( '[data-os-posts-cats-host]' )!.hasAttribute( 'os-preserve' ) ).toBe( true );
 	} );
 
-	it( 'says "No posts" for an empty page and disables both pager buttons', () => {
+	it( 'shows an empty state without pagination when the collection is empty', () => {
 		const { root } = mount( {}, data( [] ) );
-		expect( root.querySelector( '.os-app-list__pager-meta' )!.textContent!.trim() ).toBe( 'No posts' );
-		const buttons = root.querySelectorAll( '.os-app-list__pager-nav os-button' );
-		expect( buttons[ 0 ].hasAttribute( 'disabled' ) ).toBe( true );
-		expect( buttons[ 1 ].hasAttribute( 'disabled' ) ).toBe( true );
+		expect( root.querySelector( '.os-posts-desk__empty h3' )?.textContent ).toBe( 'No posts found.' );
+		expect( root.querySelector( '.os-app-list__pager' ) ).toBeNull();
 	} );
 
 	it( 'Add New opens the editor URL in a window with the post copy', () => {
@@ -198,10 +197,10 @@ describe( 'the frame', () => {
 		expect( ctx.host.openUrl ).toHaveBeenCalledWith( 'http://x.test/wp-admin/post-new.php', 'Add New Post', 'dashicons-admin-post' );
 	} );
 
-	it( 'keeps the bulk bar in the toolbar on a desk and moves it to a footer on a phone', () => {
+	it( 'anchors the bulk bar below the workspace on desktop and phone', () => {
 		const desk = mount();
-		expect( desk.root.querySelector( '.os-app-list__toolbar [data-os-posts-bulk]' ) ).not.toBeNull();
-		expect( desk.root.querySelector( '.os-app-list__bulk--footer' ) ).toBeNull();
+		expect( desk.root.querySelector( '.os-app-list__toolbar [data-os-posts-bulk]' ) ).toBeNull();
+		expect( desk.root.querySelector( '.os-app-list__bulk--footer' ) ).not.toBeNull();
 		document.documentElement.setAttribute( 'data-os-mode', 'mobile' );
 		const phone = mount();
 		expect( phone.root.querySelector( '.os-app-list__toolbar [data-os-posts-bulk]' ) ).toBeNull();
@@ -271,6 +270,8 @@ describe( 'mounted and updated', () => {
 		const context = ( opened.mock.calls[ 0 ][ 0 ] as CustomEvent< PostsWindowContext > ).detail;
 		expect( context.table ).toBe( table() );
 		expect( context.getCurrentParams() ).toMatchObject( { page: 1, perPage: 20, orderby: 'date' } );
+		Object.assign( ctx, { state: state( { page: 2, search: 'updated' } ) } );
+		expect( context.getCurrentParams() ).toMatchObject( { page: 2, search: 'updated' } );
 		expect( ( window as unknown as { wp: { hooks: { doAction: ReturnType< typeof vi.fn > } } } ).wp.hooks.doAction ).toHaveBeenCalledWith( 'openstation.postsWindow.opened', context );
 		expect( ( window as unknown as { wp: { hooks: { doAction: ReturnType< typeof vi.fn > } } } ).wp.hooks.doAction ).toHaveBeenCalledWith(
 			'openstation.postsWindow.dataLoaded',
@@ -614,5 +615,104 @@ describe( 'the REST client', () => {
 		const res = await client.fetchTermPosts( 'tags', 5, 1, 10 );
 		expect( String( ( fetch.mock.calls[ 0 ] as unknown as [ string ] )[ 0 ] ) ).toContain( 'tags=5' );
 		expect( res ).toEqual( { items: [ { id: 1, title: 'A <b>b</b>' } ], totalPages: 2, total: 12 } );
+	} );
+} );
+
+describe( 'the writing desk', () => {
+	it.each( [ 'posts', 'pages' ] as const )( 'copies the %s card ID without selecting or opening the content', async ( mode ) => {
+		const writeText = vi.fn( async () => undefined );
+		Object.defineProperty( navigator, 'clipboard', { value: { writeText }, configurable: true } );
+		const { root, ctx, table } = mount( {}, data( [ row( 123 ) ] ), { mode } );
+		await flush();
+		const chip = root.querySelector< HTMLElement >( '.os-posts-desk__id' )!;
+		expect( chip.textContent ).toContain( '#123' );
+		expect( chip.getAttribute( 'title' ) ).toBe( `Copy ${ mode === 'pages' ? 'page' : 'post' } ID 123` );
+		chip.shadowRoot!.querySelector( 'button' )!.click();
+		await flush();
+		expect( writeText ).toHaveBeenCalledWith( '123' );
+		expect( ctx.host.toast ).toHaveBeenCalledWith( { message: `Copied ${ mode === 'pages' ? 'page' : 'post' } ID #123.` } );
+		expect( ctx.host.openUrl ).not.toHaveBeenCalled();
+		expect( Array.from( table().selection ?? [] ) ).toEqual( [] );
+	} );
+
+	it( 'reports a failed ID copy honestly', async () => {
+		Object.defineProperty( navigator, 'clipboard', { value: undefined, configurable: true } );
+		const { root, ctx } = mount();
+		root.querySelector< HTMLElement >( '.os-posts-desk__id' )!.click();
+		await flush();
+		expect( ctx.host.toast ).toHaveBeenCalledWith( { message: 'Couldn’t copy the ID. Please try again.' } );
+	} );
+
+	it( 'starts with story previews and keeps the extension table populated', () => {
+		const { root, table } = mount( {}, data( [ row( 1, { excerpt: { rendered: '<p>A &amp; B <strong>story</strong></p>' } } ) ] ) );
+		expect( root.querySelector( '.os-posts-desk__workspace' )?.hasAttribute( 'hidden' ) ).toBe( false );
+		expect( root.querySelector( '[data-os-posts-body]' )?.hasAttribute( 'hidden' ) ).toBe( true );
+		expect( table().data?.map( ( item ) => item.id ) ).toEqual( [ 1 ] );
+		expect( root.querySelector( '.os-posts-desk__excerpt' )?.textContent ).toBe( 'A & B story' );
+		expect( root.querySelector( '.os-posts-desk__excerpt strong' ) ).toBeNull();
+		expect( root.querySelector( 'style' )?.textContent ).toContain( '.os-posts-desk__workspace' );
+	} );
+
+	it( 'shares selection and bulk actions across the desk and details table', async () => {
+		const { root, table } = mount();
+		await flush();
+		const box = root.querySelector( '[data-story-id="2"] os-checkbox' )!;
+		expect( box.shadowRoot?.querySelector( 'input' )?.getAttribute( 'aria-label' ) ).toBe( 'Select Row 2' );
+		box.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		expect( Array.from( table().selection ?? [] ) ).toEqual( [ 2 ] );
+		expect( root.querySelector( '[data-os-posts-bulk]' )?.hasAttribute( 'hidden' ) ).toBe( false );
+		root.querySelector( '[data-os-posts-view]' )!.dispatchEvent( new CustomEvent( 'os-pick', { detail: { value: 'table' } } ) );
+		expect( root.querySelector( '[data-os-posts-body]' )?.hasAttribute( 'hidden' ) ).toBe( false );
+		expect( root.querySelector( '.os-posts-desk__workspace' )?.hasAttribute( 'hidden' ) ).toBe( true );
+		expect( Array.from( table().selection ?? [] ) ).toEqual( [ 2 ] );
+	} );
+
+	it( 'shows the chosen story and returns focus after closing details', async () => {
+		const { root, ctx } = mount();
+		( root.querySelector( '[data-inspect-id="2"]' ) as HTMLElement ).click();
+		await flush();
+		expect( root.querySelector( '.os-posts-desk__inspector h2' )?.textContent ).toBe( 'Row 2' );
+		expect( root.querySelector( '.os-posts-desk__inspector.is-open' ) ).not.toBeNull();
+		expect( root.ownerDocument.activeElement ).toBe( root.querySelector( '[data-os-posts-inspect-close]' ) );
+		( root.querySelector( '.os-posts-desk__inspector-actions os-button' ) as HTMLElement ).click();
+		expect( ctx.host.openUrl ).toHaveBeenCalledWith( 'http://x.test/wp-admin/post.php?post=2&action=edit', 'Row 2', 'dashicons-admin-post' );
+		( root.querySelector( '[data-os-posts-inspect-close]' ) as HTMLElement ).click();
+		await flush();
+		expect( root.querySelector( '.os-posts-desk__inspector.is-open' ) ).toBeNull();
+		expect( root.ownerDocument.activeElement ).toBe( root.querySelector( '[data-inspect-id="2"]' ) );
+	} );
+
+	it( 'drops hidden selections when the server query changes and keeps details current', async () => {
+		const { root, ctx, table } = mount();
+		root.querySelector( '[data-story-id="2"] os-checkbox' )!.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		ctx.state.search = 'Row 1';
+		( ctx as { data: ListData } ).data = data( [ row( 1 ) ] );
+		ctx.repaint();
+		await flush();
+		expect( Array.from( table().selection ?? [] ) ).toEqual( [] );
+		expect( root.querySelectorAll( '[data-story-id]' ) ).toHaveLength( 1 );
+		expect( root.querySelector( '[data-os-posts-bulk]' )?.hasAttribute( 'hidden' ) ).toBe( true );
+	} );
+
+	it( 'sorts through the existing server action', () => {
+		const { root, dispatch } = mount();
+		root.querySelector( '.os-posts-desk__tools os-select' )!.dispatchEvent( new CustomEvent( 'os-pick', { detail: { value: 'modified:desc' } } ) );
+		expect( dispatch ).toHaveBeenCalledWith( 'sort', { orderby: 'modified', order: 'desc' } );
+	} );
+
+	it( 'renders extension fields into a separate inspector node', () => {
+		window.wp!.hooks!.applyFilters = ( name: string, value: unknown ) => name === 'openstation.postsWindow.columns' ? [ ...( value as unknown[] ), {
+			key: 'review', label: 'Editorial review', render: () => {
+				const el = document.createElement( 'span' ); el.textContent = 'Ready'; return el;
+			},
+		} ] : value;
+		const { root, ctx } = mount();
+		expect( root.querySelector( '[data-detail-field="review"]' ) ).toBeNull();
+		( root.querySelector( '[data-inspect-id]' ) as HTMLElement ).click();
+		const field = root.querySelector( '[data-detail-field="review"]' );
+		expect( field?.textContent ).toContain( 'Ready' );
+		ctx.repaint();
+		expect( root.querySelector( '[data-detail-field="review"]' ) ).toBe( field );
+		expect( field?.textContent ).toContain( 'Ready' );
 	} );
 } );

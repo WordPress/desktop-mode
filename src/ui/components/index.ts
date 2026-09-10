@@ -27,6 +27,7 @@ export { OsSwitch } from './os-switch/os-switch';
 export { OsToast, OsToastContainer } from './os-toast/os-toast';
 export { OsTabs, OsTab, OsTabPanel } from './os-tabs/os-tabs';
 export { OsWindowButton } from './os-window-button/os-window-button';
+export { OsActionMenu } from './os-action-menu/os-action-menu';
 export { OsMenu, OsMenuItem } from './os-menu/os-menu';
 export { OsContextMenu, OsContextMenuOption } from './os-context-menu/os-context-menu';
 export { OsConfirmDialog, osConfirm } from './os-confirm-dialog/os-confirm-dialog';

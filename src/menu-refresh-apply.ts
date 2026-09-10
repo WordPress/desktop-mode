@@ -34,6 +34,7 @@ import type {
 	NativeWindowScriptData,
 	NativeWindowServerEntry,
 	NativeWindowWireEntry,
+	MultisiteConfig,
 } from './types';
 import { hydrateServerEntries } from './native-windows';
 import { applyServerWindowNotices } from './window-notices-server-sync';
@@ -60,6 +61,8 @@ export interface MenuRefreshPayload {
 	serverDesktopThemes?: unknown;
 	desktopIcons?: unknown;
 	updateCounts?: unknown;
+	/** The site switcher's rows on a network, null elsewhere; absent in an older payload. */
+	multisite?: unknown;
 }
 
 /** Dependencies the applier needs from the shell. */
@@ -105,6 +108,12 @@ export interface MenuRefreshDeps {
 		scripts: DesktopDockRailRendererScriptServerEntry[],
 	) => Promise< void >;
 	syncServerGames: ( list: DesktopGameServerEntry[] ) => Promise< void >;
+	/**
+	 * Take the multisite block a fresh payload carries — the site
+	 * switcher's rows — so the row above overview's tiles follows the
+	 * network registry. `null` means this shell has no network.
+	 */
+	applyMultisite?: ( block: MultisiteConfig | null ) => void;
 	/**
 	 * Reconcile the desktop-theme library against a fresh payload.
 	 * Synchronous — themes carry no script to load.
@@ -247,6 +256,7 @@ export function createApplyPayload(
 		applyDesktopIcons,
 		refreshRootPlacements,
 		syncShortcuts,
+		applyMultisite,
 	} = deps;
 
 	/** Order-insensitive fingerprint of an icon list's ids. */
@@ -538,5 +548,13 @@ export function createApplyPayload(
 		// until a hard refresh (GH#296). Missing key (older payload)
 		// means "no change."
 		applyAdminBarUpdates( payload.updateCounts );
+
+		// The site switcher's rows. A Network app action (add, remove,
+		// join, leave, sync) spends a refresh so the row above overview's
+		// desktop tiles follows the registry without a reload. Missing
+		// key (older payload) means "no change"; null means no network.
+		if ( 'multisite' in payload ) {
+			applyMultisite?.( ( payload.multisite ?? null ) as MultisiteConfig | null );
+		}
 	};
 }

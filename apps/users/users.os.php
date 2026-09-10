@@ -34,6 +34,8 @@ require_once __DIR__ . '/parts/permissions.php';
 require_once __DIR__ . '/parts/login-tracker.php';
 require_once __DIR__ . '/parts/color-schemes.php';
 require_once __DIR__ . '/parts/fields.php';
+require_once __DIR__ . '/parts/roles-summary.php';
+require_once __DIR__ . '/parts/activity-summary.php';
 require_once __DIR__ . '/parts/facts.php';
 require_once __DIR__ . '/parts/rest.php';
 require_once __DIR__ . '/parts/profile-script.php';
@@ -56,6 +58,14 @@ function list_query( State $state ) {
 	$search            = trim( (string) $state->get( 'search' ) );
 	if ( '' !== $search ) {
 		$query['search'] = $search;
+	}
+	$role = trim( (string) $state->get( 'role' ) );
+	if ( 'none' === $role ) {
+		// As users.php does: the accounts with no role on this site, or nobody.
+		$ids              = wp_get_users_with_no_role();
+		$query['include'] = $ids ? array_map( 'intval', $ids ) : array( 0 );
+	} elseif ( '' !== $role ) {
+		$query['roles'] = $role;
 	}
 	return $query;
 }
@@ -114,6 +124,11 @@ return App::define( 'desktop-mode-users' )
 			'page'        => 1,
 			'perPage'     => 20,
 			'search'      => '',
+			// The role filter: a slug, or `none` for accounts with no
+			// role on this site, as `users.php?role=none` spells it. A
+			// server-side scope, so a group picked on the Roles tab is
+			// a fresh collection rather than a slice of the loaded pages.
+			'role'        => '',
 			// The presence filter (All / Online / Active 30d / Never
 			// logged in) — a client-side slice of the page.
 			'status'      => '',

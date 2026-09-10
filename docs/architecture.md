@@ -334,6 +334,11 @@ global the Electron preload injects) can answer that.
 
 ## Preference persistence
 
+The full inventory of what the plugin persists — tables, post types, meta
+keys, options, transients, disk and cron — is on the
+[Data model](./data-model.md) page; this section and the next cover the
+two per-user stores the shell itself reads at boot.
+
 User preferences (`OsSettingsState` — wallpaper, accent, dock size, layout, feature toggles, and everything else OpenStation Preferences edits) live in the `desktop_mode_os_settings` user meta and sync through `/wp-json/desktop-mode/v1/os-settings`. The client keeps a full copy in `localStorage` as a read cache, but the server snapshot in `openStationConfig.osSettings` outranks it at boot, so a change made on another device is honoured on the next load.
 
 **A save sends only what changed.** `POST /os-settings` accepts a **partial** payload: a key the request omits keeps the value already stored for that user rather than resetting to the shipped default. The shell diffs the live state against the last state the server confirmed (`src/settings/state.ts`, `_buildPayload()`) and posts just those fields; when nothing moved, no request is made at all.
@@ -358,6 +363,9 @@ Every window lifecycle event — open, close, focus, move, resize, state change 
 
 REST surface:
 
+- `GET  /wp-json/desktop-mode/v1/network/identity` — this install's OpenStation-network identity (name, URL, shell screen, public key). Public.
+- `GET  /wp-json/desktop-mode/v1/network` — the network as a hub lists it (sites and members), for a member signing with a pinned key or an administrator. See [network.md](./network.md).
+- `POST /wp-json/desktop-mode/v1/network/hop` — mint a signed hop token towards one of the switcher's entries, so a switch to another install logs the user in there. Body: `{ target, direction }`.
 - `GET  /wp-json/desktop-mode/v1/session` — current user's saved session.
 - `POST /wp-json/desktop-mode/v1/session` — overwrite the session. Body: `{ session: { windows: [...], desktops: [...], activeDesktop, focused, updated } }`.
 - `DELETE /wp-json/desktop-mode/v1/session` — clear it.
@@ -640,6 +648,30 @@ fixed in `prepare_links()` instead. `wp:featuredmedia` needs no fixing —
 it is built from the attachment's route, and `attachment` is
 REST-exposed.
 
+## Native workspaces — Users, Posts, Pages
+
+The native Users, Posts and Pages apps (`apps/users/`, `apps/posts/`, `apps/pages/`) are App Framework client views; the contracts below are theirs alone.
+
+### Users role summary
+
+The Users app's Roles tab reads `GET /desktop-mode/v1/users/roles-summary` through the app's tracked REST client. The route and reader require `list_users`; cookie-authenticated calls require WordPress's REST nonce. It returns complete current-site role totals and at most eight avatar/name samples per role, without paging the directory. A single prepared SQL statement combines one conditional count aggregate and bounded per-role sample branches over the current site's serialized capabilities keys. No user-supplied SQL identifiers or ordering expressions are accepted. Multi-role accounts count in each role but once in the site total. Registered empty roles remain available; No role is included when populated. The endpoint deliberately covers the whole site independently of the directory search and query-args filter. The `openstation_users_window_roles_summary` filter extends its result; see the hooks reference for the payload.
+
+The Users Activity tab reads `GET /desktop-mode/v1/users/activity-summary`, also gated by `list_users` and the REST nonce. Grouped published-content, approved-comment and latest-login facts join site members in one query; a server reduction builds complete totals and fixed-size leader/presence/registration samples. Only sampled profiles are hydrated. This replaces browser-driven sequential population loading; server work and temporary memory still scale with membership. The `openstation_users_window_activity_summary` filter extends the snapshot. Directory filters stay independent.
+
+Posts and Pages continuations request one page through the existing server action. Refresh/watch responses replace the already-loaded prefix (using Core REST internally in batches of at most 100), preserving the feed container and loaded range without a second browser request. Data includes a query identity and `list.replace` marker, allowing the client to reject rows from a superseded filter. Viewport-triggered metrics use `ctx.fetch` with `{ silent: true }`, retry transient failures at most three times, and distinguish restricted/unavailable counts from retryable errors; a card offers an explicit retry after automatic attempts are exhausted.
+
+Atlas previews enter at 50% zoom and remain mounted down to 40%. Up to six visible frontend documents remain resident when distance ordering changes; offscreen documents are evicted and explicit selection takes priority. Their 1440×900 viewport stays fixed under CSS transforms. Same-origin script-enabled sandboxing is not an isolation boundary: `inert`, `tabindex=-1`, `aria-hidden` and disabled pointer events keep previews out of interaction and focus flows. They render trusted site frontend content.
+
+
+### Content cards and touch exploration
+
+Post and page cards show a compact `#ID` copy button alongside their status. Activating it copies the numeric WordPress ID without the hash prefix, with a toast and screen-reader announcement on success or failure. It does not change selection or open the editor.
+
+Page Atlas, Categories and Tags share Corkboard's midpoint-anchored pinch math. Two touch pointers zoom and pan the canvas even when the gesture starts on a sheet or term. The second finger cancels a pending node drag; lifting the fingers cannot reparent a category, open a satellite post, or activate a sheet action. One-finger panning resumes on a fresh gesture. Atlas previews retain their fixed iframe viewport and zoom through the outer camera transform.
+
+The content workspace uses the inherited surface, text, border and semantic status tokens in both its cards and details table. Notebook rules read the declared subtle-surface token. Taxonomy canvases resolve those same tokens inside their stage for Pixi labels, cards and controls, then repaint existing objects when the desktop theme or inherited accent changes without refetching content or resetting the camera. Atlas threads share the same live palette observer. Translucent paint is composited over the resolved surface. Term hues still distinguish groups; count badges choose the more legible theme ink against each hue. Tag cards scale with their world-space layout so zooming out preserves the gaps between cards.
+
+
 ## CSS layering
 
 Core layering only — feature windows ship their own per-feature sheets
@@ -688,3 +720,26 @@ Never edit Core's `common.css` or color scheme files. Everything we need is expo
 - **The North Star — cross-window drag & drop** — extend the existing cross-frame drag bridge beyond Media Library attachments: pluggable mime-type negotiation (`openstation_drag_mime_types` / `openstation_drag_payload` / `openstation_drop_accepts`), Gutenberg block-insertion target, visual lift-and-drop feedback.
 
 See [Hooks Reference](./hooks-reference.md) for the filter/action names each phase will introduce.
+
+
+## Presence persistence
+
+Presence uses `{$wpdb->prefix}openstation_presence`, scoped to the current site.
+Each user has `last_seen_ms` and `last_active_ms`; atomic upserts merge maxima
+without reading or rewriting another user's record. An internal `inactive_at_ms`
+fence preserves the explicit "set away" operation: public reads report activity
+as zero until activity newer than that intent arrives. All public timestamps
+remain epoch milliseconds and all response/event shapes stay unchanged.
+
+`openstation_presence_storage` is a non-autoloaded per-site migration checkpoint.
+The migration runner invokes the presence migrator on `admin_init`; Heartbeat and
+presence REST requests also run the bounded bridge. Helpers ensure storage on demand. The checkpoint is written only after creation, import and
+verification succeed. It is independent of the general migration version so a
+presence failure cannot advance unrelated migrations. Failed setup retains the
+legacy option path; established-table write failures are reported, not redirected
+to a competing store. Failed setup is attempted once per request, with a nonblocking
+lock attempt. A request-local snapshot serves repeated reads and user lists, and
+writes and pruning invalidate it. Snapshots still scale with tracked users. Daily pruning conditionally deletes entries
+older than 14 days using the indexed heartbeat timestamp.
+
+See [presence migration and rollback](./migration-presence-storage.md).

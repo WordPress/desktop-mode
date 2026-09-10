@@ -1,41 +1,17 @@
 /**
- * Plugins app — the stylesheets that live inside `<os-table>`.
+ * Plugins app — the focused inspector stylesheet.
  *
- * Part of the `desktop-mode-plugins` client view. The Installed
- * table's cells and its expandable-row detail panel render inside
- * `<os-table>`'s shadow DOM, which document stylesheets never reach,
- * so their rules ship here and are adopted ONCE onto that shadow root
- * ({@link adoptStyles}) — one sheet for every row instead of a
- * `<style>` per expanded panel. Every selector is namespaced under
- * `.os-plugins__*`; colours resolve through the palette tokens with
- * the literal look as the fallback.
+ * The rich detail panel uses its own shadow root. Adopt one stylesheet
+ * containing the overview, fact cards, changelog, FAQ and reviews.
+ * Every selector is namespaced under .os-plugins__; colors read the
+ * palette tokens with the original literal values as fallbacks.
  *
  * @public
  */
 
 import { REVIEW_STYLES } from './reviews';
 
-/** The Installed table's cells. */
-const CELL_STYLES = `
-.os-plugins__name-cell { display: flex; align-items: center; gap: 12px; min-width: 0; padding-block: 4px; }
-.os-plugins__name-icon { flex: 0 0 32px; width: 32px; height: 32px; max-width: 32px; max-height: 32px; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var( --os-ui-surface-sunken, rgba( 0, 0, 0, 0.04 ) ); box-sizing: border-box; }
-.os-plugins__name-icon img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
-.os-plugins__name-icon .dashicons { font-size: 18px; width: 18px; height: 18px; line-height: 18px; color: var( --os-ui-fg-muted, #888 ); }
-.os-plugins__name-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; line-height: 1.35; }
-.os-plugins__name-text > strong { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.os-plugins__name-path { display: block; font-size: 0.78em; color: var( --os-ui-fg-muted, #888 ); font-family: var( --os-ui-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace ); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.os-plugins__version-cell { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.os-plugins__update-badge { font-size: 0.78em; background: var( --os-ui-badge-warning-bg, rgba( 245, 175, 0, 0.18 ) ); color: var( --os-ui-warning-fg, #915f00 ); padding: 1px 7px; border-radius: 999px; font-weight: 600; }
-.os-plugins__author-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-.os-plugins__auto-update { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.os-plugins__auto-update-fixed { color: var( --os-ui-fg-muted, #50575e ); }
-.os-plugins__auto-update-none { color: var( --os-ui-fg-faint, #787c82 ); }
-.os-plugins__row-actions { display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: nowrap; }
-.os-plugins__row-actions os-button { flex: 0 0 auto; }
-.os-plugins__update-hint { font-size: 0.78em; color: var( --os-ui-fg-muted, #50575e ); }
-`;
-
-/** The expandable-row detail panel. */
+/** The rich detail panel. */
 const PANEL_STYLES = `
 .os-plugins__detail { display: block; background: var( --os-ui-surface-subtle, rgba( 0, 0, 0, 0.025 ) ); border-block-start: 1px solid var( --os-ui-border, rgba( 0, 0, 0, 0.08 ) ); border-block-end: 1px solid var( --os-ui-border, rgba( 0, 0, 0, 0.08 ) ); color: var( --os-ui-fg, inherit ); font-size: 13px; line-height: 1.55; }
 .os-plugins__detail-hero { background: var( --os-ui-surface-raised, rgba( 255, 255, 255, 0.6 ) ); border-block-end: 1px solid var( --os-ui-border, rgba( 0, 0, 0, 0.08 ) ); }
@@ -94,8 +70,8 @@ const PANEL_STYLES = `
 @media ( max-width: 720px ) { .os-plugins__reviews-grid, .os-plugins__detail-grid { grid-template-columns: 1fr !important; } }
 `;
 
-/** Everything the table's shadow tree needs: cells, the panel, the reviews. */
-export const TABLE_STYLES = CELL_STYLES + PANEL_STYLES + REVIEW_STYLES;
+/** Everything the inspector needs: the panel and reviews. */
+export const DETAIL_STYLES = PANEL_STYLES + REVIEW_STYLES;
 
 const adopted = new WeakMap< ShadowRoot, Set< string > >();
 

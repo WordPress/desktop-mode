@@ -23,7 +23,7 @@
 
 import { __ } from '@openstation/app';
 import type { CanvasEnv } from './app';
-import { pointerTravel, stopBubble, type Bounds } from './canvas/camera';
+import { isPinchGesture, pointerTravel, stopBubble, type Bounds } from './canvas/camera';
 import { CHIP_TEXT_RES, hslToInt, readAdminThemeHue, type PixiPoint, type PixiPointerEvent } from './canvas/pixi';
 import { SPOTLIGHT_RADIUS, createTermCanvas, type TermCanvas } from './canvas/term-canvas';
 import { createChipStore } from './mindmap-chips';
@@ -66,7 +66,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 			],
 			searchPlaceholder: __( 'Search categories…' ),
 			searchAria: __( 'Search categories in the mindmap' ),
-			hint: __( 'Click a node to focus + edit · drag onto another to reparent · wheel to zoom' ),
+			hint: __( 'Click a node to focus + edit · drag onto another to reparent · scroll or pinch to zoom' ),
 		},
 		// Chip layers sit ABOVE the discs so text stays readable when the
 		// discs are dense; all inherit the world's pan/zoom.
@@ -78,7 +78,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 	}
 	// A non-null binding the closures below can capture.
 	const canvas: TermCanvas = built;
-	const { pixi, layers, fan, camera, interaction, world } = canvas;
+	const { pixi, layers, fan, camera, interaction, world, palette } = canvas;
 	const { client } = env;
 	const edgeGfx = new pixi.Graphics();
 	layers.edge.addChild( edgeGfx );
@@ -86,6 +86,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 	// --- State --------------------------------------------------------
 	const nodes = new Map< number, MindNode >();
 	const chips = createChipStore( pixi, layers.chip, interaction, {
+		palette,
 		isFocused: ( id ) => fan.focusId === id,
 		onTap: ( id ) => void canvas.focusOn( id ),
 	} );
@@ -97,7 +98,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 	// directly for the spotlight and restored from here on close.
 	const pinnedTargetBackup = new Map< number, { tx: number; ty: number } >();
 	let draft: { parent: number } | null = null;
-	const themeHue = readAdminThemeHue();
+	let themeHue = readAdminThemeHue( host );
 	const clusterColor = ( idx: number ): number => hslToInt( ( themeHue + idx * 47 ) % 360, 55, 52 );
 
 	function upsertNode( term: TermRow, facts: { tx: number; ty: number; radius: number; depth: number; color: number; pinned: boolean } ): MindNode {
@@ -141,7 +142,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 			node.ty = facts.ty;
 			node.pinned = facts.pinned;
 		}
-		drawNodeDisc( pixi, node, false );
+		drawNodeDisc( pixi, node, false, palette );
 		return node;
 	}
 
@@ -241,6 +242,9 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 
 	// --- Drag ----------------------------------------------------------
 	function onNodePointerDown( ev: PixiPointerEvent, node: MindNode ): void {
+		if ( isPinchGesture( interaction ) ) {
+			return;
+		}
 		stopBubble( interaction, ev );
 		dragNode = node;
 		node.pinned = true;
@@ -295,11 +299,11 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 		}
 		if ( hover !== dragHover ) {
 			if ( dragHover ) {
-				drawNodeDisc( pixi, dragHover, fan.focusId === dragHover.id );
+				drawNodeDisc( pixi, dragHover, fan.focusId === dragHover.id, palette );
 			}
 			dragHover = hover;
 			if ( hover ) {
-				drawDropTarget( pixi, hover, dragNode.color );
+				drawDropTarget( pixi, hover, dragNode.color, palette );
 			}
 		}
 	}
@@ -334,9 +338,9 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 				env.toast( __( 'Reparent failed:' ), err );
 			}
 		} else {
-			drawNodeDisc( pixi, node, fan.focusId === node.id );
+			drawNodeDisc( pixi, node, fan.focusId === node.id, palette );
 			if ( target ) {
-				drawNodeDisc( pixi, target, fan.focusId === target.id );
+				drawNodeDisc( pixi, target, fan.focusId === target.id, palette );
 			}
 		}
 	}
@@ -400,6 +404,28 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 	paintSidebar( sidebarHost );
 	preSettle( nodes, 80 );
 	canvas.start( {
+		themeChanged: () => {
+			const nextHue = readAdminThemeHue( host );
+			if ( nextHue !== themeHue ) {
+				themeHue = nextHue;
+				const roots = canvas.terms.filter( ( term ) => ! term.parent && ! isUncategorized( term ) );
+				for ( const node of nodes.values() ) {
+					let root = node;
+					const seen = new Set< number >();
+					while ( root.parent && nodes.has( root.parent ) && ! seen.has( root.id ) ) {
+						seen.add( root.id ); root = nodes.get( root.parent )!;
+					}
+					const index = roots.findIndex( ( term ) => term.id === root.id );
+					if ( index >= 0 ) {
+						node.color = clusterColor( index );
+					}
+				}
+			}
+			for ( const node of nodes.values() ) {
+				drawNodeDisc( pixi, node, fan.focusId === node.id, palette );
+				chips.relayout( node );
+			}
+		},
 		center: ( id ) => {
 			const n = nodes.get( id );
 			return n ? { x: n.x, y: n.y, tone: n.color } : null;
@@ -414,7 +440,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 		},
 		focusChanged: () => {
 			for ( const n of nodes.values() ) {
-				drawNodeDisc( pixi, n, fan.focusId === n.id );
+				drawNodeDisc( pixi, n, fan.focusId === n.id, palette );
 			}
 			paintSidebar( sidebarHost );
 		},
@@ -453,7 +479,7 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 			fan.ease();
 			drawEdges();
 			if ( dragNode && dragHover ) {
-				drawDropTarget( pixi, dragHover, dragNode.color );
+				drawDropTarget( pixi, dragHover, dragNode.color, palette );
 			}
 			const counterScale = 1 / Math.max( 0.01, world.scale.x );
 			chips.sync( nodes, counterScale, fan.focusId );
@@ -480,6 +506,15 @@ export async function mountCategoriesMindmap( host: HTMLElement, env: CanvasEnv 
 			return true;
 		},
 		pointerUp: dragEnd,
+		cancelGesture: () => {
+			if ( dragNode ) {
+				dragNode.pinned = dragNode.depth === 0; drawNodeDisc( pixi, dragNode, fan.focusId === dragNode.id, palette );
+			}
+			if ( dragHover ) {
+				drawNodeDisc( pixi, dragHover, fan.focusId === dragHover.id, palette );
+			}
+			dragNode = null; dragHover = null; dragStartPos = null;
+		},
 		search: ( q ) => Array.from( nodes.values() ).filter( ( n ) => n.name.toLowerCase().includes( q ) ),
 	} );
 

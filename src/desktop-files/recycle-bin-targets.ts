@@ -13,8 +13,8 @@
  *      future layout shifts.
  *
  *   2. The recycle-bin native window's body
- *      (`[data-os-recycle-bin-root]`). Registered on
- *      `WINDOW_OPENED`, deregistered on `WINDOW_CLOSED`.
+ *      (`[data-os-recycle-bin-root]`). Discovered when the app's
+ *      asynchronous render mounts it, and released when it leaves.
  *
  * Both targets accept payloads of type `'desktop-file'`. On drop they
  * route to `trashByFileType()` — the same flow the right-click "Move
@@ -33,6 +33,7 @@
 
 import { __ } from '../i18n';
 import { addAction, HOOKS } from '../hooks';
+import { beginTrashChange, trashItem } from './trash-optimistic';
 import { trashByRestPath } from './rest-trash';
 import type { DragManagerApi, DragSession } from '../drag';
 import { trashManyWithUndo } from './trash';
@@ -67,7 +68,7 @@ const RECYCLE_BIN_WINDOW_ID = 'desktop-mode-recycle-bin';
 
 /**
  * Every surface representing the bin: the files layer's wallpaper
- * tile, the legacy icon rail, the dock's system tile.
+ * tile, the legacy icon rail, the dock's system tile and the app body.
  *
  * NOT alternatives to pick between. The classic layout shows the
  * wallpaper tile and the dock tile at once, so resolving "the" bin to
@@ -78,6 +79,7 @@ const BIN_SURFACES = [
 	{ id: 'recycle-bin-tile', selector: `.os-file-tile[data-file-ref="${ RECYCLE_BIN_WINDOW_ID }"]` },
 	{ id: 'recycle-bin-icon', selector: `[data-icon-id="${ RECYCLE_BIN_WINDOW_ID }"]` },
 	{ id: 'recycle-bin-dock', selector: `[data-system-id="${ RECYCLE_BIN_WINDOW_ID }"]` },
+	{ id: 'recycle-bin-window', selector: '[data-os-recycle-bin-root]' },
 ] as const;
 
 let _installed = false;
@@ -85,9 +87,8 @@ interface BinRegistration {
 	el: HTMLElement;
 	deregister: () => void;
 }
-/** Live tile registrations, keyed by drop-target id. */
-const _tileRegistrations = new Map< string, BinRegistration >();
-let _windowDeregister: ( () => void ) | null = null;
+/** Live surface registrations, keyed by drop-target id. */
+const _surfaceRegistrations = new Map< string, BinRegistration >();
 let _binMutationObserver: MutationObserver | null = null;
 
 interface DesktopFilePayloadData {
@@ -236,12 +237,14 @@ function registerOn(
 				const set = dragShortcutItems( session.payload.data );
 				const trashing = set
 					.map( ( item ) => ( {
+						title: item.title ?? '',
+						icon: item.icon ?? '',
 						restPath: item.restPath,
 						kind: item.kind,
 						ref: Number.parseInt( item.ref, 10 ),
 					} ) )
 					.filter(
-						( t ): t is { restPath: string; kind: string; ref: number } =>
+						( t ): t is { restPath: string; kind: string; ref: number; title: string; icon: string } =>
 							!! t.restPath &&
 							Number.isFinite( t.ref ) &&
 							t.ref > 0,
@@ -249,8 +252,11 @@ function registerOn(
 				if ( trashing.length === 0 ) {
 					return;
 				}
+				const operations = trashing.map( ( t ) => beginTrashChange( trashItem( {
+					id: t.ref, type: t.kind, title: t.title, icon: t.icon,
+				} ) ) );
 				void Promise.allSettled(
-					trashing.map( ( t ) => trashByRestPath( t.restPath, t.ref ) ),
+					trashing.map( ( t, i ) => operations[ i ] ? trashByRestPath( t.restPath, t.ref ) : Promise.reject( new Error( 'Item is already moving to Trash.' ) ) ),
 				).then( ( results ) => {
 					const failed = results.filter(
 						( r ) => r.status === 'rejected',
@@ -289,6 +295,9 @@ function registerOn(
 					for ( const [ kind, ids ] of Object.entries( trashed ) ) {
 						announce?.( kind, 'trashed', ids, 'recycle-bin' );
 					}
+					results.forEach( ( result, i ) => {
+						void operations[ i ]?.finish( result.status === 'fulfilled' );
+					} );
 					const moved = trashing.length - failed.length;
 					if ( moved > 1 || failed.length > 0 ) {
 						showToast( {
@@ -322,22 +331,22 @@ export function installRecycleBinDropTargets( dragManager: DragManagerApi ): voi
 	// legacy dock rail rebuilds on `DOCK_AFTER_RENDER`. We listen to
 	// all three and re-probe every surface in `BIN_SURFACES`.
 	// Idempotent — re-registration is keyed by drop-target id.
-	const reprobeTile = (): void => {
+	const reprobeSurfaces = (): void => {
 		for ( const { id, selector } of BIN_SURFACES ) {
 			const el = document.querySelector( selector );
 			const live = el instanceof HTMLElement ? el : null;
-			const current = _tileRegistrations.get( id );
+			const current = _surfaceRegistrations.get( id );
 			if ( ! live ) {
 				// Deregister so the registry doesn't hold a detached node.
 				current?.deregister();
-				_tileRegistrations.delete( id );
+				_surfaceRegistrations.delete( id );
 				continue;
 			}
 			if ( current && current.el === live ) {
 				continue;
 			}
 			current?.deregister();
-			_tileRegistrations.set( id, {
+			_surfaceRegistrations.set( id, {
 				el: live,
 				deregister: registerOn( dragManager, id, live ),
 			} );
@@ -347,33 +356,34 @@ export function installRecycleBinDropTargets( dragManager: DragManagerApi ): voi
 	// Initial probe — covers the case where the dock has already
 	// rendered or the wallpaper layer has already mounted by the
 	// time we run.
-	reprobeTile();
+	reprobeSurfaces();
 
 	// Files-layer rebuild signal. Fires after every placement
 	// upsert/remove that flips the layer's fingerprint. The bin's
 	// tile DOM is replaced wholesale, so re-discover and re-register.
-	document.addEventListener( 'os-files-changed', reprobeTile );
+	document.addEventListener( 'os-files-changed', reprobeSurfaces );
 
 	// Legacy desktop-icons rail rebuild signal — `renderDesktopIcons`
 	// fires this hook action on each render that changed the DOM.
 	addAction(
 		HOOKS.DESKTOP_ICONS_RENDERED,
 		'desktop-mode/files/recycle-bin-icons-target',
-		reprobeTile,
+		reprobeSurfaces,
 	);
 	addAction(
 		HOOKS.DOCK_AFTER_RENDER,
 		'desktop-mode/files/recycle-bin-dock-target',
-		reprobeTile,
+		reprobeSurfaces,
 	);
 
-	// Belt-and-braces: a MutationObserver on the wallpaper area
-	// catches any DOM swap we missed (third-party plugin replacing
-	// the tile, future renderer we don't know about). Disconnects
-	// only on test reset; in production it lives forever.
+	// App bodies arrive after WINDOW_OPENED: the framework first loads
+	// their bundle and server data. Observe the actual DOM so Trash's
+	// target follows late mounts, body replacements and close/reopen,
+	// as well as wallpaper tiles rebuilt outside the render hooks.
+	// Disconnects only on test reset; in production it lives forever.
 	if ( typeof MutationObserver !== 'undefined' ) {
 		_binMutationObserver = new MutationObserver( () => {
-			reprobeTile();
+			reprobeSurfaces();
 		} );
 		const desktopArea =
 			document.getElementById( 'os-area' ) ?? document.body;
@@ -382,52 +392,15 @@ export function installRecycleBinDropTargets( dragManager: DragManagerApi ): voi
 			subtree: true,
 		} );
 	}
-
-	// Window body — register on open, deregister on close.
-	addAction(
-		HOOKS.WINDOW_OPENED,
-		'desktop-mode/files/recycle-bin-window-target',
-		( detail: { windowId?: string } ) => {
-			if ( detail.windowId !== RECYCLE_BIN_WINDOW_ID ) {
-				return;
-			}
-			_windowDeregister?.();
-			_windowDeregister = null;
-			const el = document.querySelector(
-				'[data-os-recycle-bin-root]',
-			);
-			if ( el instanceof HTMLElement ) {
-				_windowDeregister = registerOn(
-					dragManager,
-					'recycle-bin-window',
-					el,
-				);
-			}
-		},
-	);
-
-	addAction(
-		HOOKS.WINDOW_CLOSED,
-		'desktop-mode/files/recycle-bin-window-cleanup',
-		( detail: { windowId?: string } ) => {
-			if ( detail.windowId !== RECYCLE_BIN_WINDOW_ID ) {
-				return;
-			}
-			_windowDeregister?.();
-			_windowDeregister = null;
-		},
-	);
 }
 
 /** Test-only — resets the install latch + clears registrations. */
 export function __resetRecycleBinDropTargetsForTests(): void {
-	for ( const { deregister } of _tileRegistrations.values() ) {
+	for ( const { deregister } of _surfaceRegistrations.values() ) {
 		deregister();
 	}
-	_tileRegistrations.clear();
-	_windowDeregister?.();
+	_surfaceRegistrations.clear();
 	_binMutationObserver?.disconnect();
-	_windowDeregister = null;
 	_binMutationObserver = null;
 	_installed = false;
 }

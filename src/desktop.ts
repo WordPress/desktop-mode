@@ -43,10 +43,11 @@ import { OsSettings } from './settings';
 import { OS_SETTINGS_WINDOW_ID } from './settings/constants';
 import { getExitOpenStationTileDef } from './exit-openstation';
 import { getNetworkAdminTileDef } from './multisite/dock-tiles';
-import { hopToAdmin } from './multisite/hop';
-import { buildSiteSwitcher } from './multisite/site-switcher';
+import { createHopMinter, hopToAdmin, type HopMinter } from './multisite/hop';
+import { buildSiteSwitcher, installSiteSwitcherKeys, switchToSite } from './multisite/site-switcher';
+import { createLinkPoster, offerAccountLink } from './multisite/link-offer';
 import { revealInstance, stampArrival } from './multisite/instance-transition';
-import { installOverviewHeader } from './window-manager/overview';
+import { installOverviewHeader, refreshOverviewTopBar } from './window-manager/overview';
 import { deriveWindowId, urlMatchKey } from './utils';
 import { shellUrlWithoutBootArgs } from './shell-url';
 import {
@@ -2209,7 +2210,11 @@ function init(): void {
 	// A shell arriving from another site's switcher paints hidden
 	// (`os-shell--arriving`, stamped server-side) until overview is up;
 	// stamp the side it slides in from while nothing has shown yet.
-	stampArrival();
+	stampArrival(
+		config.arrivalDirection === 'next' || config.arrivalDirection === 'prev'
+			? config.arrivalDirection
+			: null,
+	);
 
 	const manager = new WindowManager( desktopArea );
 
@@ -2947,9 +2952,47 @@ function init(): void {
 	const openOtherAdmin = hopToAdmin;
 
 	// The site switcher above the overview's desktop tiles, on a network.
+	// A switch to another origin mints a login token first, when the
+	// shell has the route for it (a network with somewhere to hop to).
+	// Read at mint time, not boot: a site that joins a network from its
+	// Network window gets the route on the refresh that follows.
+	const hopMinter: HopMinter = ( target, direction ) => {
+		const hopUrl = config.multisite?.hopUrl;
+		return hopUrl
+			? createHopMinter( { hopUrl, restNonce: config.restNonce } )( target, direction )
+			: Promise.resolve( null );
+	};
 	installOverviewHeader( () =>
-		config.multisite ? buildSiteSwitcher( config.multisite ) : null,
+		config.multisite
+			? buildSiteSwitcher( config.multisite, { mint: hopMinter } )
+			: null,
 	);
+	// An app's `hop` effect — the Network window's Open — takes the same
+	// switch a pick in the row does. A value the switcher does not offer
+	// is ignored, so nothing hops anywhere the row cannot.
+	document.addEventListener( 'os-app-effect', ( e: Event ) => {
+		const effect = ( e as CustomEvent< { effect?: { type?: string; site?: unknown } } > )
+			.detail?.effect;
+		if ( effect?.type === 'hop' && config.multisite && typeof effect.site === 'string' ) {
+			switchToSite( config.multisite, effect.site, { mint: hopMinter } );
+		}
+	} );
+	// Tab and Shift+Tab move between sites while the switcher is on
+	// screen — overview, on a network — and nowhere else.
+	installSiteSwitcherKeys( {
+		multisite: () => config.multisite,
+		isShown: () => !! document.querySelector( '.os-area--overview .os-site-switcher' ),
+		mint: hopMinter,
+	} );
+	// A switch from another install arrived with a login token while
+	// this user was logged in, and no account is linked to it yet: ask
+	// once whether to link the two.
+	if ( config.hopLinkOffer ) {
+		void offerAccountLink( config.hopLinkOffer, {
+			confirm: ( options ) => osConfirm( options ),
+			post: createLinkPoster( config.restNonce ),
+		} );
+	}
 
 	bindAdminLinkDispatch( {
 		adminUrl: config.adminUrl,
@@ -4566,6 +4609,19 @@ function init(): void {
 		layoutDispatcher,
 		desktopArea,
 		config,
+		// The site switcher's rows follow the network registry: a
+		// Network app action spends a refresh whose payload carries the
+		// multisite block, and overview, when open, rebuilds its top bar
+		// on the spot. Which instance this shell IS cannot change without
+		// a navigation, so `current` and the admin it stands in are kept.
+		applyMultisite: ( block ) => {
+			const was = config.multisite;
+			config.multisite =
+				block && was
+					? { ...block, current: was.current, isNetworkAdmin: was.isNetworkAdmin }
+					: block;
+			refreshOverviewTopBar( manager );
+		},
 		syncNativeWindows,
 		syncServerWidgets,
 		syncServerWallpapers,

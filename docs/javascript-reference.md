@@ -1771,7 +1771,7 @@ manager.moveWindowToDesktop( windowId, desktopId ): boolean;  // one window to a
 
 The one rule the whole feature rests on: **a workspace is a view, never a write.** The rails, the widget column and the appearance are all computed on top of the user's own state and restored the moment they leave, so a workspace they delete costs them nothing. See **[Workspaces](./workspaces.md)** for the whole surface: it is documented there rather than here because it is a layer above Spaces, not a change to them.
 
-**On a network, every site is its own OpenStation** with its own desktops, and the overview top bar carries a **site switcher** above the tiles: `installOverviewHeader( build )` (`src/window-manager/overview.ts`) is the seam the shell uses to put that row there, and `openstation_overview=1` on the shell screen boots it straight into overview, a one-shot boot arg stripped from the address bar with `target` and `intent`. The switch animates on both sides through shell-root classes (`os-shell--arriving`, `os-shell--hop-out-next` / `-prev`) and a one-shot `sessionStorage` hint, `openstation-hop-direction`. See [multisite.md](./multisite.md#site-instances).
+**On a network, every site is its own OpenStation** with its own desktops, and the overview top bar carries a **site switcher** above the tiles: `installOverviewHeader( build )` (`src/window-manager/overview.ts`) is the seam the shell uses to put that row there, and `openstation_overview=1` on the shell screen boots it straight into overview, a one-shot boot arg stripped from the address bar with `target` and `intent`; so are `openstation_hop`, the login token a switch from another install carries (spent server-side before the shell renders), and `openstation_hop_from`, the direction it lands with (`config.arrivalDirection`). A token that arrives while the user is logged in on the target, with no account linked to it yet, leaves `config.hopLinkOffer` (`{ site, name, email, url }`) for the shell to ask about once, and the answer goes to `POST /desktop-mode/v1/network/link`; each switcher entry's `foreign` flag says whether a switch there mints a token at all (another install, whatever its origin). The switch animates on both sides through shell-root classes (`os-shell--arriving`, `os-shell--hop-out-next` / `-prev`) and a one-shot `sessionStorage` hint, `openstation-hop-direction`. See [multisite.md](./multisite.md#site-instances).
 
 Lifecycle hooks fire on each operation: `HOOKS.DESKTOP_CREATED`, `HOOKS.DESKTOP_CLOSED { desktopId, migratedTo }`, `HOOKS.DESKTOP_SWITCHED { from, to }`, `HOOKS.DESKTOP_RENAMED { desktopId, label, previousLabel }`, `HOOKS.WINDOW_DESKTOP_CHANGED { windowId, from, to }`.
 
@@ -2095,6 +2095,10 @@ wp.os.presence.applyBatch( [
 The server-side `openstation_presence_visible_users` filter gates which users surface to a given viewer. By default everyone tracked is visible to everyone tracked; plugins can narrow (e.g. "subscribers only see other subscribers") without the client knowing.
 
 **Companion CustomEvent:** [`os-presence-changed`](#os-presence-changed--stable) fires once per status transition per user, with a `null` oldStatus on first sighting.
+
+Presence persistence is site-scoped and uses atomic per-user rows. The JS API,
+Heartbeat payloads and timestamp units are unchanged. See
+[migration and rollback](./migration-presence-storage.md) for server-side storage.
 
 **See also:** [`docs/examples/presence.md`](./examples/presence.md) for an end-to-end recipe.
 
@@ -2845,7 +2849,7 @@ When a live app window is reopened with params (`wp.os.openWindow( id, { params 
 - **`dispatch`** runs an action on a mounted app window exactly as one of its own `os-action` triggers would: the request carries the view's current state and the window's open-time params, the response is morphed in and its effects performed. Resolves `true` once applied, `false` if the window is not mounted or the dispatch failed (the failure is toasted). `view` is `main` (default) or a tab slug declared with `App::tab()` — each tab panel is its own session.
 - **`session`** is the live session object — `state` (read-only snapshot), `view`, `dispatch`, `setPaused`, `dispose`. Read `state` to react to what the window is showing; do not mutate it.
 
-Effects the runtime performs itself: `toast`, `title`, `close`, `open`, `open_url` (an admin URL in an iframe window, with an optional `icon`), `badge` (dock tile + desktop icon), `announce` (`wp.os.announceContentChange`), `menu` (a context menu at the pointer whose items dispatch actions), `send` (the window's channel bus). Any other `type` is re-dispatched as **`os-app-effect`** on the app's root element (bubbles, composed) with `detail = { appId, windowId, view, effect }`. Queue one from PHP with `$os->effects->add( 'my-plugin/thing', array( … ) )`.
+Effects the runtime performs itself: `toast`, `title`, `close`, `open`, `open_url` (an admin URL in an iframe window, with an optional `icon`), `badge` (dock tile + desktop icon), `announce` (`wp.os.announceContentChange`), `menu` (a context menu at the pointer whose items dispatch actions), `send` (the window's channel bus). Any other `type` is re-dispatched as **`os-app-effect`** on the app's root element (bubbles, composed) with `detail = { appId, windowId, view, effect }`. Queue one from PHP with `$os->effects->add( 'my-plugin/thing', array( … ) )`. The shell itself listens for one of them: on a network, `hop` with a `site` (a value of the site switcher: `network`, a blog id, `member:<id>`) switches to that site the way a pick in the switcher does; see [multisite.md](./multisite.md#site-instances).
 
 Inbound: an app that declared `->on_channel( $channel, $action )` receives `wp.os.connect( id ).send( channel, payload )` / `Window.send()` as a dispatch of `$action` with `$args['payload']`; declared `resize` / `show` / `hide` / `focus` / `blur` actions are dispatched on those window moments.
 
@@ -4717,6 +4721,7 @@ The bridge posts this message (and `os-menu-signature`) to the **top** window ra
         nativeWindows: unknown[];
         /* … */
         updateCounts?: { total: number; formatted: string; text: string; url: string };
+        multisite: MultisiteConfig | null; // the site switcher's rows on a network; overview rebuilds its row
         menuSig: string;
     };
 }
@@ -6638,6 +6643,10 @@ The Users app mounts it only when its Profile tab is picked; the User Edit app m
 ## Native Plugins window
 
 The `desktop-mode-plugins` native window replaces the chromeless `plugins.php` and `plugin-install.php` iframes. Three tabs (Installed, Add Plugin, OpenStation plugins), a `<os-flyout>` detail panel, .zip upload (button + drop-on-window), and drag-card-to-dock pinning via the framework drag bridge. It is an [App Framework](./app-framework.md) app — `apps/plugins/` — whose installed list is a `data()` over `openstation_app_rest( 'GET', 'wp/v2/plugins' )` (every `openstation_*` REST field included), whose activate / deactivate / delete / bulk are server actions running Core's controller in-process, and whose install, update, upload, browse, info and reviews stay on admin-ajax.
+
+The Installed tab is a responsive plugin library. Its default “Attention first” order groups each plugin once: pending updates, active tools, then inactive tools. Collections (All plugins / Updates / Active / Inactive), name/author/path search, and name or disk-size sorting operate on the current browser data without a request. Each card keeps Update / Activate / Deactivate / Delete beside the plugin, respecting site and per-plugin capabilities.
+
+Details open in a companion inspector, or take the library's place in narrow windows. Actions and automatic-update policy remain above its scrollable Overview / Details / Changelog / FAQ / Reviews content. Escape or Library returns to the originating detail button. Compact per-plugin checkboxes are always visible without changing the card layout; the selection tray appears outside the scrolling content only while at least one plugin is selected; changing filters removes hidden plugins from the selection. “Select updates” selects only plugins with downloadable packages and leaves execution to the explicit bulk action. Sort, selection and the open inspector are per-window client state; the server and public action contracts are unchanged.
 
 ### URL routing
 

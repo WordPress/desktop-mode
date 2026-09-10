@@ -164,6 +164,34 @@ function openstation_stored_file_path( $row ) {
  * @return int|WP_Error Row id.
  */
 function openstation_stored_files_create( $owner_id, $args ) {
+	$id = openstation_stored_files_locked(
+		static function () use ( $owner_id, $args ) {
+			return openstation_stored_files_create_locked( $owner_id, $args );
+		}
+	);
+	if ( ! is_wp_error( $id ) ) {
+		/**
+		 * Fires after a stored-file row is created (bytes are already
+		 * on disk at this point).
+		 *
+		 * @param int $id       Stored-file id.
+		 * @param int $owner_id Owner.
+		 */
+		do_action( 'openstation_stored_file_created', $id, (int) $owner_id );
+
+	}
+	return $id;
+}
+
+/**
+ * Insert a stored-file row while holding the reconciliation lock.
+ *
+ * @internal
+ * @param int   $owner_id Owner.
+ * @param array $args Stored-file attributes.
+ * @return int|WP_Error
+ */
+function openstation_stored_files_create_locked( $owner_id, $args ) {
 	global $wpdb;
 	$owner_id = (int) $owner_id;
 	if ( $owner_id <= 0 ) {
@@ -205,15 +233,6 @@ function openstation_stored_files_create( $owner_id, $args ) {
 		return new WP_Error( 'openstation_stored_files_insert_failed', __( 'Failed to record the uploaded file.', 'desktop-mode' ), array( 'status' => 500 ) );
 	}
 	$id = (int) $wpdb->insert_id;
-
-	/**
-	 * Fires after a stored-file row is created (bytes are already
-	 * on disk at this point).
-	 *
-	 * @param int $id       Stored-file id.
-	 * @param int $owner_id Owner.
-	 */
-	do_action( 'openstation_stored_file_created', $id, $owner_id );
 
 	return $id;
 }
@@ -587,80 +606,7 @@ function openstation_stored_files_handle_unplaced( $placement_id, $row ) {
 }
 add_action( 'openstation_file_unplaced', 'openstation_stored_files_handle_unplaced', 10, 2 );
 
-/**
- * Daily reconciliation sweep, both directions:
- *
- * Two classes of orphan get collected:
- *
- *   a) Rows with no placement at all (crashed uploads, interrupted
- *      purges) older than the grace period → delete row + bytes.
- *   b) Bytes on disk with no matching row (interrupted deletes)
- *      whose mtime is older than the grace period → delete bytes.
- *
- * Rows whose bytes are missing are left alone — `exists()` still
- * renders the tile so the user can see and remove it.
- */
-function openstation_stored_files_reconcile() {
-	global $wpdb;
-	$tables = openstation_files_table_names();
-	$grace  = DAY_IN_SECONDS;
 
-	// a) Placement-less rows past grace.
-	$cutoff_ms = openstation_files_now_ms() - ( $grace * 1000 );
-	$orphans   = $wpdb->get_col(
-		$wpdb->prepare(
-			"SELECT sf.id FROM {$tables['stored_files']} sf
-			LEFT JOIN {$tables['placements']} p
-				ON p.file_type = 'upload'
-				AND p.file_ref = CAST( sf.id AS CHAR )
-			WHERE p.id IS NULL
-				AND sf.created_at_ms < %d",
-			$cutoff_ms
-		)
-	);
-	foreach ( (array) $orphans as $orphan_id ) {
-		openstation_stored_files_delete( (int) $orphan_id );
-	}
-
-	// b) Row-less bytes past grace. The flat layout makes this a
-	// two-level scan: <base>/<user_id>/<disk_name>.
-	$base = openstation_stored_files_dir();
-	if ( ! is_dir( $base ) ) {
-		return;
-	}
-	$user_dirs = glob( $base . '/*', GLOB_ONLYDIR );
-	foreach ( (array) $user_dirs as $user_dir ) {
-		$owner_id = (int) basename( $user_dir );
-		if ( $owner_id <= 0 ) {
-			continue;
-		}
-		$known     = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT disk_name FROM {$tables['stored_files']} WHERE owner_id = %d",
-				$owner_id
-			)
-		);
-		$known_set = array_flip( array_map( 'strval', (array) $known ) );
-		$entries   = glob( $user_dir . '/*' );
-		foreach ( (array) $entries as $entry ) {
-			$name = basename( $entry );
-			if ( 'index.php' === $name || ! is_file( $entry ) ) {
-				continue;
-			}
-			if ( isset( $known_set[ $name ] ) ) {
-				continue;
-			}
-			if ( ! openstation_stored_files_valid_disk_name( $name ) ) {
-				continue; // Not ours — leave foreign files alone.
-			}
-			$mtime = (int) filemtime( $entry );
-			if ( $mtime > 0 && ( time() - $mtime ) > $grace ) {
-				wp_delete_file( $entry );
-			}
-		}
-	}
-}
-add_action( 'desktop_mode_files_daily_prune', 'openstation_stored_files_reconcile' );
 
 /**
  * When a WordPress user is deleted, purge their stored files (rows,

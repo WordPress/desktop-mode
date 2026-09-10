@@ -7,10 +7,11 @@
  * callbacks so this module stays DOM-free.
  */
 
+import { beginTrashChange, trashItem } from '../desktop-files/trash-optimistic';
 import { __ } from '../i18n';
 import { broadcastNotesChange } from './broadcast';
 import { deleteNote, restoreNote } from './rest';
-import type { Note } from './types';
+import { NOTES_POST_TYPE, type Note } from './types';
 
 interface ToastApi {
 	showToast?: ( opts: {
@@ -42,23 +43,31 @@ export async function trashNoteWithUndo(
 	note: Note,
 	callbacks: TrashNoteCallbacks,
 ): Promise< void > {
+	const optimistic = beginTrashChange( trashItem( { id: note.id, type: NOTES_POST_TYPE, title: note.text } ) );
+	if ( ! optimistic ) {
+		return;
+	}
 	callbacks.onEvict( note.id );
 	try {
 		await deleteNote( note.id );
 		// The bin gained an item — tell its icon.
 		broadcastNotesChange( 'trashed', [ note.id ] );
+		void optimistic.finish( true );
 		getToastApi()?.showToast?.( {
 			message: __( 'Note moved to Trash', 'desktop-mode' ),
 			duration: 6000,
 			action: {
 				label: __( 'Undo', 'desktop-mode' ),
 				onClick: () => {
+					const undo = beginTrashChange( trashItem( { id: note.id, type: NOTES_POST_TYPE, title: note.text } ), 'out' );
 					void restoreNote( note.id )
 						.then( ( restored ) => {
 							broadcastNotesChange( 'untrashed', [ note.id ] );
 							callbacks.onRestore( restored );
+							void undo?.finish( true );
 						} )
 						.catch( ( err: unknown ) => {
+							void undo?.finish( false );
 							// eslint-disable-next-line no-console
 							console.error(
 								'[openstation] notes: restore failed:',
@@ -71,6 +80,7 @@ export async function trashNoteWithUndo(
 	} catch ( err ) {
 		// eslint-disable-next-line no-console
 		console.error( '[openstation] notes: trash failed:', err );
+		void optimistic.finish( false );
 		callbacks.onRestore( note );
 		getToastApi()?.showToast?.( {
 			message: __( 'Could not move the note to the Trash.', 'desktop-mode' ),

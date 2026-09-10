@@ -119,9 +119,18 @@ function openstation_files_place( $user_id, $parent_id, $type, $ref, $args = arr
 	// break `await response.json()` on the client. `$wpdb->last_error`
 	// still holds the message, so genuine DB failures surface via the
 	// `WP_Error` we return when no existing row is found.
-	$prev_suppress = $wpdb->suppress_errors( true );
-	$ok            = $wpdb->insert( $tables['placements'], $row, array( '%d', '%d', '%d', '%s', '%s', '%d', '%d', '%d', '%d', '%s' ) );
-	$wpdb->suppress_errors( $prev_suppress );
+	$insert = static function () use ( $tables, $row ) {
+		global $wpdb;
+		$prev_suppress = $wpdb->suppress_errors( true );
+		$ok            = $wpdb->insert( $tables['placements'], $row, array( '%d', '%d', '%d', '%s', '%s', '%d', '%d', '%d', '%d', '%s' ) );
+		$wpdb->suppress_errors( $prev_suppress );
+		return array( $ok, (int) $wpdb->insert_id );
+	};
+	$result = 'upload' === $type ? openstation_stored_files_place_insert( $ref, $insert ) : $insert();
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	list( $ok, $id ) = $result;
 	if ( false === $ok ) {
 		// Disambiguate the two cases hidden behind a generic `false`:
 		// (a) The `placement_unique` index collided
@@ -188,8 +197,6 @@ function openstation_files_place( $user_id, $parent_id, $type, $ref, $args = arr
 
 		return $existing_id;
 	}
-	$id = (int) $wpdb->insert_id;
-
 	$row['id'] = $id;
 
 	/**

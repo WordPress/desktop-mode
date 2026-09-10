@@ -45,6 +45,7 @@ import {
 	type ListItem,
 	type SectionDef,
 } from './parts/types';
+import { explorerItemTrashing, openPreview, previewContext, visibleExplorerItems, watchExplorerTrash } from './parts/optimistic';
 import { listKey, sectionOf } from './parts/helpers';
 import {
 	renderList,
@@ -133,7 +134,7 @@ function renderBody(
 	// list with Back in the header — the way a phone shows the detail
 	// of a row. A pane beside the list has no room, and a sheet along
 	// the bottom read as a preview of the thing rather than the thing.
-	if ( ctx.state.item > 0 && isMobileStamped() ) {
+	if ( ctx.state.item > 0 && ! explorerItemTrashing( section, ctx.state.item ) && isMobileStamped() ) {
 		return html`<div class="os-mywp__detail-page">${ renderDetail( ctx, section ) }</div>`;
 	}
 	// The preview pane appears beside the list once an entry is open,
@@ -142,7 +143,7 @@ function renderBody(
 	// whole window.
 	return splitView(
 		renderList( ctx, section, items ),
-		ctx.state.item > 0 ? renderDetail( ctx, section ) : null,
+		ctx.state.item > 0 && ! explorerItemTrashing( section, ctx.state.item ) ? renderDetail( ctx, section ) : null,
 	);
 }
 
@@ -183,6 +184,17 @@ function renderViewSwitch( ctx: Ctx ): TemplateResult {
 
 export default defineApp< AppState, AppData >( 'my-wordpress', {
 	local: {
+		'search-query': ( state, args ) => {
+			state.query = String( args.value ?? '' );
+			state.page = 1;
+			state.item = 0;
+			state.selected = [];
+		},
+		preview: ( state, args ) => {
+			state.item = Number( args.item ) || 0;
+			state.pane = 'define';
+			state.agentNotice = '';
+		},
 		select: ( state, args ) => {
 			const order = Array.isArray( args.order ) ? ( args.order as number[] ) : [];
 			state.selected = applySelection( state.selected, order, Number( args.item ), {
@@ -280,6 +292,7 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 	},
 
 	view: ( ctx ) => {
+		ctx = previewContext( ctx );
 		const { state, data: payload } = ctx;
 		const section = sectionOf( payload, state.section );
 		const group = payload.groups.find( ( g ) => g.id === state.group ) ?? null;
@@ -343,9 +356,10 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 		}
 
 		const items = section && ! inFolder
-			? uiOf( ctx ).list.accumulate( listKey( state ), payload.list )
+			? visibleExplorerItems( ctx, section, uiOf( ctx ).list.accumulate( listKey( state ), payload.list ) )
 			: [];
 		const loaded = items.length;
+		const selectedCount = section ? state.selected.filter( ( id ) => ! explorerItemTrashing( section, id ) ).length : state.selected.length;
 		let folderStatus: [ string, string ] | null = null;
 		if ( inSub && payload.sub ) {
 			folderStatus = [
@@ -389,11 +403,11 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 				__( '%1$d of %2$d items' ),
 				loaded,
 				payload.list?.total ?? 0,
-			) }${ state.selected.length > 0
+			) }${ selectedCount > 0
 				? ' — ' + sprintf(
 					/* translators: %d: selected count. */
 					__( '%d selected' ),
-					state.selected.length,
+					selectedCount,
 				)
 				: '' }`
 			: sprintf(
@@ -428,7 +442,7 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 							class="os-mywp__back"
 							aria-label=${ __( 'Back' ) }
 							@click=${ () =>
-								void ctx.dispatch( onItemPage ? 'open' : 'back', onItemPage ? { item: 0 } : undefined ) }
+								onItemPage ? openPreview( ctx, 0 ) : void ctx.dispatch( 'back' ) }
 						>‹</button>`
 						: '' }
 					<nav class="os-mywp__crumbs">${ crumbs }</nav>
@@ -443,8 +457,8 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 								section.label.toLowerCase(),
 							) }
 							clearable
-							os-bind="query"
-							os-action="search"
+							@os-input-change=${ ( event: CustomEvent< { value: string } > ) => ctx.local( 'search-query', event.detail ) }
+							os-action="refresh"
 						></os-text-field>
 						${ renderViewSwitch( ctx ) }
 						${ section.kind === 'user' && section.canAdd
@@ -475,12 +489,14 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 
 	mounted: ( ctx ) => {
 		const unwire = wire( ctx );
+		const unwatchTrash = watchExplorerTrash( ctx );
 		// The body reads the shell's mode stamp (the phone's item page);
 		// a crossing between the desk and the phone band repaints
 		// nothing on its own.
 		const onModeChange = (): void => ctx.repaint();
 		document.addEventListener( 'os-mode-changed', onModeChange );
 		return () => {
+			unwatchTrash();
 			unwire();
 			document.removeEventListener( 'os-mode-changed', onModeChange );
 		};

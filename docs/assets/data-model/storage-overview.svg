@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-label="Where OpenStation persists data: eight custom tables, two post types, twenty-six user meta keys, fourteen post and comment meta keys, fourteen options, nine transient families, three upload directories, two cron hooks.">
+	<rect x="0" y="0" width="760" height="340" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+	<text x="24" y="34" font-family="IBM Plex Sans, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="600" fill="#1f2328">Where OpenStation keeps its data</text>
+	<text x="24" y="54" font-family="IBM Plex Sans, Helvetica Neue, Arial, sans-serif" font-size="12" fill="#59636e">Distinct tables, keys or families per store, counted from includes/ and apps/</text>
+
+	<g font-family="IBM Plex Mono, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#1f2328">
+		<!-- rows: label at x=24, bar from x=250, 14px per unit -->
+		<text x="24" y="90">Custom tables</text>
+		<rect x="250" y="78" width="112" height="16" rx="2" fill="#b0298f"/>
+		<text x="370" y="90" fill="#59636e">8</text>
+
+		<text x="24" y="118">Custom post types</text>
+		<rect x="250" y="106" width="28" height="16" rx="2" fill="#3d5b80"/>
+		<text x="286" y="118" fill="#59636e">2</text>
+
+		<text x="24" y="146">User meta keys</text>
+		<rect x="250" y="134" width="364" height="16" rx="2" fill="#3d5b80"/>
+		<text x="622" y="146" fill="#59636e">26</text>
+
+		<text x="24" y="174">Post + comment meta keys</text>
+		<rect x="250" y="162" width="196" height="16" rx="2" fill="#3d5b80"/>
+		<text x="454" y="174" fill="#59636e">14</text>
+
+		<text x="24" y="202">Options</text>
+		<rect x="250" y="190" width="196" height="16" rx="2" fill="#3d5b80"/>
+		<text x="454" y="202" fill="#59636e">14</text>
+
+		<text x="24" y="230">Transient families</text>
+		<rect x="250" y="218" width="126" height="16" rx="2" fill="#a3641a"/>
+		<text x="384" y="230" fill="#59636e">9</text>
+
+		<text x="24" y="258">Upload directories</text>
+		<rect x="250" y="246" width="42" height="16" rx="2" fill="#a3641a"/>
+		<text x="300" y="258" fill="#59636e">3</text>
+
+		<text x="24" y="286">Cron hooks</text>
+		<rect x="250" y="274" width="28" height="16" rx="2" fill="#a3641a"/>
+		<text x="286" y="286" fill="#59636e">2</text>
+	</g>
+
+	<g font-family="IBM Plex Sans, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#59636e">
+		<rect x="24" y="312" width="12" height="12" rx="2" fill="#b0298f"/><text x="42" y="322">Plugin-owned tables</text>
+		<rect x="180" y="312" width="12" height="12" rx="2" fill="#3d5b80"/><text x="198" y="322">Rows in WordPress core tables</text>
+		<rect x="400" y="312" width="12" height="12" rx="2" fill="#a3641a"/><text x="418" y="322">Outside tables: caches, disk, cron</text>
+	</g>
+</svg>

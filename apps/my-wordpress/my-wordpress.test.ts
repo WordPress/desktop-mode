@@ -5,8 +5,11 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockViewContext } from '../../src/app-runtime/testing';
+import { _resetAllSharedStoresForTests } from '../../src/shared-store';
+import { beginTrashChange, trashItem } from '../../src/desktop-files/trash-optimistic';
+import { openPreview, trashExplorerItems, watchExplorerTrash } from './parts/optimistic';
 import { uiOf } from './parts/types';
 import app, {
 	buildMenuOptions,
@@ -192,7 +195,12 @@ describe( 'view', () => {
 	): HTMLElement {
 		const root = document.createElement( 'div' );
 		document.body.appendChild( root );
-		app.render( mockViewContext( { state: s, data: d, root, dispatch } ) );
+		const ctx = mockViewContext( { state: s, data: d, root, dispatch } );
+		ctx.local = ( action, args = {} ) => {
+			Object.assign( s, app.runLocal( action, s, args, d ) );
+			app.render( ctx );
+		};
+		app.render( ctx );
 		return root;
 	}
 
@@ -220,7 +228,8 @@ describe( 'view', () => {
 			expect( links ).toContain( 'Posts' );
 			root.querySelector< HTMLButtonElement >( '.os-mywp__back' )!.click();
 			await Promise.resolve();
-			expect( calls ).toEqual( [ [ 'open', { item: 0 } ] ] );
+			expect( calls ).toEqual( [] );
+			expect( root.querySelector( '.os-mywp__detail-page' ) ).toBeNull();
 		} finally {
 			document.documentElement.removeAttribute( 'data-os-mode' );
 		}
@@ -307,7 +316,7 @@ describe( 'view', () => {
 		expect( open.querySelector( '.os-mywp__detail-pane' ) ).not.toBeNull();
 		expect( open.querySelector( '.os-mywp__split--solo' ) ).toBeNull();
 		expect( open.textContent ).toContain( 'Status' );
-		expect( open.querySelector( '[os-action="trash"]' ) ).not.toBeNull();
+		expect( Array.from( open.querySelectorAll( 'os-button' ) ).some( ( button ) => button.textContent?.trim() === 'Trash' ) ).toBe( true );
 		// The pane carries WP Explorer's full verb row: the door into
 		// the detail folder sits beside the editor button.
 		expect( open.textContent ).toContain( 'Explore details' );
@@ -836,5 +845,155 @@ describe( 'theme tokenization', () => {
 			'utf8',
 		);
 		expect( shared ).not.toMatch( /rgba\(\s*34,\s*113,\s*177/ );
+	} );
+} );
+
+describe( 'optimistic Explorer interactions', () => {
+	afterEach( () => {
+		_resetAllSharedStoresForTests();
+		document.body.replaceChildren();
+	} );
+
+	function setup() {
+		const root = document.createElement( 'div' );
+		document.body.appendChild( root );
+		const ctx = mockViewContext( {
+			root, state: state( { section: 'posts' } ),
+			data: data( { list: page( [ item( { id: 1 } ), item( { id: 2, title: 'Beta' } ) ] ) } ),
+		} );
+		ctx.repaint = () => app.render( ctx );
+		ctx.local = ( action, args = {} ) => {
+			Object.assign( ctx.state, app.runLocal( action, ctx.state, args, ctx.data ) );
+			ctx.repaint();
+		};
+		ctx.repaint();
+		return ctx;
+	}
+
+	it( 'resets search selection immediately so the debounced refresh cannot close a newer preview', async () => {
+		const ctx = setup();
+		ctx.state.item = 1;
+		ctx.state.page = 3;
+		ctx.state.selected = [ 1 ];
+		const field = ctx.root.querySelector( 'os-text-field' )!;
+		field.dispatchEvent( new CustomEvent( 'os-input-change', { detail: { value: 'Beta' }, bubbles: true } ) );
+		expect( ctx.state ).toMatchObject( { query: 'Beta', page: 1, item: 0, selected: [] } );
+		expect( field.getAttribute( 'os-action' ) ).toBe( 'refresh' );
+		ctx.dispatch = vi.fn( async () => true );
+		openPreview( ctx, 2 );
+		await Promise.resolve();
+		expect( ctx.state.item ).toBe( 2 );
+		expect( ctx.root.querySelector( '.os-mywp__detail-title' )?.textContent ).toBe( 'Beta' );
+	} );
+
+	it( 'paints the clicked row before details arrive, skips stale content, and closes without a request', async () => {
+		const ctx = setup();
+		let answer!: ( ok: boolean ) => void;
+		ctx.dispatch = vi.fn( () => new Promise< boolean >( ( resolve ) => {
+			answer = resolve;
+		} ) );
+		openPreview( ctx, 1 );
+		expect( ctx.root.querySelector( '.os-mywp__detail-title' )?.textContent ).toBe( 'Alpha' );
+		expect( ctx.root.querySelector( '.os-mywp__detail' )?.getAttribute( 'aria-busy' ) ).toBe( 'true' );
+		openPreview( ctx, 2 );
+		// Simulate a queued search resetting item after the newer pick.
+		ctx.state.item = 0;
+		ctx.data.detail = { id: 1, kind: 'post', title: 'OLD', content: '<p>Wrong body</p>', facts: [], canEdit: true, canDelete: true };
+		ctx.repaint();
+		expect( ctx.root.querySelector( '.os-mywp__detail-title' )?.textContent ).toBe( 'Beta' );
+		expect( ctx.root.textContent ).not.toContain( 'Wrong body' );
+		expect( ctx.dispatch ).toHaveBeenCalledTimes( 1 );
+		answer( true );
+		await vi.waitFor( () => expect( ctx.dispatch ).toHaveBeenCalledTimes( 2 ) );
+		openPreview( ctx, 0 );
+		expect( ctx.root.querySelector( '.os-mywp__detail-pane' ) ).toBeNull();
+		answer( true );
+		await Promise.resolve();
+		expect( ctx.state.item ).toBe( 0 );
+	} );
+
+	it( 'rolls back a dropped item and its preview without a server refresh on failure', async () => {
+		const ctx = setup();
+		ctx.state.item = 1;
+		ctx.data.detail = { id: 1, kind: 'post', title: 'Alpha', facts: [], canEdit: true, canDelete: true };
+		ctx.dispatch = vi.fn( async () => true );
+		const stop = watchExplorerTrash( ctx );
+		const operation = beginTrashChange( trashItem( { id: 1, type: 'post', title: 'Alpha' } ) )!;
+		expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).toBeNull();
+		expect( ctx.root.querySelector( '.os-mywp__detail-pane' ) ).toBeNull();
+		await operation.finish( false );
+		expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).not.toBeNull();
+		expect( ctx.root.querySelector( '.os-mywp__detail-title' )?.textContent ).toBe( 'Alpha' );
+		expect( ctx.dispatch ).not.toHaveBeenCalled();
+		stop();
+	} );
+
+	it( 'preserves PHP trash actions for sections without a REST collection', async () => {
+		const ctx = setup();
+		const stop = watchExplorerTrash( ctx );
+		ctx.host.confirm = vi.fn( async () => true );
+		let answer!: ( ok: boolean ) => void;
+		ctx.dispatch = vi.fn( () => new Promise< boolean >( ( resolve ) => {
+			answer = resolve;
+		} ) );
+		const done = trashExplorerItems( ctx, section( { restPath: undefined } ), [ ctx.data.list!.items[ 0 ] ] );
+		await Promise.resolve();
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'trash', { item: 1 } );
+		expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).toBeNull();
+		answer( false );
+		await done;
+		expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).not.toBeNull();
+		stop();
+	} );
+
+	it( 'rolls back only failed members of a confirmed bulk trash', async () => {
+		const ctx = setup();
+		const stop = watchExplorerTrash( ctx );
+		ctx.host.confirm = vi.fn( async () => true );
+		ctx.host.announce = vi.fn();
+		const answers: Array< ( response: Response ) => void > = [];
+		ctx.fetch = vi.fn( () => new Promise< Response >( ( resolve ) => {
+			answers.push( resolve );
+		} ) );
+		ctx.dispatch = vi.fn( async () => {
+			ctx.data.list = page( [ item( { id: 2, title: 'Beta' } ) ] );
+			ctx.repaint();
+			return true;
+		} );
+		const done = trashExplorerItems( ctx, section( { restPath: 'wp/v2/posts' } ), ctx.data.list!.items );
+		await Promise.resolve();
+		expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).toBeNull();
+		expect( ctx.root.querySelector( '[data-item-id="2"]' ) ).toBeNull();
+		answers[ 0 ]( new Response( '{}', { status: 200 } ) );
+		answers[ 1 ]( new Response( '{}', { status: 403 } ) );
+		await done;
+		await vi.waitFor( () => {
+			expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).toBeNull();
+			expect( ctx.root.querySelector( '[data-item-id="2"]' ) ).not.toBeNull();
+		} );
+		expect( ctx.host.announce ).toHaveBeenCalledWith( 'post', 'trashed', [ 1 ] );
+		stop();
+	} );
+
+	it( 'keeps a trashed row on an older accumulated page hidden after reconciliation', async () => {
+		const ctx = setup();
+		ctx.state.page = 2;
+		ctx.state.item = 1;
+		ctx.data.list = page( [ item( { id: 3 } ) ], { page: 2, total: 3 } );
+		ctx.repaint();
+		const stop = watchExplorerTrash( ctx );
+		ctx.dispatch = vi.fn( async () => {
+			ctx.data.list = page( [ item( { id: 3 } ) ], { page: 2, total: 2 } );
+			ctx.repaint();
+			return true;
+		} );
+		const operation = beginTrashChange( trashItem( { id: 1, type: 'post', title: 'Alpha' } ) )!;
+		await operation.finish( true );
+		expect( ctx.root.querySelector( '[data-item-id="1"]' ) ).toBeNull();
+		expect( ctx.root.querySelector( '[data-item-id="2"]' ) ).not.toBeNull();
+		expect( ctx.root.querySelector( '[data-item-id="3"]' ) ).not.toBeNull();
+		expect( ctx.state.item ).toBe( 0 );
+		expect( ctx.root.querySelector( '.os-mywp__detail-pane' ) ).toBeNull();
+		stop();
 	} );
 } );

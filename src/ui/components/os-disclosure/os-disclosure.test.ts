@@ -57,6 +57,7 @@ describe( '<os-disclosure>', () => {
 		// A real <button> is what gets Tab, Enter and Space for free.
 		const el = await mount( 'heading="Advanced"' );
 		expect( summary( el ).tagName ).toBe( 'BUTTON' );
+		expect( el.shadowRoot?.querySelector( '[part=heading]' )?.textContent ).toBeTruthy();
 		expect( summary( el ).type ).toBe( 'button' );
 
 		summary( el ).click();

@@ -23,3 +23,11 @@ The Trash window is now an `.os.php` app (`apps/trash/`) driven by the [App Fram
 ## Why
 
 The bin window was 2,155 lines — a 1,305-line imperative bundle, a 198-line REST client, a 366-line registration/template module and 286 lines of routes it used for itself. As an app it is ~640: two declared actions (`restore`, `purge`), a `data()` over the same store, and a client view whose filter, search and Refresh all ride the built-in `refresh`. The port also drove two framework additions every app now has: `$os->icon()` / `ctx.host.setIcon()` (state-driven tile art — the empty/full bin swap) and `ctx.extra` (`App::config()` values, which is how both drawings reach the client once instead of riding every response).
+
+### Immediate feedback
+
+Drops from WP Explorer, desktop placements/folders and pinned notes appear in an open Trash window immediately; the closed bin also switches its artwork immediately. Restore, Delete forever, Pin to desktop, Undo and Empty Trash hide affected visible rows while their requests run. Destructive confirmations still come first. Pending incoming rows cannot be restored or purged until their server permissions arrive.
+
+The internal `src/desktop-files/trash-optimistic.ts` presentation store is shared across bundles through `createSharedStore`. It overlays typed row identities (`type:id`) on each window's server snapshot. It does not emit a successful content-change broadcast before a request succeeds. Failed operations roll back individually; successful drops keep their overlay through the mounted windows' reconciliation requests. Type/search filters still apply to pending rows, and the server supplies the final counts, metadata and permissions.
+
+The open window accepts the same drops as the dock, including uploaded files dragged from folder windows. Its drop target follows the mounted app body through asynchronous loading, re-rendering and close/reopen, so registration does not depend on the body already existing when the window opens.

@@ -18,7 +18,7 @@ import { createBrowseGallery } from './parts/gallery';
 import { isSafeUrl, sanitizeHtml, stripHtml } from './parts/html';
 import { attachIconFallback } from './parts/icon-fallback';
 import { deriveSlug } from './parts/installed-detail';
-import { countUpdates, filterRows, freshInstalledUi, haystacksFor } from './parts/installed-table';
+import { countUpdates, filterRows, freshInstalledUi, haystacksFor } from './parts/installed-library';
 import { leaveAfterSelfMutation, selfGone } from './parts/mutations';
 import { createPluginsRest, readJsonOrThrow, unwrapAjaxEnvelope } from './parts/rest';
 import {
@@ -144,16 +144,16 @@ afterEach( () => {
 } );
 
 describe( 'the plugins app view', () => {
-	it( 'declares a placeholder: the frame paints before mount with the installed table in its skeleton', () => {
+	it( 'declares a placeholder: the frame paints before mount with a library loading state', () => {
 		expect( app.placeholder!( {} ) ).toEqual( { installed: [], error: '' } );
 
 		const { root } = mount( {}, { installed: [] }, {}, {}, true );
 		expect( root.querySelector( '[data-os-plugins-tabs]' ) ).not.toBeNull();
-		expect( root.querySelector( 'os-segmented' ) ).not.toBeNull();
-		expect( root.querySelector( '[data-os-plugins-table]' )?.hasAttribute( 'loading' ) ).toBe( true );
+		expect( root.querySelector( '.os-plugins__collections' ) ).not.toBeNull();
+		expect( root.querySelector( '.os-plugins__library-scroll' )?.getAttribute( 'aria-busy' ) ).toBe( 'true' );
 
 		const settled = mount();
-		expect( settled.root.querySelector( '[data-os-plugins-table]' )?.hasAttribute( 'loading' ) ).toBe( false );
+		expect( settled.root.querySelector( '.os-plugins__library-scroll' )?.getAttribute( 'aria-busy' ) ).toBe( 'false' );
 	} );
 
 	it( 'paints the three tabs on the state tab, bound to it, with the framework list frame', () => {
@@ -181,7 +181,7 @@ describe( 'the plugins app view', () => {
 		expect( root.querySelector( '[data-os-plugins-featured-host]' ) ).toBeNull();
 	} );
 
-	it( 'counts pending updates on the Update-available segment and keeps the bulk bar hidden until a selection', () => {
+	it( 'counts pending updates on the Updates collection and keeps selection mode out of the way', () => {
 		const { root } = mount(
 			{},
 			{
@@ -195,22 +195,20 @@ describe( 'the plugins app view', () => {
 				],
 			},
 		);
-		const status = root.querySelector( '[os-bind="status"]' );
-		expect( status?.getAttribute( 'os-action' ) ).toBe( 'set' );
-		expect( status?.querySelector( 'os-segment[value="update"]' )?.textContent?.trim() ).toBe( 'Update available (1)' );
-		expect( root.querySelector( '.os-app-list__toolbar-right' )?.hasAttribute( 'hidden' ) ).toBe( true );
+		const status = root.querySelector( '[data-filter="update"]' );
+		expect( status?.querySelector( 'strong' )?.textContent ).toBe( '1' );
+		expect( root.querySelector( '.os-plugins__selection' )?.hasAttribute( 'hidden' ) ).toBe( true );
 		expect( root.querySelector( '[os-action="reload"]' ) ).not.toBeNull();
 		expect( root.querySelector( '[os-bind="search"]' )?.classList.contains( 'os-app-list__search' ) ).toBe( true );
 	} );
 
-	it( 'moves the bulk bar to the bottom and swaps the pills for a picker on a phone', () => {
+	it( 'keeps the same library and anchored selection tray on a phone', () => {
 		document.documentElement.setAttribute( 'data-os-mode', 'mobile' );
 		const { root } = mount();
-		const bar = root.querySelector( '.os-app-list__toolbar-right' );
-		expect( bar?.classList.contains( 'os-app-list__bulk--footer' ) ).toBe( true );
-		expect( root.querySelector( '[os-bind="status"]' )?.tagName.toLowerCase() ).toBe( 'os-select' );
+		expect( root.querySelector( '.os-plugins__selection' )?.parentElement?.className ).toBe( 'os-plugins__library' );
+		expect( root.querySelector( '.os-plugins__collections' ) ).not.toBeNull();
 		expect( root.querySelector( '[os-bind="browse"]' )?.tagName.toLowerCase() ).toBe( 'os-select' );
-		expect( root.querySelector( '[data-os-plugins-table]' )?.hasAttribute( 'stacked' ) ).toBe( true );
+		expect( root.querySelector( 'os-table' ) ).toBeNull();
 	} );
 
 	it( 'offers Upload only to a viewer who may upload, and binds the browse toolbar', () => {
@@ -706,5 +704,144 @@ describe( 'deriveSlug', () => {
 		);
 		expect( deriveSlug( row( { openstation_wporg_slug: null } ) ) ).toBe( '' );
 		expect( deriveSlug( row() ) ).toBe( '' );
+	} );
+} );
+
+describe( 'the installed plugin library', () => {
+	const libraryRows = (): InstalledPlugin[] => [
+		row( { plugin: 'sleep/sleep', name: 'Sleeping plugin', openstation_size_kb: 400 } ),
+		row( { plugin: 'network/network', name: 'Network plugin', status: 'network-active', openstation_can_manage: { activate: false, deactivate: false, delete: false } } ),
+		row( { plugin: 'update/update', name: 'Update plugin', status: 'active', openstation_size_kb: 100,
+			openstation_update_available: { available: true, new_version: '2.0', package: 'download.zip', slug: 'update' } } ),
+	];
+	const click = ( root: HTMLElement, selector: string ): void => {
+		const el = root.querySelector< HTMLElement >( selector );
+		expect( el, selector ).not.toBeNull();
+		el!.click();
+	};
+
+	it( 'puts updates first, with every plugin in exactly one shelf and its actions beside it', () => {
+		const { root } = mount( {}, { installed: libraryRows() } );
+		expect( root.querySelector( 'os-table, table' ) ).toBeNull();
+		expect( root.querySelector( '.os-plugins__workspace > style' )?.textContent ).toContain( '.os-plugins__library' );
+		expect( Array.from( root.querySelectorAll< HTMLElement >( '[data-plugin-card]' ) ).map( ( el ) => el.dataset.pluginCard ) )
+			.toEqual( [ 'update/update', 'network/network', 'sleep/sleep' ] );
+		const update = root.querySelector( '[data-plugin-card="update/update"]' );
+		expect( update?.textContent ).toContain( '2.0' );
+		expect( update?.querySelector( '.os-plugins__module-actions os-button' )?.textContent ).toBe( 'Update' );
+		expect( update?.querySelector( '.os-plugins__module-actions' )?.textContent ).toContain( 'Deactivate' );
+		expect( root.querySelector( '[data-plugin-card="network/network"]' )?.textContent ).toContain( 'Network active' );
+		expect( root.querySelector( '[data-plugin-card="network/network"] .os-plugins__module-actions os-button' ) ).toBeNull();
+	} );
+
+	it( 'filters locally, preserves actions, and drops selections that become hidden', () => {
+		const { root, ctx } = mount( {}, { installed: libraryRows() } );
+		const updateButton = root.querySelector( '[data-plugin-card="update/update"] .os-plugins__module-actions os-button' );
+		root.querySelector( '.os-plugins__pick' )!.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		root.querySelector( '.os-plugins__selection os-checkbox' )!.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		expect( root.querySelector( '.os-plugins__selection-count' )?.textContent ).toBe( '3 selected' );
+		expect( root.querySelector( '[data-plugin-card="update/update"] .os-plugins__module-actions os-button' ) ).toBe( updateButton );
+		click( root, '[data-filter="inactive"]' );
+		expect( ctx.state.status ).toBe( 'inactive' );
+		expect( root.querySelector( '[data-plugin-card="sleep/sleep"] .os-plugins__module-actions' )?.textContent ).toContain( 'Activate' );
+		expect( root.querySelector( '[data-plugin-card="sleep/sleep"] .os-plugins__module-icon' ) ).not.toBeNull();
+		expect( root.querySelectorAll( '[data-plugin-card]' ) ).toHaveLength( 1 );
+		expect( root.querySelector( '.os-plugins__selection-count' )?.textContent ).toBe( '1 selected' );
+		expect( fetchMock() ).not.toHaveBeenCalled();
+	} );
+
+	it( 'always shows compact checkboxes and opens bulk tools only with a selection', async () => {
+		const { root } = mount( {}, { installed: libraryRows() } );
+		const box = root.querySelector( '.os-plugins__pick' )!;
+		expect( box.hasAttribute( 'hidden' ) ).toBe( false );
+		expect( box.hasAttribute( 'label' ) ).toBe( false );
+		expect( root.querySelector( '.os-plugins__library-tools os-button' ) ).toBeNull();
+		expect( root.querySelector( '.os-plugins__selection' )?.hasAttribute( 'hidden' ) ).toBe( true );
+		await Promise.resolve();
+		expect( box.shadowRoot?.querySelector( 'input' )?.getAttribute( 'aria-label' ) ).toMatch( /^Select / );
+		box.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		expect( root.querySelector( '.os-plugins__selection' )?.hasAttribute( 'hidden' ) ).toBe( false );
+		box.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: false } } ) );
+		expect( root.querySelector( '.os-plugins__selection' )?.hasAttribute( 'hidden' ) ).toBe( true );
+	} );
+
+	it( 'selects only downloadable updates and waits for an explicit bulk action', () => {
+		const rows = libraryRows();
+		rows.push( row( { plugin: 'premium/premium', openstation_update_available: { available: true, new_version: '3', package: '', slug: 'premium' } } ) );
+		const { root } = mount( {}, { installed: rows } );
+		click( root, '[data-shelf="update"] .os-plugins__shelf-heading os-button' );
+		expect( root.querySelector( '.os-plugins__selection-count' )?.textContent ).toBe( '1 selected' );
+		expect( root.querySelector( '.os-plugins__selection-actions' )?.textContent ).toContain( 'Update 1' );
+		expect( fetchMock() ).not.toHaveBeenCalled();
+	} );
+
+	it( 'adds update candidates without clearing previously selected inactive plugins', () => {
+		const { root } = mount( {}, { installed: libraryRows() } );
+		root.querySelector( '[data-plugin-card="sleep/sleep"] os-checkbox' )!.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		click( root, '[data-shelf="update"] .os-plugins__shelf-heading os-button' );
+		expect( root.querySelector( '.os-plugins__selection-count' )?.textContent ).toBe( '2 selected' );
+		expect( root.querySelector( '[data-plugin-card="sleep/sleep"] os-checkbox' )?.hasAttribute( 'checked' ) ).toBe( true );
+	} );
+
+	it( 'sorts by disk size without a request or mutating the server list', () => {
+		const rows = libraryRows();
+		const { root } = mount( {}, { installed: rows } );
+		root.querySelector( '.os-plugins__library-tools os-select' )!.dispatchEvent( new CustomEvent( 'os-pick', { detail: { value: 'size' } } ) );
+		expect( Array.from( root.querySelectorAll< HTMLElement >( '[data-plugin-card]' ) ).map( ( el ) => el.dataset.pluginCard ) )
+			.toEqual( [ 'sleep/sleep', 'update/update', 'network/network' ] );
+		expect( rows.map( ( r ) => r.plugin ) ).toEqual( [ 'sleep/sleep', 'network/network', 'update/update' ] );
+		expect( root.querySelector( '[data-plugin-card="sleep/sleep"] .os-plugins__module-actions' )?.textContent ).toContain( 'Activate' );
+		expect( root.querySelector( '[data-plugin-card="update/update"] .os-plugins__module-actions os-button' )?.textContent ).toBe( 'Update' );
+		expect( fetchMock() ).not.toHaveBeenCalled();
+	} );
+
+	it( 'keeps inspector actions independent, preserves details on repaint, and returns keyboard focus', async () => {
+		const { root, ctx } = mount();
+		const original = root.querySelector( '[data-plugin-card] .os-plugins__module-actions os-button' );
+		click( root, '[data-plugin-details]' );
+		await Promise.resolve();
+		const inspector = root.querySelector( '.os-plugins__inspector' );
+		expect( inspector ).not.toBeNull();
+		expect( inspector?.querySelector( '.os-plugins__module-actions os-button' ) ).not.toBe( original );
+		expect( original?.isConnected ).toBe( true );
+		expect( root.ownerDocument.activeElement ).toBe( root.querySelector( '[data-plugin-back]' ) );
+		const details = root.querySelector( '.os-plugins__inspector-content' );
+		ctx.repaint();
+		expect( root.querySelector( '.os-plugins__inspector-content' ) ).toBe( details );
+		inspector!.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } ) );
+		await Promise.resolve();
+		expect( root.querySelector( '.os-plugins__inspector' ) ).toBeNull();
+		expect( root.ownerDocument.activeElement ).toBe( root.querySelector( '[data-plugin-details]' ) );
+	} );
+
+	it( 'names search and detail controls inside their shadow roots', async () => {
+		const { root } = mount();
+		await Promise.resolve();
+		expect( root.querySelector( '[data-filter="all"]' )?.shadowRoot?.querySelector( 'button' )?.getAttribute( 'aria-pressed' ) ).toBe( 'true' );
+		expect( root.querySelector( '[data-plugin-details]' )?.shadowRoot?.querySelector( 'button' )?.getAttribute( 'aria-label' ) ).toBe( 'Details for Akismet' );
+	} );
+
+	it( 'shows auto-update policy in the inspector and honors capability gates', () => {
+		const { root } = mount( {}, { installed: [ row( { openstation_auto_update: { supported: true, enabled: true, forced: true } } ) ] },
+			{ caps: { install: false, activate: false, delete: false, update: false, upload: false } } );
+		expect( root.querySelector( '.os-plugins__module-actions os-button' ) ).toBeNull();
+		click( root, '[data-plugin-details]' );
+		expect( root.querySelector( '.os-plugins__inspector-updates' )?.textContent ).toContain( 'Auto-updates enabled' );
+		expect( root.querySelector( '.os-plugins__inspector-updates os-button' ) ).toBeNull();
+	} );
+
+	it( 'resets an empty search and distinguishes a load error from an empty result', () => {
+		const { root, ctx } = mount( { search: 'not-a-plugin' } );
+		const field = root.querySelector( '.os-plugins__library-tools os-text-field' );
+		expect( root.querySelectorAll( '[data-plugin-card]' ) ).toHaveLength( 0 );
+		expect( field?.getAttribute( 'value' ) ).toBe( 'not-a-plugin' );
+		click( root, '.os-plugins__library-empty os-button' );
+		expect( ctx.state.search ).toBe( '' );
+		expect( root.querySelectorAll( '[data-plugin-card]' ) ).toHaveLength( 1 );
+		// The field follows the state it is bound to, or the next keystroke re-filters on stale text.
+		expect( field?.getAttribute( 'value' ) ?? '' ).toBe( '' );
+		const failed = mount( {}, { installed: [], error: 'Connection lost' } );
+		expect( failed.root.querySelector( 'os-notice' )?.textContent ).toContain( 'Connection lost' );
+		expect( failed.root.querySelector( '.os-plugins__library-empty' ) ).toBeNull();
 	} );
 } );

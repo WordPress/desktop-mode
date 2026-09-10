@@ -18,6 +18,7 @@
  * Extracted from `layer.ts` (drag-and-drop rework).
  */
 
+import { beginTrashChange, placementTrashItem } from './trash-optimistic';
 import { announceContentChange } from '../broadcast';
 import { rest, store as filesStoreApi } from './layer-deps';
 import type { RestPlacementShape } from './rest';
@@ -102,6 +103,10 @@ function showTrashedToast( message: string, onUndo: () => void ): void {
 export async function trashPlacementWithUndo(
 	placement: RestPlacementShape,
 ): Promise< void > {
+	const optimistic = beginTrashChange( placementTrashItem( placement ) );
+	if ( ! optimistic ) {
+		return;
+	}
 	const placementId = placement.id;
 	const parentId = placement.parentId;
 	const title = placement.file?.title ?? 'Item';
@@ -111,13 +116,17 @@ export async function trashPlacementWithUndo(
 	try {
 		await rest.deletePlacement( placementId );
 		broadcastFilesChange( kind, 'trashed', [ placementId ] );
+		void optimistic.finish( true );
 		showTrashedToast( `"${ title }" moved to Trash`, async () => {
+			const undo = beginTrashChange( placementTrashItem( placement ), 'out' );
 			try {
 				await rest.restoreTrashedItem( placementId, 'placement' );
 				const res = await rest.listPlacements( parentId );
 				filesStoreApi.setFolderPlacements( parentId, res.placements );
 				broadcastFilesChange( kind, 'untrashed', [ placementId ] );
+				void undo?.finish( true );
 			} catch ( err ) {
+				void undo?.finish( false );
 				// eslint-disable-next-line no-console
 				console.error( '[openstation] restore failed:', err );
 			}
@@ -125,10 +134,12 @@ export async function trashPlacementWithUndo(
 	} catch ( err ) {
 		// eslint-disable-next-line no-console
 		console.error( '[openstation] deletePlacement failed:', err );
+		void optimistic.finish( false );
+		filesStoreApi.upsertPlacement( placement );
 		showTrashErrorToast( err );
 		void rest.listPlacements( parentId ).then( ( res ) => {
 			filesStoreApi.setFolderPlacements( parentId, res.placements );
-		} );
+		} ).catch( () => {} );
 	}
 }
 
@@ -144,21 +155,30 @@ export async function trashFolderWithUndo(
 	if ( ! folderId ) {
 		return;
 	}
+	const optimistic = beginTrashChange( placementTrashItem( placement ) );
+	if ( ! optimistic ) {
+		return;
+	}
 	const placementId = placement.id;
 	const parentId = placement.parentId;
 	const title = placement.file?.title ?? 'Folder';
 	filesStoreApi.removePlacement( placementId );
+	const folder = filesStoreApi.getState().folders.get( folderId );
 	filesStoreApi.removeFolder( folderId );
 	try {
 		await rest.deleteFolder( folderId );
 		broadcastFilesChange( 'folder', 'trashed', [ folderId ] );
+		void optimistic.finish( true );
 		showTrashedToast( `"${ title }" moved to Trash`, async () => {
+			const undo = beginTrashChange( placementTrashItem( placement ), 'out' );
 			try {
 				await rest.restoreTrashedItem( folderId, 'folder' );
 				const res = await rest.listPlacements( parentId );
 				filesStoreApi.setFolderPlacements( parentId, res.placements );
 				broadcastFilesChange( 'folder', 'untrashed', [ folderId ] );
+				void undo?.finish( true );
 			} catch ( err ) {
+				void undo?.finish( false );
 				// eslint-disable-next-line no-console
 				console.error( '[openstation] restore folder failed:', err );
 			}
@@ -166,10 +186,15 @@ export async function trashFolderWithUndo(
 	} catch ( err ) {
 		// eslint-disable-next-line no-console
 		console.error( '[openstation] deleteFolder failed:', err );
+		if ( folder ) {
+			filesStoreApi.upsertFolder( folder );
+		}
+		void optimistic.finish( false );
+		filesStoreApi.upsertPlacement( placement );
 		showTrashErrorToast( err );
 		void rest.listPlacements( parentId ).then( ( res ) => {
 			filesStoreApi.setFolderPlacements( parentId, res.placements );
-		} );
+		} ).catch( () => {} );
 	}
 }
 
@@ -199,6 +224,11 @@ export async function trashManyWithUndo(
 		return trashByFileType( placements[ 0 ] );
 	}
 
+	const operations = new Map( placements.map( ( placement ) => [
+		placement.id, beginTrashChange( placementTrashItem( placement ) ),
+	] ) );
+	placements = placements.filter( ( placement ) => operations.get( placement.id ) );
+	const folders = new Map( filesStoreApi.getState().folders );
 	const parentIds = new Set< number >();
 	for ( const placement of placements ) {
 		parentIds.add( placement.parentId );
@@ -259,6 +289,17 @@ export async function trashManyWithUndo(
 		} ),
 	);
 
+	results.forEach( ( result, index ) => {
+		if ( result.status === 'rejected' ) {
+			const placement = placements[ index ];
+			filesStoreApi.upsertPlacement( placement );
+			const folder = placement.file.type === 'folder' && folders.get( Number( placement.file.ref ) );
+			if ( folder ) {
+				filesStoreApi.upsertFolder( folder );
+			}
+			void operations.get( placements[ index ].id )?.finish( false );
+		}
+	} );
 	const deleted: Deleted[] = [];
 	let failed = 0;
 	for ( const result of results ) {
@@ -293,6 +334,12 @@ export async function trashManyWithUndo(
 		}
 	}
 
+	results.forEach( ( result, index ) => {
+		if ( result.status === 'fulfilled' ) {
+			void operations.get( placements[ index ].id )?.finish( true );
+		}
+	} );
+
 	// A partial failure is normal enough to name rather than hide: a
 	// shared folder the viewer may read but not write 403s while its
 	// neighbours succeed, and "3 items moved" when only 2 moved is a
@@ -304,6 +351,10 @@ export async function trashManyWithUndo(
 			: `${ deleted.length } ${ noun } moved to Trash`;
 
 	showTrashedToast( message, async () => {
+		const undo = deleted.map( ( d ) => {
+			const placement = placements.find( ( p ) => p.file.type === 'folder' ? Number( p.file.ref ) === d.id && d.kind === 'folder' : p.id === d.id && d.kind !== 'folder' );
+			return placement ? beginTrashChange( placementTrashItem( placement ), 'out' ) : null;
+		} );
 		const restores = await Promise.allSettled(
 			deleted.map( ( d ) =>
 				rest.restoreTrashedItem( d.restoreId, d.restoreKind ),
@@ -338,6 +389,9 @@ export async function trashManyWithUndo(
 				broadcastFilesChange( kind, 'untrashed', ids );
 			}
 		}
+		restores.forEach( ( result, index ) => {
+			void undo[ index ]?.finish( result.status === 'fulfilled' );
+		} );
 		if ( stillTrashed > 0 ) {
 			// The user pressed Undo and part of it didn't take. Saying
 			// nothing would leave them believing it did.

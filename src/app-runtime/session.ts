@@ -426,7 +426,7 @@ export function createSession( deps: SessionDeps ): Session {
 	 * Accept header ride along unless the caller set their own, and
 	 * the request is attributed to this window so its spinner shows.
 	 */
-	const restFetch = ( path: string, init: RequestInit = {} ): Promise< Response > => {
+	const restFetch = ( path: string, init: RequestInit = {}, options: { silent?: boolean } = {} ): Promise< Response > => {
 		const url = /^https?:\/\//i.test( path )
 			? path
 			: String( config.restRoot ?? '' ) + path.replace( /^\//, '' );
@@ -440,7 +440,7 @@ export function createSession( deps: SessionDeps ): Session {
 		return host.fetch(
 			url,
 			{ credentials: 'same-origin', signal, ...init, headers },
-			{ windowId, source: `openstation/app/${ config.id }` },
+			{ windowId, source: `openstation/app/${ config.id }`, ...options },
 		);
 	};
 

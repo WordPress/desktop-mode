@@ -304,6 +304,33 @@ class Tests_OpenStation_UsersApp extends WP_UnitTestCase {
 	/**
 	 * @covers \OpenStation\App\Runtime::dispatch
 	 */
+	public function test_the_role_filter_scopes_the_collection_server_side() {
+		$editors = $this->dispatch( 'filter', array( 'role' => 'editor', 'page' => 3 ) );
+		$this->assertSame( 1, $editors['state']['page'], 'a role change lands on page 1' );
+		$this->assertSame( 'editor', $editors['state']['role'] );
+		$this->assertSame( array( self::$editor_id ), wp_list_pluck( $editors['data']['list']['items'], 'id' ) );
+
+		// `none` with nobody role-less answers nobody, not everybody.
+		$nobody = $this->dispatch( 'filter', array( 'role' => 'none' ) );
+		$this->assertSame( array(), $nobody['data']['list']['items'] );
+		$this->assertSame( 0, $nobody['data']['list']['total'] );
+
+		$loner = self::factory()->user->create( array( 'role' => '' ) );
+		if ( is_multisite() ) {
+			// A site member without a role still carries the site's capabilities key.
+			update_user_meta( $loner, $GLOBALS['wpdb']->get_blog_prefix() . 'capabilities', array( 'read' => true ) );
+		}
+		$roleless = $this->dispatch( 'filter', array( 'role' => 'none' ) );
+		$this->assertSame( array( $loner ), wp_list_pluck( $roleless['data']['list']['items'], 'id' ) );
+
+		$everyone = $this->dispatch( 'filter', array( 'role' => '' ) );
+		$this->assertContains( self::$editor_id, wp_list_pluck( $everyone['data']['list']['items'], 'id' ) );
+		$this->assertContains( $loner, wp_list_pluck( $everyone['data']['list']['items'], 'id' ) );
+	}
+
+	/**
+	 * @covers \OpenStation\App\Runtime::dispatch
+	 */
 	public function test_search_rides_filter_and_the_page_action_turns_pages() {
 		$searched = $this->dispatch( 'filter', array( 'search' => 'Sam Subscriber', 'page' => 3 ) );
 		$this->assertSame( 1, $searched['state']['page'], 'a filter change lands on page 1' );

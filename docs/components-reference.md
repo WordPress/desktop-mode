@@ -42,7 +42,7 @@ The search box above the list filters on the flattened descriptor, not just the 
 | `<os-grid>` | `OsGrid` | `os-grid/os-grid.ts` | Auto-fit CSS grid primitive. |
 | `<os-card>` | `OsCard` | `os-card/os-card.ts` | Bordered surface for entity-card UIs. |
 | `<os-display>` | `OsDisplay` | `os-display/os-display.ts` | Hero / display-typography container. |
-| `<os-disclosure>` | `OsDisclosure` | `os-disclosure/os-disclosure.ts` | Titled section that folds away. Closed by default. |
+| `<os-disclosure>` | `OsDisclosure` | `os-disclosure/os-disclosure.ts` | Titled section that folds away. Closed by default. Parts: `summary`, `heading` (compact typography), `body`. |
 
 ## Form controls
 
@@ -187,6 +187,7 @@ you relabel the host, e.g. Maximize ⇄ Restore.
 | Tag | Class | Source | Purpose |
 | --- | --- | --- | --- |
 | `<os-menu>` / `<os-menu-item>` | `OsMenu`, `OsMenuItem` | `os-menu/os-menu.ts` | Dropdown menu surface. |
+| `<os-action-menu>` | `OsActionMenu` | `os-action-menu/os-action-menu.ts` | Button-anchored dropdown with top-layer placement, arrow/Home/End navigation, Escape/outside dismissal and focus restoration. Accepts translated `text` and accessible `label`; wraps context-menu options and their `os-context-menu-pick` event. |
 | `<os-context-menu>` / `<os-context-menu-option>` | `OsContextMenu`, `OsContextMenuOption` | `os-context-menu/os-context-menu.ts` | Right-click / long-press menu. |
 | `<os-flyout>` | `OsFlyout` | `os-flyout/os-flyout.ts` | Anchored popover. Supports placement strategies. |
 | `<os-modal>` | `OsModal` | `os-modal/os-modal.ts` | Full-overlay modal with focus trap. |

@@ -33,6 +33,7 @@
 
 import { addAction, HOOKS } from '../hooks';
 import { subscribe } from '../broadcast';
+import { trashChanges, watchTrashChanges } from './trash-optimistic';
 import { createSharedStore } from '../shared-store';
 
 /* eslint-disable no-console */
@@ -181,7 +182,9 @@ export function _currentRecycleBinCount(): number {
  * "how do I change a tile's icon" example should land here.
  */
 function paintIconState( count: number ): void {
-	const art = count > 0 ? store.state.fullArt : store.state.emptyArt;
+	const pending = trashChanges().filter( ( change ) => change.pending );
+	const effective = count + pending.reduce( ( delta, change ) => delta + ( change.direction === 'in' ? 1 : -1 ), 0 );
+	const art = effective > 0 ? store.state.fullArt : store.state.emptyArt;
 	log( 'paintIconState', { count, full: count > 0, hasArt: !! art } );
 	if ( ! art ) {
 		// The PHP filter didn't deliver. Leaving the server-declared
@@ -286,6 +289,7 @@ export function startRecycleBinIconState(
 	wireDockTileSignal();
 	wireDesktopIconsSignal();
 
+	watchTrashChanges( () => paintIconState( store.state.current ) );
 	wireBroadcastDeltas();
 	wirePostMessageFastPath();
 	wireHeartbeatProbe();

@@ -17,6 +17,8 @@
 import { describe, expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { paperStyles } from '../../apps/posts/parts/paper.styles';
+import { libraryStyles } from '../../apps/plugins/parts/library.styles';
 import { styles } from '../../src/ui/components/os-table/os-table.styles';
 
 const ROOT = join( __dirname, '../..' );
@@ -29,7 +31,7 @@ const bin = read( 'assets/css/recycle-bin.css' );
 // their fold in the Posts app's own sheet.
 const lists = read( 'assets/css/app-runtime.css' );
 const posts = read( 'apps/posts/posts.css' );
-const plugins = read( 'apps/plugins/plugins.css' );
+const plugins = read( 'apps/plugins/plugins.css' ) + libraryStyles.cssText;
 const explorer = read( 'apps/my-wordpress/my-wordpress.css' );
 
 /** The declarations of one rule, by a unique selector fragment. */
@@ -154,15 +156,20 @@ describe( 'Posts, Pages and Users', () => {
 } );
 
 describe( 'Plugins', () => {
-	const view = read( 'apps/plugins/plugins.os.ts' );
+	const view = read( 'apps/plugins/parts/installed-library.ts' );
 
-	test( 'the installed list wears the framework list layout — its phone rules are the runtime sheet’s', () => {
-		expect( view ).toContain( 'os-app-list__bulk--footer' );
-		expect( view ).toContain( 'os-app-list__toolbar-right' );
-		expect( view ).toContain( 'os-app-list__body' );
-		// Nothing of that layout is re-declared in the app's own sheet.
-		expect( plugins ).not.toContain( '.os-plugins__bulk--footer' );
-		expect( plugins ).not.toMatch( /html\[data-os-mode="mobile"\] \.os-plugins__body/ );
+	test( 'the library scrolls independently of its pinned selection tray', () => {
+		expect( view ).not.toContain( '<os-table' );
+		expect( block( plugins, '.os-plugins__library-scroll {' ) ).toMatch( /overflow:\s*auto/ );
+		expect( block( plugins, '.os-plugins__library-scroll {' ) ).toMatch( /min-block-size:\s*0/ );
+		expect( block( plugins, '.os-plugins__selection {' ) ).toMatch( /flex:\s*0 0 auto/ );
+		expect( block( plugins, '.os-plugins__module-actions {' ) ).toMatch( /flex-wrap:\s*wrap/ );
+	} );
+
+	test( 'a narrow window gives the inspector a full pane and clears the library', () => {
+		expect( plugins ).toMatch( /@container \( max-width: 760px \)/ );
+		expect( block( plugins, '.os-plugins__workspace[data-detail-open="true"] > .os-plugins__library {' ) ).toMatch( /display:\s*none/ );
+		expect( plugins ).toContain( 'minmax( min( 100%, 310px ), 1fr )' );
 	} );
 } );
 
@@ -178,4 +185,10 @@ describe( 'WP Explorer', () => {
 		expect( block( explorer, '.os-mywp__detail-page .os-mywp__actions {' ) ).toMatch( /flex-direction:\s*column/ );
 		expect( block( explorer, '.os-mywp__detail-page .os-mywp__actions os-button {' ) ).toMatch( /inline-size:\s*100%/ );
 	} );
+} );
+
+ test( 'content selection keeps the mobile bulk tray at its content height', () => {
+	const tray = block( paperStyles.cssText, '.desktop-mode-posts .os-app-list__toolbar-right.os-app-list__bulk--footer' );
+	expect( tray ).toMatch( /flex:\s*0 0 auto/ );
+	expect( tray ).toMatch( /align-content:\s*start/ );
 } );

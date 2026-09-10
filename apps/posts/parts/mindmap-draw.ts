@@ -7,6 +7,7 @@
  * @public
  */
 
+import type { CanvasPalette } from './canvas/palette';
 import { shadeColor, type PixiGraphics, type PixiNamespace, type PixiPoint } from './canvas/pixi';
 
 export interface MindNode {
@@ -88,7 +89,7 @@ export function drawCurvedEdge(
 }
 
 /** A lit-from-above sphere: shadow, halo (focused), rim, cap, gloss, stroke. */
-export function drawNodeDisc( pixi: PixiNamespace, node: MindNode, highlighted: boolean ): void {
+export function drawNodeDisc( pixi: PixiNamespace, node: MindNode, highlighted: boolean, palette: CanvasPalette ): void {
 	const g = node.gfx;
 	g.clear();
 	const r = node.radius;
@@ -107,7 +108,7 @@ export function drawNodeDisc( pixi: PixiNamespace, node: MindNode, highlighted: 
 	g.circle( -r * 0.32, -r * 0.42, r * 0.3 );
 	g.fill( { color: 0xffffff, alpha: 0.32 } );
 	g.circle( 0, 0, r );
-	g.stroke( { color: 0xffffff, width: highlighted ? 3 : 2, alignment: 0 } );
+	g.stroke( { color: palette.border, width: highlighted ? 3 : 2, alignment: 0 } );
 	g.x = node.x;
 	g.y = node.y;
 	g.zIndex = 10;
@@ -117,8 +118,8 @@ export function drawNodeDisc( pixi: PixiNamespace, node: MindNode, highlighted: 
 }
 
 /** The drop target while reparenting: a breathing ring + accent dot in the dragged node's colour. */
-export function drawDropTarget( pixi: PixiNamespace, hover: MindNode, sourceColor: number ): void {
-	drawNodeDisc( pixi, hover, false );
+export function drawDropTarget( pixi: PixiNamespace, hover: MindNode, sourceColor: number, palette: CanvasPalette ): void {
+	drawNodeDisc( pixi, hover, false, palette );
 	const g = hover.gfx;
 	const pulse = Math.sin( performance.now() / 280 ) * 0.5 + 0.5;
 	g.circle( 0, 0, hover.radius + 6 + pulse * 5 );

@@ -500,13 +500,13 @@ describe( 'createSession', () => {
 		function clientHarness() {
 			const root = document.createElement( 'div' );
 			document.body.appendChild( root );
-			const fetches: Array< { input: string; init?: RequestInit } > = [];
+			const fetches: Array< { input: string; init?: RequestInit; options?: { silent?: boolean; windowId?: string } } > = [];
 			const confirms: string[] = [];
 			let renders = 0;
 			let ctx: Ctx | undefined;
 			const host: RuntimeHost = {
-				fetch: async ( input, init ) => {
-					fetches.push( { input: String( input ), init } );
+				fetch: async ( input, init, options ) => {
+					fetches.push( { input: String( input ), init, options } );
 					return jsonResponse( { ok: true, state: {}, html: '', data: null, effects: [] } );
 				},
 				confirm: async ( o ) => {
@@ -538,6 +538,14 @@ describe( 'createSession', () => {
 				renders: () => renders,
 			};
 		}
+
+		it( 'passes silent enrichment through the tracked REST wrapper', async () => {
+			const h = clientHarness(); await h.session.dispatch( 'mount' );
+			await h.ctx().fetch( 'wp/v2/posts/7', {}, { silent: true } );
+			expect( h.fetches.at( -1 )?.options ).toEqual( expect.objectContaining( { silent: true, windowId: 'demo' } ) );
+			await h.ctx().fetch( 'wp/v2/posts/7' );
+			expect( h.fetches.at( -1 )?.options?.silent ).toBeUndefined();
+		} );
 
 		it( 'ui() memoises one bag per view and repaint() re-renders without a request', async () => {
 			const h = clientHarness();

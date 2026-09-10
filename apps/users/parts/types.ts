@@ -41,6 +41,8 @@ export interface UsersState extends Record< string, unknown > {
 	page: number;
 	perPage: number;
 	search: string;
+	/** A role slug, `none` for accounts without a role on this site, or empty for every role. */
+	role: string;
 	status: string;
 	orderby: string;
 	order: string;
