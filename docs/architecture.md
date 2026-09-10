@@ -743,3 +743,46 @@ writes and pruning invalidate it. Snapshots still scale with tracked users. Dail
 older than 14 days using the indexed heartbeat timestamp.
 
 See [presence migration and rollback](./migration-presence-storage.md).
+
+## Async agent jobs
+
+Chat, Send to and drag invocations use `POST /agents/{id}/invoke` with
+`async: true` and a client-generated UUID `requestId`. The route validates the
+agent and caller, stores a non-autoloaded job option, schedules WordPress work,
+and returns HTTP 202. The synchronous PHP helper and the REST default remain
+compatible for integrations that explicitly need them.
+
+`includes/agents/jobs.php` owns storage and execution. A WordPress single event
+(`openstation_agent_job_run`) starts the worker outside the browser request.
+On FPM, an additional shutdown callback may claim the job **only after**
+`fastcgi_finish_request()` has successfully delivered the response. This covers
+local installations with blocked loopbacks without making Apache requests run
+inline. Non-FPM hosts need working WP-Cron loopbacks or a system cron. Automatic
+spawning respects `DISABLE_WP_CRON` and avoids `ALTERNATE_WP_CRON`'s inline path.
+
+Admission permits one outstanding job per human/agent pair. Atomic inserts and
+compare-and-delete operations use the options table's unique key; `add_option()`
+uses an upsert and cannot provide this concurrency guarantee. A permanent claim
+prevents duplicate workers or retries from repeating abilities. The worker
+rechecks the enabled flag and the human's permissions, then calls the existing
+runner with an explicit `invoker`. Existing execution quotas and tool permission
+checks remain in force. Provider calls retain their own bounded timeout.
+
+`GET /agents/{id}/jobs/{jobId}` is an owner-only, no-store snapshot. It reads
+stored state and never performs AI work or dispatches a worker. In-tree clients
+poll sequentially from roughly 3 seconds up to 10 seconds, at least 15 seconds
+in hidden tabs, and back off to 30 seconds after transport errors. Each HTTP
+request has a 15-second client timeout. A lost submission is retried with its
+original UUID; an accepted job is only polled. Authentication failures stop
+polling. Transcripts remain in browser memory until the existing conversation
+save after completion; reloading the page does not automatically restore an
+outstanding job, though its ID can still retrieve the result.
+
+The worker ignores browser disconnects and removes PHP's ordinary execution
+limit where allowed. Host-enforced process limits can still terminate it;
+exceptions and shutdown failures become stored errors. Jobs without a terminal
+result after two hours are reported as interrupted. They are never automatically
+rerun because an ability might already have changed content. Input, result and
+claim are removed by `openstation_agent_job_cleanup` after one day. The job
+module remains loaded while Agents is disabled so queued work fails safely and
+cleanup still runs. Cron retention depends on the site's scheduler running.

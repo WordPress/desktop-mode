@@ -339,3 +339,16 @@ in-request caching.
 - [Architecture](./architecture.md#preference-persistence) — preference
   and session persistence in detail.
 - [Multisite](./multisite.md) — session scoping across a network.
+
+## Agent job storage
+
+All names below are per-site. No transient or browser cache is the source of
+truth for job execution.
+
+| Name | Kind | Contents / lifetime |
+|---|---|---|
+| `openstation_agent_job_{uuid}` | Option, non-autoloaded | Owner, agent, bounded message/history, source, timestamps, status, result/error. Retained for one day. |
+| `openstation_agent_job_claim_{uuid}` | Option, non-autoloaded | Atomic execution claim, retained with the job; never recycled for retries. |
+| `openstation_agent_job_active_{owner}_{agent}` | Option, non-autoloaded | Admission slot (`uuid|deadline`), released on completion/failure, expiry or cleanup. |
+| `openstation_agent_job_run` | Single cron event, UUID argument | Executes a queued invocation once. |
+| `openstation_agent_job_cleanup` | Single cron event, UUID argument | Deletes job input/result and its claim after one day. |

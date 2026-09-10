@@ -63,6 +63,7 @@ All in-tree routes register under `desktop-mode/v1`. Extensions are expected to 
 | `/agents` | GET / POST | `includes/agents/rest.php` | GET `edit_posts`, POST `edit_users` (both filterable; whole module behind the `agents` extended option) |
 | `/agents/{id}` | GET / POST / DELETE | `includes/agents/rest.php` | GET `edit_posts`, POST/DELETE `edit_users` (filterable) |
 | `/agents/{id}/invoke` | POST | `includes/agents/rest.php` | `edit_posts` (filterable via `openstation_agents_user_can_invoke`), then the per-agent gate `openstation_agent_user_can_invoke_agent()` (honours the trigger's `capability`) + per-invoker and per-agent rate limits. The run itself is ceilinged at the caller's own capabilities — see [`docs/agents-security.md`](../../docs/agents-security.md) |
+| `/agents/{id}/jobs/{jobId}` | GET | `includes/agents/jobs.php` | Authenticated invoker + exact job owner and agent match. Constant-cost status read, no worker dispatch. |
 | `/agents/abilities` | GET | `includes/agents/rest.php` | `edit_posts` (filterable) |
 | `/agents/draft` | POST | `includes/agents/rest.php` | `edit_users` (filterable). One AI generate call with a strict answer schema; creates nothing. `503` without the AI Client, `502` when the provider fails or answers unreadably |
 | `/agents/trigger-kinds` | GET | `includes/agents/rest.php` | `edit_posts` (filterable) |
@@ -80,3 +81,5 @@ All in-tree routes register under `desktop-mode/v1`. Extensions are expected to 
 PHP `register_rest_route()` calls execute on `rest_api_init`. The callback closures in the existing files capture per-module state — the recycle-bin store, the desktop-files registry, the AI provider — that lives in the same module. Moving the registration calls out of those files would force every callback to re-look-up its dependencies, increasing surface area without reducing coupling. The route → handler-file map above is the discoverability win we wanted; the per-module registrations are the layout that minimises blast radius.
 
 If a future extension adds REST routes that don't fit any existing module, the `extensions/base/OpenStation_Extension_Rest` base class is the cheapest path. See `extensions/base/README.md`.
+
+Agent invocation supports `async: true` plus a UUID `requestId`, returning HTTP 202. See [async jobs](../../docs/architecture.md#async-agent-jobs) for the status contract and worker requirements.

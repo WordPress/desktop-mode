@@ -144,6 +144,8 @@ describe( 'agent chat window', () => {
 		);
 		expect( JSON.parse( String( invoke[ 1 ].body ) ) ).toEqual( {
 			message: 'Audit post 1',
+			async: true,
+			requestId: expect.any( String ),
 			source: 'chat',
 			// First message of the conversation — nothing to replay yet.
 			history: [],

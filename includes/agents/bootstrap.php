@@ -20,8 +20,8 @@
  *
  * The module is opt-in behind the `agents` extended option — while
  * off, no user-meta registration, no REST routes and no chat window.
- * Two files load regardless of the flag: guard.php and
- * my-wordpress.php. See below for why.
+ * Guard, WP Explorer discovery, and job cleanup load regardless of the flag.
+ * See below for why.
  *
  * @package OpenStation
  */
@@ -155,6 +155,8 @@ function openstation_agents_enabled() {
  * descriptor and the section config.
  */
 require_once OPENSTATION_DIR . 'includes/agents/my-wordpress.php';
+// Queued work must fail safely and retained data must expire even when disabled.
+require_once OPENSTATION_DIR . 'includes/agents/jobs.php';
 
 /**
  * Loads the agents module when the framework is enabled.

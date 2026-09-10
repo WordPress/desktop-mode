@@ -240,3 +240,18 @@ document, that suite should change with it.
 - [Hooks reference — AI Agents](./hooks-reference.md#ai-agents)
 - [Architecture](./architecture.md)
 - [Event-driven framework](./event-driven-framework.md)
+
+## Async job ownership
+
+Async REST submissions store the authenticated human id, never an invoker
+supplied in JSON. The background worker rechecks the human's existence,
+feature flag, invocation gate and trigger gate, and passes that id explicitly
+to the runner's capability intersection. Cron does not turn a human request
+into a system invocation. Status reads require the original owner even when
+another caller is an administrator; inputs and history never appear in status
+responses. Completed results retain the same sensitivity as chat transcripts.
+
+An atomic claim prevents duplicate execution. A failed or interrupted worker
+is never automatically replayed: tools may already have applied changes. Jobs
+and claims expire through cron after one day; see
+[storage and scheduling](./architecture.md#async-agent-jobs).

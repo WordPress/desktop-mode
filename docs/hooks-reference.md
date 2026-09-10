@@ -5372,7 +5372,7 @@ Features → Extended options, admin-only, default off). While the flag
 is off none of these hooks exist — `includes/agents/bootstrap.php`
 skips every module file.
 
-**Two exceptions** load unconditionally, ahead of the flag:
+**Three exceptions** load unconditionally, ahead of the flag:
 
 - `includes/agents/guard.php` owns `openstation_agent_is_agent()` and
   every login/session block. Disabling the feature does not delete
@@ -5388,6 +5388,10 @@ skips every module file.
   `openstation_agent_avatar_url()` live in `bootstrap.php` for the
   same reason: the section descriptor needs them while `rest.php` and
   `identity.php` are unloaded.
+
+- `includes/agents/jobs.php` retains the worker and cleanup callbacks. Disabling
+  Agents makes queued jobs fail permission checks, while retained data still
+  expires. Its REST status route is registered only while Agents is enabled.
 
 An agent is a synthetic `wp_users` row (login-blocked) whose entire
 definition lives as user meta on that row: description, instructions
@@ -5410,6 +5414,20 @@ Whether the agents framework is enabled site-wide. Runs on
 all, and again wherever the enabled state is consulted.
 
 - **Param** `bool $enabled` — default: the `agents` extended option.
+
+### `openstation_agent_job_finished` — Experimental *(action)*
+
+Fires after an async agent job stores a completed or failed result and releases
+its admission slot. Parameters: `string $id` (job UUID), `int $owner` (human
+invoker), `array $status` (the public job snapshot, including result/error).
+A hard-killed process cannot fire this action. Status reads may report an
+interrupted job from its deadline without dispatching actions or running work.
+
+`openstation_agent_job_run( $id )` and
+`openstation_agent_job_cleanup( $id )` are internal WordPress cron hooks, not
+extension callbacks. Integrations submit through the async REST contract and
+observe `openstation_agent_job_finished`; see the [example](./examples/agents.md#queue-work-from-a-chat-or-another-client).
+
 
 ### `openstation_agent_created` — Experimental *(action)*
 

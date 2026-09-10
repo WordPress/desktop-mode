@@ -7698,17 +7698,39 @@ interface Agent {
 ```
 
 `POST /agents/{id}/invoke` with `{ message, source?, history? }`
-returns `{ text, toolCalls, turns }` where each tool call is
+returns `{ text, callToActions, toolCalls, turns }` where each tool call is
 `{ callId, name, args, output, error }`.
 
 `history` is the prior conversation (`[ { role: 'user'|'agent', text },
 … ]`, oldest first) and is **required for multi-turn work**: each
 invocation is otherwise stateless, so a follow-up ("yes, do it")
 arrives with no idea which entity was being discussed. The server caps
-it at the 20 most recent turns, 4000 characters each. Both in-tree
+it at the 50 most recent turns, 4000 characters each. Both in-tree
 intakes (typing in the chat window, and drops) go through
 `invokeAgentIntoTranscript()` in `src/agents-dispatch.ts`, which
 snapshots the transcript before appending the new message.
+
+### Async invocation (Experimental)
+
+Add `async: true, requestId: '<uuid>'` to the invocation body to receive HTTP
+202 with `{ jobId, status, createdAt, pollAfter, result, error }`. The in-tree
+chat, Send to, and drag intakes use this path. `requestId` is required in async
+mode; reusing it with identical input returns the same job, while different
+input returns 409. Async messages are limited to 20,000 bytes.
+
+Poll `GET /agents/{id}/jobs/{jobId}` with the same user's REST authentication.
+States are `queued`, `running`, `completed` and `failed`. `result` is null until
+completion, then contains the usual invocation result including confirmation
+buttons. `error` is null or `{ code, message }`. `createdAt` is Unix seconds;
+`pollAfter` is a suggested delay in seconds. Unknown, wrong-agent, and another
+user's job IDs return 404, even for administrators. Responses use
+`Cache-Control: no-store, private`.
+
+Only one outstanding job per human/agent pair is admitted (409 for a different
+request while busy). The client backs off its sequential polling and uses the
+same UUID when retrying a lost submission. It does not rerun accepted jobs on
+network failures. See [architecture](./architecture.md#async-agent-jobs) for
+retention, browser lifetime and scheduling requirements.
 
 ### WP Explorer integration
 
