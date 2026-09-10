@@ -51,14 +51,18 @@ const MOBILE_COLUMN_KEYS = new Set< string >( [ 'title', 'author', 'parent', 'da
 /** The REST `orderby` values a column click may send; anything else is the default. */
 export const ALLOWED_ORDERBY = [ 'date', 'title', 'author', 'modified', 'comment_count', 'menu_order' ] as const;
 
+/** The valid OS Settings keys for hidden columns in list apps. */
+export type HiddenColumnsSettingKey = 'nativePostsHiddenColumns' | 'nativePagesHiddenColumns';
+
 /** The user's hidden-column preference, from the OS Settings API. */
-export function getHiddenColumns(): Set< string > {
+export function getHiddenColumns( settingKey: HiddenColumnsSettingKey = 'nativePostsHiddenColumns' ): Set< string > {
 	try {
 		const api = window.wp?.os;
 		if ( api && typeof api.getOsSettings === 'function' ) {
-			const snap = api.getOsSettings() as { nativePostsHiddenColumns?: string[] };
-			if ( Array.isArray( snap.nativePostsHiddenColumns ) ) {
-				return new Set( snap.nativePostsHiddenColumns );
+			const snap = api.getOsSettings() as unknown as Record< string, unknown >;
+			const val = snap[ settingKey ];
+			if ( Array.isArray( val ) ) {
+				return new Set( val.filter( ( v ): v is string => typeof v === 'string' ) );
 			}
 		}
 	} catch {
