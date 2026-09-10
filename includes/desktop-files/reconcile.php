@@ -6,6 +6,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+require_once dirname( __DIR__ ) . '/storage-primary.php';
+
 /**
  * Serialize upload registration, placement creation and each cleanup candidate.
  *
@@ -16,12 +18,19 @@ defined( 'ABSPATH' ) || exit;
  *
  * @internal
  * @param callable $callback Operation to protect.
+ * @param bool     $cleanup Require a real advisory lock for destructive reconciliation.
  * @return mixed|WP_Error Callback result, or a retryable lock error.
  */
-function openstation_stored_files_locked( $callback ) {
+function openstation_stored_files_locked( $callback, $cleanup = false ) {
 	global $wpdb;
+	openstation_storage_use_primary();
 	$name = 'os-files-' . md5( $wpdb->dbname . ':' . $wpdb->prefix );
 	$lock = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $name ) );
+	// SQLite translates GET_LOCK to a successful no-op. Keep intake working,
+	// but never run destructive reconciliation without mutual exclusion.
+	if ( '1=1' === $lock && ! $cleanup ) {
+		return $callback();
+	}
 	if ( '1' !== (string) $lock ) {
 		return new WP_Error( 'openstation_storage_busy', __( 'File storage is busy. Please try again.', 'desktop-mode' ), array( 'status' => 503 ) );
 	}
@@ -33,7 +42,33 @@ function openstation_stored_files_locked( $callback ) {
 }
 
 /**
- * Report an aborted sweep without exposing SQL or filesystem paths.
+ * Protect only the current reference check and placement insert.
+ * Authorization, collision recovery and extension callbacks run outside the lock.
+ *
+ * @internal
+ * @param string   $ref Stored-file reference.
+ * @param callable $insert Placement insert.
+ * @return array|WP_Error
+ */
+function openstation_stored_files_place_insert( $ref, $insert ) {
+	return openstation_stored_files_locked(
+		static function () use ( $ref, $insert ) {
+			global $wpdb;
+			$tables = openstation_files_table_names();
+			$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$tables['stored_files']} WHERE id = %d FOR UPDATE", (int) $ref ) );
+			if ( '' !== $wpdb->last_error ) {
+				return new WP_Error( 'openstation_storage_unavailable', __( 'File storage is unavailable. Please try again.', 'desktop-mode' ), array( 'status' => 503 ) );
+			}
+			if ( ! $exists ) {
+				return new WP_Error( 'openstation_stored_files_not_found', __( 'Stored file not found.', 'desktop-mode' ), array( 'status' => 404 ) );
+			}
+			return $insert();
+		}
+	);
+}
+
+/**
+ * Report a failed cleanup operation without exposing SQL or filesystem paths.
  *
  * @internal
  * @param string $stage Failed operation.
@@ -41,13 +76,13 @@ function openstation_stored_files_locked( $callback ) {
  */
 function openstation_stored_files_reconcile_failed( $stage ) {
 	/**
-	 * Fires when reconciliation stops because its safety checks failed.
+	 * Fires when reconciliation skips bytes or stops after a failed safety check.
 	 *
 	 * @param WP_Error $error Error whose data contains the failing stage.
 	 */
 	do_action(
 		'openstation_stored_files_reconcile_failed',
-		new WP_Error( 'openstation_reconcile_failed', __( 'File cleanup was stopped safely.', 'desktop-mode' ), array( 'stage' => $stage ) )
+		new WP_Error( 'openstation_reconcile_failed', __( 'A file cleanup operation could not be completed.', 'desktop-mode' ), array( 'stage' => $stage ) )
 	);
 }
 
@@ -101,8 +136,9 @@ function openstation_stored_files_reconcile_row( $id, $cutoff_ms ) {
 		$path = openstation_stored_file_path( $row );
 		if ( $path && is_file( $path ) ) {
 			wp_delete_file( $path );
+			clearstatcache( true, $path );
 			if ( is_file( $path ) ) {
-				return false;
+				openstation_stored_files_reconcile_failed( 'unlink_row_bytes' );
 			}
 		}
 		/** This action is documented in includes/desktop-files/stored-files-store.php. */
@@ -141,7 +177,11 @@ function openstation_stored_files_reconcile_bytes( $owner_id, $entry, $cutoff ) 
 		$mtime = filemtime( $entry );
 		if ( false !== $mtime && $mtime > 0 && $mtime < $cutoff ) {
 			wp_delete_file( $entry );
-			return ! is_file( $entry );
+			clearstatcache( true, $entry );
+			if ( is_file( $entry ) ) {
+				openstation_stored_files_reconcile_failed( 'unlink_bytes' );
+			}
+			return true;
 		}
 	}
 	return true;
@@ -175,7 +215,8 @@ function openstation_stored_files_reconcile() {
 		$result = openstation_stored_files_locked(
 			static function () use ( $id, $cutoff_ms ) {
 				return openstation_stored_files_reconcile_row( (int) $id, $cutoff_ms );
-			}
+			},
+			true
 		);
 		if ( true !== $result ) {
 			openstation_stored_files_reconcile_failed( 'delete_row' );
@@ -202,10 +243,15 @@ function openstation_stored_files_reconcile() {
 			if ( isset( $known_set[ basename( $entry ) ] ) || ! openstation_stored_files_valid_disk_name( basename( $entry ) ) ) {
 				continue;
 			}
+			clearstatcache( true, $entry );
+			if ( ! is_file( $entry ) || is_link( $entry ) || filemtime( $entry ) >= time() - DAY_IN_SECONDS ) {
+				continue;
+			}
 			$result = openstation_stored_files_locked(
 				static function () use ( $owner_id, $entry ) {
 					return openstation_stored_files_reconcile_bytes( $owner_id, $entry, time() - DAY_IN_SECONDS );
-				}
+				},
+				true
 			);
 			if ( true !== $result ) {
 				openstation_stored_files_reconcile_failed( 'delete_bytes' );

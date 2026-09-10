@@ -164,11 +164,23 @@ function openstation_stored_file_path( $row ) {
  * @return int|WP_Error Row id.
  */
 function openstation_stored_files_create( $owner_id, $args ) {
-	return openstation_stored_files_locked(
+	$id = openstation_stored_files_locked(
 		static function () use ( $owner_id, $args ) {
 			return openstation_stored_files_create_locked( $owner_id, $args );
 		}
 	);
+	if ( ! is_wp_error( $id ) ) {
+		/**
+		 * Fires after a stored-file row is created (bytes are already
+		 * on disk at this point).
+		 *
+		 * @param int $id       Stored-file id.
+		 * @param int $owner_id Owner.
+		 */
+		do_action( 'openstation_stored_file_created', $id, (int) $owner_id );
+
+	}
+	return $id;
 }
 
 /**
@@ -221,15 +233,6 @@ function openstation_stored_files_create_locked( $owner_id, $args ) {
 		return new WP_Error( 'openstation_stored_files_insert_failed', __( 'Failed to record the uploaded file.', 'desktop-mode' ), array( 'status' => 500 ) );
 	}
 	$id = (int) $wpdb->insert_id;
-
-	/**
-	 * Fires after a stored-file row is created (bytes are already
-	 * on disk at this point).
-	 *
-	 * @param int $id       Stored-file id.
-	 * @param int $owner_id Owner.
-	 */
-	do_action( 'openstation_stored_file_created', $id, $owner_id );
 
 	return $id;
 }

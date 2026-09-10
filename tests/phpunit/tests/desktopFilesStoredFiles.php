@@ -510,4 +510,66 @@ class Tests_OpenStation_StoredFiles extends WP_UnitTestCase {
 		$this->assertNull( openstation_stored_files_get( $id ) );
 		$this->assertFileDoesNotExist( $path );
 	}
+	/** @covers ::openstation_stored_files_reconcile */
+	public function test_unlink_failure_does_not_starve_later_bytes() {
+		$dir = openstation_stored_files_ensure_dir( self::$owner_id );
+		$blocked = $dir . '/aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
+		$other = $dir . '/bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
+		foreach ( array( $blocked, $other ) as $path ) { file_put_contents( $path, 'orphan' ); touch( $path, time() - 2 * DAY_IN_SECONDS ); }
+		$filter = static function ( $path ) use ( $blocked ) { return $path === $blocked ? '' : $path; };
+		$stages = array();
+		add_action( 'openstation_stored_files_reconcile_failed', static function ( $error ) use ( &$stages ) { $stages[] = $error->get_error_data()['stage']; } );
+		add_filter( 'wp_delete_file', $filter );
+		try { openstation_stored_files_reconcile(); } finally { remove_filter( 'wp_delete_file', $filter ); }
+		$this->assertFileExists( $blocked );
+		$this->assertFileDoesNotExist( $other );
+		$this->assertSame( array( 'unlink_bytes' ), $stages );
+	}
+
+	/** @covers ::openstation_stored_files_reconcile_row */
+	public function test_deleted_row_announces_deletion_even_when_bytes_cannot_be_unlinked() {
+		global $wpdb;
+		$id = $this->make_stored_file( self::$owner_id );
+		$path = openstation_stored_file_path( openstation_stored_files_get( $id ) );
+		$tables = openstation_files_table_names();
+		$wpdb->update( $tables['stored_files'], array( 'created_at_ms' => 1 ), array( 'id' => $id ) );
+		$deleted = array();
+		add_action( 'openstation_stored_file_deleted', static function ( $id ) use ( &$deleted ) { $deleted[] = $id; } );
+		add_filter( 'wp_delete_file', '__return_empty_string' );
+		try { openstation_stored_files_reconcile(); } finally { remove_filter( 'wp_delete_file', '__return_empty_string' ); }
+		$this->assertSame( array( $id ), $deleted );
+		$this->assertNull( openstation_stored_files_get( $id ) );
+		$this->assertFileExists( $path );
+	}
+
+	/** @covers ::openstation_stored_files_locked */
+	public function test_sqlite_noop_lock_allows_intake_but_never_destructive_cleanup() {
+		global $wpdb;
+		$filter = static function ( $sql ) { return false !== strpos( $sql, 'SELECT GET_LOCK' ) ? "SELECT '1=1'" : $sql; };
+		add_filter( 'query', $filter );
+		try {
+			$id = $this->make_stored_file( self::$owner_id );
+			$tables = openstation_files_table_names();
+			$wpdb->update( $tables['stored_files'], array( 'created_at_ms' => 1 ), array( 'id' => $id ) );
+			openstation_stored_files_reconcile();
+			$this->assertNotNull( openstation_stored_files_get( $id ) );
+			$this->assertIsInt( openstation_files_place( self::$owner_id, 0, 'upload', (string) $id ) );
+		} finally { remove_filter( 'query', $filter ); }
+	}
+
+	/** @covers ::openstation_stored_files_create @covers ::openstation_files_place */
+	public function test_upload_extension_callbacks_run_outside_the_storage_lock() {
+		global $wpdb;
+		$name = 'os-files-' . md5( $wpdb->dbname . ':' . $wpdb->prefix );
+		$check = function () use ( $name ) {
+			global $wpdb;
+			$this->assertSame( '1', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_FREE_LOCK(%s)', $name ) ) );
+		};
+		add_action( 'openstation_stored_file_created', $check );
+		add_action( 'openstation_file_placed', $check );
+		add_filter( 'openstation_files_can_place', static function ( $can ) use ( $check ) { $check(); return $can; } );
+		$id = $this->make_stored_file( self::$owner_id );
+		$this->assertIsInt( openstation_files_place( self::$owner_id, 0, 'upload', (string) $id ) );
+	}
+
 }

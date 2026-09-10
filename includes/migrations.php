@@ -664,4 +664,4 @@ function openstation_migrate_delete_ai_keys() {
 }
 
 // Presence owns a verified checkpoint so failures never advance unrelated migrations.
-add_action( 'init', 'openstation_presence_migration_tick', 20 );
+add_action( 'admin_init', 'openstation_presence_migration_tick', 20 );

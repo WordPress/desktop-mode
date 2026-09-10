@@ -92,9 +92,21 @@ function openstation_presence_get_all() {
  * @return bool True if accepted; false on invalid id, tracking veto or storage failure.
  */
 function openstation_presence_record( $user_id, $active = true ) {
+	return true === openstation_presence_record_result( $user_id, $active );
+}
+
+/**
+ * Record presence while preserving a distinct veto and storage failure result.
+ *
+ * @internal
+ * @param int  $user_id User to record.
+ * @param bool $active Whether this request carries activity.
+ * @return true|WP_Error
+ */
+function openstation_presence_record_result( $user_id, $active = true ) {
 	$user_id = (int) $user_id;
 	if ( $user_id <= 0 ) {
-		return false;
+		return new WP_Error( 'openstation_presence_invalid_user', __( 'A user id is required.', 'desktop-mode' ) );
 	}
 
 	/**
@@ -108,13 +120,13 @@ function openstation_presence_record( $user_id, $active = true ) {
 	 */
 	$can = (bool) apply_filters( 'openstation_presence_can_track', true, $user_id );
 	if ( ! $can ) {
-		return false;
+		return new WP_Error( 'openstation_presence_tracking_veto' );
 	}
 
 	$now_ms = (int) round( microtime( true ) * 1000 );
 	$all    = openstation_presence_read_records( $user_id );
 	if ( is_wp_error( $all ) ) {
-		return false;
+		return $all;
 	}
 	$prev        = isset( $all[ $user_id ] ) ? $all[ $user_id ] : array(
 		'last_seen_ms'   => 0,
@@ -133,8 +145,14 @@ function openstation_presence_record( $user_id, $active = true ) {
 		$write                   = $next;
 		$write['last_active_ms'] = $active ? $now_ms : 0;
 		if ( ! openstation_presence_write_record( $user_id, $write ) ) {
-			return false;
+			return new WP_Error( 'openstation_presence_write_failed', __( 'Could not save presence.', 'desktop-mode' ), array( 'status' => 503 ) );
 		}
+		$stored = openstation_presence_read_records( $user_id );
+		if ( is_wp_error( $stored ) ) {
+			return $stored;
+		}
+		$next        = $stored[ $user_id ] ?? $prev;
+		$next_status = openstation_presence_status_from_record( $next );
 	}
 
 	/**
@@ -354,6 +372,7 @@ function openstation_presence_cron_prune() {
 	$table  = openstation_presence_table();
 	$cutoff = (int) round( microtime( true ) * 1000 ) - 14 * DAY_IN_SECONDS * 1000;
 	$wpdb->query( $wpdb->prepare( "DELETE FROM $table WHERE last_seen_ms < %d", $cutoff ) );
+	openstation_presence_invalidate_records();
 }
 add_action( 'desktop_mode_presence_daily_prune', 'openstation_presence_cron_prune' );
 
@@ -401,6 +420,7 @@ function openstation_presence_heartbeat_received( $response, $data ) {
 	$user_id     = (int) get_current_user_id();
 	$user_active = ! empty( $data['openstation_user_active'] );
 
+	openstation_presence_migration_tick();
 	openstation_presence_record( $user_id, $user_active );
 
 	// Snapshot the users this viewer is allowed to see — by default
@@ -466,6 +486,7 @@ add_action( 'rest_api_init', 'openstation_presence_register_rest_routes' );
  * visibility filter.
  */
 function openstation_presence_rest_get() {
+	openstation_presence_migration_tick();
 	$viewer_id = (int) get_current_user_id();
 	$all_ids   = array_keys( openstation_presence_get_all() );
 	$visible   = openstation_presence_visible_users( $all_ids, $viewer_id );
@@ -490,6 +511,7 @@ function openstation_presence_rest_get() {
  * the simplest "I'm here" call.
  */
 function openstation_presence_rest_post( WP_REST_Request $request ) {
+	openstation_presence_migration_tick();
 	$user_id  = (int) get_current_user_id();
 	$active   = $request->get_param( 'active' );
 	$inactive = (bool) $request->get_param( 'inactive' );
@@ -519,9 +541,10 @@ function openstation_presence_rest_post( WP_REST_Request $request ) {
 			do_action( 'openstation_presence_changed', $user_id, $next_status, $prev_status );
 		}
 	} else {
-		$flag = ( null === $active ) ? true : (bool) $active;
-		if ( ! openstation_presence_record( $user_id, $flag ) && apply_filters( 'openstation_presence_can_track', true, $user_id ) ) {
-			return new WP_Error( 'openstation_presence_write_failed', __( 'Could not save presence.', 'desktop-mode' ), array( 'status' => 503 ) );
+		$flag   = ( null === $active ) ? true : (bool) $active;
+		$result = openstation_presence_record_result( $user_id, $flag );
+		if ( is_wp_error( $result ) && 'openstation_presence_tracking_veto' !== $result->get_error_code() ) {
+			return $result;
 		}
 	}
 

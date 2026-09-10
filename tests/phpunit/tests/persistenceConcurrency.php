@@ -40,8 +40,10 @@ class Tests_OpenStation_PersistenceConcurrency extends WP_UnitTestCase {
 		mysqli_query( $this->db->dbh, 'DROP TABLE IF EXISTS ' . $this->prefix . 'openstation_presence' );
 		mysqli_query( $this->db->dbh, 'DROP TABLE IF EXISTS ' . $this->prefix . 'desktop_mode_stored_files' );
 		$this->db->close();
-		foreach ( glob( $this->dir . '/*' ) as $path ) { unlink( $path ); }
-		rmdir( $this->dir );
+		if ( $this->dir && is_dir( $this->dir ) ) {
+			foreach ( glob( $this->dir . '/*' ) as $path ) { unlink( $path ); }
+			rmdir( $this->dir );
+		}
 		parent::tear_down();
 	}
 

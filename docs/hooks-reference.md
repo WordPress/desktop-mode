@@ -4939,7 +4939,7 @@ All Experimental.
 | `openstation_stored_file_uploaded` | `( int $file_id, int $placement_id, int $user_id )` | After a full upload lands (bytes + row + placement). |
 | `openstation_stored_file_renamed` | `( int $file_id, string $new_name, string $old_name )` | After a display-name rename. |
 | `openstation_stored_file_deleted` | `( int $file_id, array $row )` | After bytes + row are deleted. |
-| `openstation_stored_files_reconcile_failed` | `( WP_Error $error )` | **Experimental.** Cleanup stopped safely. Error code `openstation_reconcile_failed`; error data contains `stage`: `orphan_rows`, `delete_row`, `known_bytes`, or `delete_bytes`. No SQL or paths are included. |
+| `openstation_stored_files_reconcile_failed` | `( WP_Error $error )` | **Experimental.** Cleanup could not complete an operation. Error code `openstation_reconcile_failed`; stages `orphan_rows`, `delete_row`, `known_bytes`, and `delete_bytes` stop the sweep after failed database/lock checks. Stages `unlink_row_bytes` and `unlink_bytes` report individual filesystem failures and allow later candidates to continue. No SQL or paths are included. |
 | `openstation_stored_file_downloaded` | `( int $file_id, int $user_id )` | Download audit — just before a file streams. |
 | `openstation_folder_zip_downloaded` | `( int $folder_id, int $user_id, int $count )` | Just before a folder zip streams. |
 | `openstation_stored_file_added_to_media` | `( int $attachment_id, int $file_id, int $user_id )` | After a stored file has been copied into the Media Library. Fires once per stored file — a repeat "Add" returns the existing attachment silently. |

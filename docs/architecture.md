@@ -724,13 +724,14 @@ as zero until activity newer than that intent arrives. All public timestamps
 remain epoch milliseconds and all response/event shapes stay unchanged.
 
 `openstation_presence_storage` is a non-autoloaded per-site migration checkpoint.
-The migration runner invokes the presence migrator on `init`; helpers also ensure
-storage on demand. The checkpoint is written only after creation, import and
+The migration runner invokes the presence migrator on `admin_init`; Heartbeat and
+presence REST requests also run the bounded bridge. Helpers ensure storage on demand. The checkpoint is written only after creation, import and
 verification succeed. It is independent of the general migration version so a
 presence failure cannot advance unrelated migrations. Failed setup retains the
 legacy option path; established-table write failures are reported, not redirected
-to a competing store. Single-user lookups use the primary key. Full snapshots
-still scale with tracked users. Daily pruning conditionally deletes entries
+to a competing store. Failed setup is attempted once per request, with a nonblocking
+lock attempt. A request-local snapshot serves repeated reads and user lists, and
+writes and pruning invalidate it. Snapshots still scale with tracked users. Daily pruning conditionally deletes entries
 older than 14 days using the indexed heartbeat timestamp.
 
 See [presence migration and rollback](./migration-presence-storage.md).

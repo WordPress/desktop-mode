@@ -12,18 +12,23 @@ cannot undo a later explicit "set away" request.
 
 ## Upgrade
 
-Creation and import happen under a site/database-scoped connection lock. Imports
+Creation and import use a site/database-scoped connection lock on MySQL/MariaDB.
+SQLite provides a compatibility no-op; the import remains idempotent. Imports
 merge timestamps without lowering newer destination values. The non-autoloaded
-`openstation_presence_storage` option records `ready` and `completed_at_ms` only
+`openstation_presence_storage` option records `ready`, `completed_at_ms` and `legacy_digest` only
 after verification succeeds. Failed creation, reads, imports or verification
-leave migration pending and retryable. If installation is unavailable, helpers
+leave migration pending and retryable on the next request. Setup failures are
+memoized for the current request; lock attempts do not wait. If installation is unavailable, helpers
 retain the legacy read/write path; that temporary fallback retains the original
 shared-row contention until setup succeeds. Pruning skips work while setup fails.
 An established table's write failure returns failure rather than dual-writing.
 
-For five minutes after cutover, each `init` imports legacy records whose heartbeat
+For five minutes after cutover, admin, Heartbeat and presence REST requests import
+legacy records whose heartbeat
 is newer than the cutover timestamp. This bridges requests that started on the
-old code. Imports remain monotonic and respect explicit away intent. Deployments
+old code. A digest skips unchanged legacy maps. Initial import preserves away
+state, but late legacy zero-activity records never override newer activity: an old
+idle heartbeat cannot be distinguished from an explicit away request. Deployments
 must finish replacing old workers within this interval; a worker running older
 code beyond it can have a presence update ignored until the user's next current
 heartbeat. New code never dual-writes after successful migration.
@@ -48,3 +53,7 @@ or rename `_desktop_mode_presence`.
 Multisite migrates each site's records separately as it is accessed. Removing a
 subsite includes its presence table in the existing Core table-cleanup integration.
 No uninstall policy is changed by this migration.
+
+Schema changes require a versioned schema migration before changing the ready-check
+or required columns. The current checkpoint describes only this initial table shape;
+`CREATE TABLE IF NOT EXISTS` is not an alteration mechanism.

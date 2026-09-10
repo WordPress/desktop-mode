@@ -208,7 +208,13 @@ function openstation_stored_file_share_accept( $share_id, $user_id ) {
 		return new WP_Error( 'openstation_files_share_not_recipient', __( 'This invite is not for you.', 'desktop-mode' ), array( 'status' => 403 ) );
 	}
 	if ( 'accepted' === $row['state'] ) {
-		return $row;
+		// A previous attempt may have accepted the invite but failed to plant
+		// its tile (for example, a busy upload lock). Allow that step to retry.
+		$tables = openstation_files_table_names();
+		$placed = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$tables['placements']} WHERE owner_id = %d AND file_type = 'upload' AND file_ref = %s LIMIT 1", $user_id, (string) $row['folder_id'] ) );
+		if ( $placed ) {
+			return $row;
+		}
 	}
 	if ( 'denied' === $row['state'] ) {
 		return new WP_Error( 'openstation_files_share_already_denied', __( 'This invite was denied.', 'desktop-mode' ), array( 'status' => 410 ) );
@@ -231,7 +237,10 @@ function openstation_stored_file_share_accept( $share_id, $user_id ) {
 	$file_id = (int) $row['folder_id'];
 	/** This filter is documented in includes/desktop-files/shares-store.php */
 	$parent_id = (int) apply_filters( 'openstation_folder_share_accept_default_parent', 0, $file_id, $user_id, $row );
-	openstation_files_place_at_next_free_slot( $user_id, $parent_id, 'upload', (string) $file_id );
+	$placed    = openstation_files_place_at_next_free_slot( $user_id, $parent_id, 'upload', (string) $file_id );
+	if ( is_wp_error( $placed ) ) {
+		return $placed;
+	}
 
 	$next = openstation_files_get_share( $share_id );
 
