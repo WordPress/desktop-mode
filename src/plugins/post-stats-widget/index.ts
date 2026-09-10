@@ -113,6 +113,21 @@ function drawChart( canvas: HTMLCanvasElement, buckets: Bucket[] ): void {
 	}
 	ctx.scale( dpr, dpr );
 
+	// Canvas ink, read from the same custom properties this widget's own
+	// stylesheet already uses for its DOM text. The chrome was hardcoded
+	// black, which is why the bars survived and everything drawn as text or
+	// rule did not: `.os-widgets__card` is a fixed dark glass in every
+	// desktop theme, so black measured 1.01:1 on it.
+	//
+	// The fallbacks are the dark-glass values from variables.css, NOT the
+	// old black — a widget that renders before the tokens resolve should
+	// fail toward legible rather than back into the bug.
+	const ink = getComputedStyle( canvas );
+	const inkOf = ( token: string, fallback: string ): string =>
+		ink.getPropertyValue( token ).trim() || fallback;
+	const RULE = inkOf( '--os-ui-color-border', 'rgba( 255, 251, 255, 0.12 )' );
+	const LABEL = inkOf( '--os-ui-color-text-subtle', 'rgba( 255, 251, 255, 0.7 )' );
+
 	const W = rect.width;
 	const H = rect.height;
 	const PAD = { top: 18, right: 10, bottom: 22, left: 28 };
@@ -128,7 +143,7 @@ function drawChart( canvas: HTMLCanvasElement, buckets: Bucket[] ): void {
 	const barPad = barGroupW * 0.2;
 	const barW = Math.max( 1, barGroupW - barPad * 2 );
 
-	ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+	ctx.strokeStyle = RULE;
 	ctx.lineWidth = 1;
 	for ( let i = 0; i <= 3; i++ ) {
 		const y = PAD.top + chartH - ( chartH * i / 3 );
@@ -136,7 +151,7 @@ function drawChart( canvas: HTMLCanvasElement, buckets: Bucket[] ): void {
 		ctx.moveTo( PAD.left, y );
 		ctx.lineTo( PAD.left + chartW, y );
 		ctx.stroke();
-		ctx.fillStyle = 'rgba(0,0,0,0.35)';
+		ctx.fillStyle = LABEL;
 		ctx.font = '9px -apple-system, sans-serif';
 		ctx.textAlign = 'right';
 		ctx.fillText( String( Math.round( maxVal * i / 3 ) ), PAD.left - 4, y + 3 );
@@ -163,7 +178,7 @@ function drawChart( canvas: HTMLCanvasElement, buckets: Bucket[] ): void {
 			ctx.fill();
 		}
 
-		ctx.fillStyle = 'rgba(0,0,0,0.5)';
+		ctx.fillStyle = LABEL;
 		ctx.font = '9px -apple-system, sans-serif';
 		ctx.textAlign = 'center';
 		ctx.fillText( b.label, x + barW / 2, PAD.top + chartH + 13 );
