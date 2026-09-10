@@ -73,7 +73,7 @@ describe( 'Extended Options — saving', () => {
 		await flush();
 		expect( dispatch ).toHaveBeenCalledTimes( 1 );
 		expect( dispatch.mock.calls[ 0 ][ 0 ] ).toBe( 'extended' );
-		expect( optionsOf( 0 ) ).toEqual( { media_library_enhanced: true, games: true, agents: false } );
+		expect( optionsOf( 0 ) ).toEqual( { media_library_enhanced: true, games: true, agents: false, network: false } );
 	} );
 
 	test( 'a second toggle carries the newest values', async () => {
@@ -82,7 +82,7 @@ describe( 'Extended Options — saving', () => {
 		toggle( 'Enable AI agents', true );
 		await flush();
 		expect( dispatch ).toHaveBeenCalledTimes( 2 );
-		expect( optionsOf( 1 ) ).toEqual( { media_library_enhanced: true, games: true, agents: true } );
+		expect( optionsOf( 1 ) ).toEqual( { media_library_enhanced: true, games: true, agents: true, network: false } );
 	} );
 
 	test( 'rapid toggles while a save is in flight carry the newest values and do not drop prior toggles', async () => {
@@ -104,8 +104,8 @@ describe( 'Extended Options — saving', () => {
 		await new Promise( ( resolve ) => setTimeout( resolve, 150 ) );
 
 		expect( dispatch ).toHaveBeenCalledTimes( 2 );
-		expect( optionsOf( 0 ) ).toEqual( { media_library_enhanced: false, games: false, agents: false } );
-		expect( optionsOf( 1 ) ).toEqual( { media_library_enhanced: false, games: true, agents: false } );
+		expect( optionsOf( 0 ) ).toEqual( { media_library_enhanced: false, games: false, agents: false, network: false } );
+		expect( optionsOf( 1 ) ).toEqual( { media_library_enhanced: false, games: true, agents: false, network: false } );
 		expect( el.querySelector( '.os-ext__saving' ) ).toBeNull();
 	} );
 
@@ -116,7 +116,7 @@ describe( 'Extended Options — saving', () => {
 		);
 		toggle( 'Enable games', true );
 		await flush();
-		expect( heard ).toEqual( [ { options: { media_library_enhanced: true, games: true, agents: false } } ] );
+		expect( heard ).toEqual( [ { options: { media_library_enhanced: true, games: true, agents: false, network: false } } ] );
 	} );
 
 	test( 'a failed save says so inline and announces nothing', async () => {

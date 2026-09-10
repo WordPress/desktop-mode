@@ -2647,6 +2647,7 @@ export interface DesktopConfig {
 		media_library_enhanced: boolean;
 		games: boolean;
 		agents: boolean;
+		network: boolean;
 	} | null;
 	/**
 	 * REST endpoint for reading/writing extended options (admin only).

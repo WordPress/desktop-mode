@@ -50,6 +50,8 @@ tests_add_filter(
 		// Same deal for the agents framework — force it on so the
 		// agents test classes have the module available.
 		add_filter( 'openstation_agents_enabled', '__return_true' );
+		// The OpenStation Network is opt-in too; the suite exercises it.
+		add_filter( 'openstation_network_enabled', '__return_true' );
 	}
 );
 

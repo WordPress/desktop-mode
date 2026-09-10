@@ -29,6 +29,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	defined( 'OPENSTATION_STANDALONE' ) || exit;
 }
 
+// Off unless the OpenStation Network extended option is on: the module
+// behind this window did not load, and the registry takes no app.
+if ( ! function_exists( 'openstation_network_enabled' ) || ! openstation_network_enabled() ) {
+	return null;
+}
+
 const APP_ID = 'openstation-network';
 
 /** Three nodes joined by lines: a hub and two members. */
