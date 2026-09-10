@@ -27,6 +27,10 @@ import { __, defineApp, html, sprintf, type TemplateResult } from '@openstation/
 import { beginTrashChange, projectTrash, trashKey, watchTrashChanges } from '../../src/desktop-files/trash-optimistic';
 import { isMobileStamped } from '../../src/mode/stamp';
 import { stackOnPhone } from '../../src/ui/components/os-table/stack-on-phone';
+// Register before updated() assigns data and columns. A type-only import
+// leaves own properties on an unupgraded element, shadowing the table's
+// setters when the lazy component kit eventually loads.
+import '../../src/ui/components/os-table/os-table';
 import { runEmptyLoop } from './parts/empty-loop';
 import * as realtime from './parts/realtime';
 import {
