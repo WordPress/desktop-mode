@@ -174,6 +174,8 @@ function browsePanel( ctx: Ctx, ui: UiState, phone: boolean ): TemplateResult {
 				} ) }
 				<os-text-field
 					class="os-app-list__search"
+					label=${ __( 'Search WordPress.org', 'desktop-mode' ) }
+					hide-label
 					os-bind="query"
 					os-debounce="300"
 					placeholder=${ __( 'Search WordPress.org…', 'desktop-mode' ) }

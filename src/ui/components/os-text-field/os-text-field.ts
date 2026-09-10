@@ -15,6 +15,20 @@
  * ></os-text-field>
  * ```
  *
+ * A compact field with no room for a label — a toolbar search, say —
+ * takes `hide-label`. The label still renders, still pairs with the
+ * input by `for=`, and is still the accessible name; it is only taken
+ * out of the visual flow. `placeholder` is NOT a substitute: it is not
+ * an accessible name, and it disappears on the first keystroke.
+ *
+ * ```html
+ * <os-text-field
+ *     label="Search notes"
+ *     hide-label
+ *     placeholder="Search notes…"
+ * ></os-text-field>
+ * ```
+ *
  * Add the `reveal` attribute on `type="password"` fields to show an
  * eye-icon toggle that switches between hidden and visible text:
  *
@@ -40,6 +54,7 @@ import { textFieldStyles } from './os-text-field.styles';
 export class OsTextField extends Component {
 	static props = [
 		'label',
+		'hideLabel',
 		'value',
 		'placeholder',
 		'disabled',
@@ -63,7 +78,18 @@ export class OsTextField extends Component {
 			'Labelled text input primitive. Two-way reflects `value`, emits os-input-change per keystroke, os-input-commit on blur/change, and os-submit on Enter. Optional password reveal toggle.',
 		status: 'stable',
 		props: [
-			{ name: 'label', type: 'string', description: 'Visible label above the input.' },
+			{
+				name: 'label',
+				type: 'string',
+				description:
+					'Label text. Rendered above the input and used as the accessible name. Pair with `hide-label` for a compact control that still has a name.',
+			},
+			{
+				name: 'hideLabel',
+				type: 'boolean attribute',
+				description:
+					'Keeps the label as the accessible name but takes it out of the visual flow — for toolbar searches and other compact fields with no room for it.',
+			},
 			{ name: 'value', type: 'string', description: 'Current input value; reflected two-way.' },
 			{ name: 'placeholder', type: 'string', description: 'Native placeholder string.' },
 			{ name: 'disabled', type: 'boolean attribute', description: 'Disables the native input.' },
@@ -127,6 +153,7 @@ export class OsTextField extends Component {
 		example: html`
 			<os-stack gap="8">
 				<os-text-field label="Note title" value="Untitled" placeholder="Name this note"></os-text-field>
+				<os-text-field label="Search notes" hide-label placeholder="Search notes…"></os-text-field>
 				<os-text-field type="password" reveal label="API key"></os-text-field>
 			</os-stack>
 		`,
@@ -146,6 +173,13 @@ export class OsTextField extends Component {
 
 	protected render() {
 		const label = ( this as unknown as { label: string | null } ).label || '';
+		// `hide-label` hides the label, never the NAME: the <label> below is
+		// still rendered and still paired by `for=`, and `aria-label` on the
+		// input is unchanged. A compact field that drops the label entirely
+		// has no accessible name at all — `placeholder` is not one, and it
+		// disappears on the first keystroke.
+		const hideLabel =
+			( this as unknown as { hideLabel: string | null } ).hideLabel !== null;
 		const value = ( this as unknown as { value: string | null } ).value ?? '';
 		const placeholder =
 			( this as unknown as { placeholder: string | null } ).placeholder ||
@@ -243,7 +277,9 @@ export class OsTextField extends Component {
 		return html`
 			${ label
 				? html`<label
-						class="os-text-field__label"
+						class=${ hideLabel
+							? 'os-text-field__label os-text-field__label--hidden'
+							: 'os-text-field__label' }
 						for=${ inputId }
 					>${ label }</label>`
 				: html`` }

@@ -53,6 +53,25 @@ export const textFieldStyles = css`
 		color: var( --os-ui-fg-muted, #646970 );
 	}
 
+	/*
+	 * `hide-label`: the label is still rendered and still paired with the
+	 * input by `for=`, it is only taken out of the visual flow. Hiding it
+	 * with `display: none` would remove it from the accessibility tree too,
+	 * which is the opposite of the point. Same idiom as
+	 * `.os-constellation__row-note` in openstation-layout.css.
+	 */
+	.os-text-field__label--hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		border: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		clip-path: inset( 50% );
+	}
+
 	.os-text-field__row {
 		position: relative;
 		display: flex;

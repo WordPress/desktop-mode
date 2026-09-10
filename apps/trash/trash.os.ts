@@ -400,6 +400,8 @@ export default defineApp< AppState, AppData >( APP_ID, {
 						</os-segmented>
 						<os-text-field
 							type="search"
+							label=${ __( 'Search trash' ) }
+							hide-label
 							os-bind="search"
 							os-action="refresh"
 							placeholder=${ __( 'Search trash…' ) }
