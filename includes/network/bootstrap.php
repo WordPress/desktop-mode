@@ -30,6 +30,16 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * The token's query arg on the target's shell screen. Defined here,
+ * not in the hop module, because the shell screen strips and reads
+ * these boot args whether or not the module loaded.
+ */
+const OPENSTATION_NETWORK_HOP_ARG = 'openstation_hop';
+
+/** The slide direction the target lands with, after the token is spent. */
+const OPENSTATION_NETWORK_HOP_FROM_ARG = 'openstation_hop_from';
+
+/**
  * Whether the OpenStation Network is enabled site-wide.
  *
  * Backed by the `network` key of the extended options bundle
