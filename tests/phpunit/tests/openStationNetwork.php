@@ -413,12 +413,13 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$now     = time();
 		$payload = array_merge(
 			array(
-				'v'    => 1,
-				'iss'  => 'https://member.test/',
-				'aud'  => openstation_network_origin( admin_url() ),
-				'sub'  => 'visitor@example.org',
-				'name' => 'Visitor',
-				'dir'  => 'next',
+				'v'     => 2,
+				'iss'   => 'https://member.test/',
+				'aud'   => openstation_network_identity()['url'],
+				'sub'   => '77',
+				'email' => 'visitor@example.org',
+				'name'  => 'Visitor',
+				'dir'   => 'next',
 				'iat'  => $now,
 				'exp'  => $now + 60,
 				'jti'  => bin2hex( random_bytes( 8 ) ),
@@ -449,14 +450,35 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		list( $body, $sig ) = explode( '.', $minted['token'] );
 		$json    = openstation_network_hop_decode( $body );
 		$payload = json_decode( $json, true );
-		$this->assertSame( 'https://member.test', $payload['aud'] );
-		$this->assertSame( get_userdata( self::$admin_id )->user_email, $payload['sub'] );
+		$this->assertSame( 2, $payload['v'] );
+		$this->assertSame( 'https://member.test/', $payload['aud'], 'The audience is the install, by its identity URL.' );
+		$this->assertSame( (string) self::$admin_id, $payload['sub'], 'The subject is the user id, which the user cannot edit.' );
+		$this->assertSame( get_userdata( self::$admin_id )->user_email, $payload['email'] );
 		$this->assertSame( 'next', $payload['dir'] );
 		$this->assertLessThanOrEqual( 60, $payload['exp'] - $payload['iat'] );
 		$this->assertTrue( openstation_network_verify( $json, sodium_bin2base64( openstation_network_hop_decode( $sig ), SODIUM_BASE64_VARIANT_ORIGINAL ), openstation_network_public_key() ), 'Signed with this install\'s key.' );
 
 		$this->assertSame( 'openstation_hop_target', openstation_network_mint_hop( 'https://stranger.test/wp-admin/admin.php?page=openstation' )->get_error_code() );
-		$this->assertSame( 'openstation_hop_same_origin', openstation_network_mint_hop( admin_url( 'admin.php?page=openstation' ) )->get_error_code() );
+		$this->assertSame( 'openstation_hop_target', openstation_network_mint_hop( admin_url( 'admin.php?page=openstation' ) )->get_error_code(), 'A site of this install is no target: it shares the login already.' );
+
+		// Origin is not the line. A separate install on this very
+		// hostname shares nothing but the hostname, so it is a target
+		// like any other member; only the transport rule still applies.
+		$members            = openstation_network_members();
+		$twin               = array_values( $members )[0];
+		$twin['id']         = 'twin';
+		$twin['url']        = home_url( '/site-b/' );
+		$twin['shellUrl']   = home_url( '/site-b/wp-admin/admin.php?page=openstation' );
+		$members['twin']    = $twin;
+		openstation_network_save_members( $members );
+		$this->assertSame( home_url( '/site-b/' ), openstation_network_hop_targets()[ $twin['shellUrl'] ], 'Same origin, another install: a target, with that install as audience.' );
+		$twin_mint = openstation_network_mint_hop( $twin['shellUrl'] );
+		if ( is_wp_error( $twin_mint ) ) {
+			$this->assertSame( 'openstation_hop_insecure', $twin_mint->get_error_code(), 'Over plain HTTP outside a local environment, only the transport rule stands in the way.' );
+		} else {
+			$twin_payload = json_decode( openstation_network_hop_decode( explode( '.', $twin_mint['token'] )[0] ), true );
+			$this->assertSame( home_url( '/site-b/' ), $twin_payload['aud'], 'Minted, for that install.' );
+		}
 
 		wp_set_current_user( 0 );
 		$this->assertSame( 401, rest_do_request( $request )->get_status(), 'Only a logged-in user mints.' );
@@ -473,9 +495,18 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$token   = self::foreign_token( $pair );
 		$payload = openstation_network_verify_hop( $token );
 		$this->assertIsArray( $payload );
-		$this->assertSame( 'visitor@example.org', $payload['sub'] );
-		$this->assertSame( $visitor, openstation_network_hop_user( $payload )->ID );
+		$this->assertSame( '77', $payload['sub'] );
+		$this->assertNull( openstation_network_hop_user( $payload ), 'A matching email logs nobody in: nothing links source user 77 to anyone here yet.' );
+		openstation_network_link( $visitor, array( 'iss' => 'https://member.test/', 'sub' => '77', 'name' => 'Visitor', 'email' => 'visitor@example.org', 'site' => 'Member' ) );
+		$this->assertSame( $visitor, openstation_network_hop_user( $payload )->ID, 'Linked, the token logs that user in.' );
 		$this->assertSame( 'openstation_hop_replay', openstation_network_verify_hop( $token )->get_error_code(), 'Once.' );
+
+		// The takeover the linking exists to refuse: a token whose email
+		// is an administrator's, minted for some other source account.
+		$admin_email = get_userdata( self::$admin_id )->user_email;
+		$forged      = openstation_network_verify_hop( self::foreign_token( $pair, array( 'sub' => '78', 'email' => $admin_email ) ) );
+		$this->assertIsArray( $forged, 'Validly signed, so it verifies…' );
+		$this->assertNull( openstation_network_hop_user( $forged ), '…and logs nobody in: the email is the source user\'s to edit, not proof of an account here.' );
 		if ( is_multisite() ) {
 			// Spent on one site of the origin, spent on every site: the
 			// claim lives in the main site's table, not a per-site transient.
@@ -486,9 +517,10 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 			restore_current_blog();
 		}
 
-		$this->assertNull( openstation_network_hop_user( array( 'sub' => 'nobody@example.org' ) ), 'A URL never creates a user.' );
+		$this->assertNull( openstation_network_hop_user( array( 'iss' => 'https://member.test/', 'sub' => '9999' ) ), 'A URL never creates a user.' );
 		$this->assertSame( 'openstation_hop_expired', openstation_network_verify_hop( self::foreign_token( $pair, array( 'exp' => time() - 3600, 'iat' => time() - 3700 ) ) )->get_error_code() );
-		$this->assertSame( 'openstation_hop_audience', openstation_network_verify_hop( self::foreign_token( $pair, array( 'aud' => 'https://elsewhere.test' ) ) )->get_error_code() );
+		$this->assertSame( 'openstation_hop_audience', openstation_network_verify_hop( self::foreign_token( $pair, array( 'aud' => 'https://elsewhere.test/' ) ) )->get_error_code() );
+		$this->assertSame( 'openstation_hop_malformed', openstation_network_verify_hop( self::foreign_token( $pair, array( 'v' => 1 ) ) )->get_error_code(), 'The email-subject token is not a token any more.' );
 		$this->assertSame( 'openstation_hop_issuer', openstation_network_verify_hop( self::foreign_token( $pair, array( 'iss' => 'https://stranger.test/' ) ) )->get_error_code() );
 		$this->assertSame( 'openstation_hop_signature', openstation_network_verify_hop( self::foreign_token( self::remote_keypair() ) )->get_error_code(), 'A pinned issuer, another key.' );
 		$this->assertSame( 'openstation_hop_malformed', openstation_network_verify_hop( 'not.a.token' )->get_error_code() );
@@ -500,6 +532,55 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 			array( 'iss' => openstation_network_identity()['url'] )
 		);
 		$this->assertIsArray( openstation_network_verify_hop( $own ) );
+	}
+
+	public function test_a_link_is_offered_to_the_user_logged_in_here_and_answered_from_that_session() {
+		$pair         = self::remote_keypair();
+		$this->remote = static function () use ( $pair ) {
+			return self::json_response( self::member_identity( $pair['public'] ) );
+		};
+		openstation_network_add_member( 'https://member.test' );
+		$payload = openstation_network_verify_hop( self::foreign_token( $pair, array( 'sub' => '78', 'name' => 'Visitor', 'email' => 'visitor@example.org' ) ) );
+
+		// Nobody logged in: no offer to anyone, and nothing in the config.
+		$this->assertNull( openstation_network_link_offer() );
+
+		wp_set_current_user( self::$admin_id );
+		openstation_network_offer_link( self::$admin_id, $payload );
+		$offer = openstation_network_link_offer();
+		$this->assertSame( array( 'site' => 'Member', 'name' => 'Visitor', 'email' => 'visitor@example.org' ), array_intersect_key( $offer, array_flip( array( 'site', 'name', 'email' ) ) ) );
+		$this->assertStringContainsString( '/desktop-mode/v1/network/link', $offer['url'] );
+
+		// No, and not asked again for that account.
+		$request = new WP_REST_Request( 'POST', '/desktop-mode/v1/network/link' );
+		$request->set_param( 'accept', false );
+		$this->assertSame( array( 'linked' => false ), rest_do_request( $request )->get_data() );
+		$this->assertNull( openstation_network_link_offer(), 'Answered.' );
+		openstation_network_offer_link( self::$admin_id, $payload );
+		$this->assertNull( openstation_network_link_offer(), 'Declined once, not offered again.' );
+		$this->assertNull( openstation_network_hop_user( $payload ) );
+
+		// Yes, for another source account: from then on its token logs this user in.
+		$other = openstation_network_verify_hop( self::foreign_token( $pair, array( 'sub' => '79', 'name' => 'Visitor', 'email' => 'visitor@example.org' ) ) );
+		openstation_network_offer_link( self::$admin_id, $other );
+		$request->set_param( 'accept', true );
+		$this->assertSame( array( 'linked' => true ), rest_do_request( $request )->get_data() );
+		$this->assertSame( self::$admin_id, openstation_network_hop_user( $other )->ID );
+		$this->assertSame( 404, rest_do_request( $request )->get_status(), 'Nothing left to answer.' );
+		$links = openstation_network_linked_accounts( self::$admin_id );
+		$this->assertCount( 1, $links );
+		$this->assertSame( array( 'site' => 'Member', 'name' => 'Visitor', 'email' => 'visitor@example.org' ), array_values( $links )[0] );
+
+		// The Network window lists it and undoes it.
+		$html = openstation_apps_runtime()->dispatch( 'openstation-network', array( 'action' => 'mount', 'state' => array(), 'args' => array() ), openstation_apps_os() )['html'];
+		$this->assertStringContainsString( 'Linked accounts', $html );
+		$this->assertStringContainsString( 'visitor@example.org', $html );
+		$response = openstation_apps_runtime()->dispatch( 'openstation-network', array( 'action' => 'unlink', 'state' => array(), 'args' => array( 'key' => array_keys( $links )[0] ) ), openstation_apps_os() );
+		$this->assertStringContainsString( 'Unlinked', $response['state']['notice'] );
+		$this->assertNull( openstation_network_hop_user( $other ), 'And the token logs nobody in again.' );
+
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, rest_do_request( $request )->get_status(), 'Only a logged-in session answers.' );
 	}
 
 	public function test_landing_drops_the_token_and_keeps_the_direction() {
@@ -656,5 +737,8 @@ class Tests_OpenStation_Network extends WP_UnitTestCase {
 		$this->assertSame( 'member', $kinds[ 'member:' . $member['id'] ], 'An install that joined from elsewhere.' );
 		$this->assertSame( 'local', $kinds[ is_multisite() ? '1' : 'hub' ], "This network's own site." );
 		$this->assertCount( 0, array_diff( $kinds, array( 'local', 'member' ) ), 'Nothing else.' );
+		$foreign = wp_list_pluck( $block['sites'], 'foreign', 'id' );
+		$this->assertTrue( $foreign[ 'member:' . $member['id'] ], 'Another install: a switch there mints a token.' );
+		$this->assertFalse( $foreign[ is_multisite() ? '1' : 'hub' ], 'This install: it shares the login already.' );
 	}
 }

@@ -47,6 +47,7 @@ function openstation_multisite_payload() {
 			'url'      => esc_url_raw( network_admin_url() ),
 			'shellUrl' => esc_url_raw( network_admin_url( 'admin.php?page=' . OPENSTATION_SHELL_PAGE_SLUG ) ),
 			'rows'     => openstation_multisite_network_admin_rows(),
+			'foreign'  => false,
 		);
 	}
 
@@ -166,6 +167,7 @@ function openstation_multisite_sites() {
 			'name'     => $name,
 			'shellUrl' => esc_url_raw( get_admin_url( $blog_id, 'admin.php?page=' . OPENSTATION_SHELL_PAGE_SLUG ) ),
 			'kind'     => 'local',
+			'foreign'  => false,
 		);
 	}
 	foreach ( openstation_network_member_entries() as $member ) {
@@ -174,6 +176,7 @@ function openstation_multisite_sites() {
 			'name'     => $member['name'],
 			'shellUrl' => $member['shellUrl'],
 			'kind'     => 'member',
+			'foreign'  => true,
 		);
 	}
 
@@ -186,7 +189,9 @@ function openstation_multisite_sites() {
 	 *
 	 * @param array[] $sites Each `id` (blog id as a string, or `member:<id>`), `name`, `shellUrl`,
 	 *                       `kind` (`local` for a site of this network, `member` for an install
-	 *                       that joined from elsewhere, which the switcher marks as external).
+	 *                       that joined from elsewhere, which the switcher marks as external),
+	 *                       `foreign` (whether the entry is another install, which a switch to
+	 *                       it needs a login token for).
 	 */
 	return apply_filters( 'openstation_multisite_sites', $sites );
 }

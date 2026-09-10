@@ -29,11 +29,13 @@ const config = ( over: Partial< MultisiteConfig > = {} ): MultisiteConfig => ( {
 		url: 'http://example.test/wp-admin/network/',
 		shellUrl: NETWORK_SHELL,
 		rows: [],
+		foreign: true,
 	},
 	current: '1',
 	sites: [
 		{ id: '1', name: 'Main', shellUrl: MAIN_SHELL },
-		{ id: '2', name: 'Shop', shellUrl: SHOP_SHELL },
+		// Another install: a switch there mints a login token.
+		{ id: '2', name: 'Shop', shellUrl: SHOP_SHELL, foreign: true },
 	],
 	...over,
 } );
@@ -246,7 +248,7 @@ describe( 'the site switcher', () => {
 			config( {
 				sites: [
 					{ id: '1', name: 'Main', shellUrl: MAIN_SHELL },
-					{ id: 'member:abc', name: 'Studio', shellUrl: 'https://studio.test/wp-admin/admin.php?page=openstation', kind: 'member' },
+					{ id: 'member:abc', name: 'Studio', shellUrl: 'https://studio.test/wp-admin/admin.php?page=openstation', kind: 'member', foreign: true },
 				],
 			} ),
 			{ hop, mint },
@@ -282,25 +284,41 @@ describe( 'the site switcher', () => {
 		).toBe( MAIN_SHELL );
 	} );
 
-	test( 'a site on this origin carries no direction arg and mints nothing', async () => {
+	test( 'a site of this install mints nothing, and another install mints even on this origin', async () => {
 		const here = window.location.origin + '/wp-admin/admin.php?page=openstation';
+		const twin = window.location.origin + '/site-b/wp-admin/admin.php?page=openstation';
 		expect( isOtherOrigin( here ) ).toBe( false );
 		expect( isOtherOrigin( SHOP_SHELL ) ).toBe( true );
+		// The direction arg rides only across origins: on this one the
+		// sessionStorage hint follows the navigation by itself.
 		expect( shellUrlInOverview( here, 'next' ) ).toBe( here + '&openstation_overview=1' );
 
 		const hop = vi.fn();
-		const mint = vi.fn( async () => 'https://never.test/' );
+		const mint = vi.fn( async ( target: string ) => target + '&openstation_overview=1&openstation_hop=signed' );
 		const el = buildSiteSwitcher(
-			config( { sites: [ { id: '1', name: 'Main', shellUrl: MAIN_SHELL }, { id: '9', name: 'Here', shellUrl: here } ] } ),
+			config( {
+				sites: [
+					{ id: '1', name: 'Main', shellUrl: MAIN_SHELL },
+					{ id: '9', name: 'Here', shellUrl: here },
+					{ id: 'member:twin', name: 'Twin', shellUrl: twin, kind: 'member', foreign: true },
+				],
+			} ),
 			{ hop, mint },
 		);
 		el?.dispatchEvent( new CustomEvent( 'os-pick', { detail: { value: '9' } } ) );
 		await new Promise( ( r ) => setTimeout( r, 0 ) );
 		expect( mint ).not.toHaveBeenCalled();
 		expect( hop ).toHaveBeenCalledWith( here + '&openstation_overview=1' );
+
+		// Same hostname, separate install: a token all the same.
+		hop.mockClear();
+		el?.dispatchEvent( new CustomEvent( 'os-pick', { detail: { value: 'member:twin' } } ) );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+		expect( mint ).toHaveBeenCalledWith( twin, 'next' );
+		expect( hop ).toHaveBeenCalledWith( twin + '&openstation_overview=1&openstation_hop=signed' );
 	} );
 
-	test( 'another origin gets a login token minted, and hops without one when the mint fails', async () => {
+	test( 'another install gets a login token minted, and hops without one when the mint fails', async () => {
 		const settle = () => new Promise( ( r ) => setTimeout( r, 0 ) );
 		const hop = vi.fn();
 		const mint = vi.fn( async () => SHOP_SHELL + '&openstation_overview=1&openstation_hop=signed' );

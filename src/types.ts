@@ -1893,6 +1893,8 @@ export interface MultisiteConfig {
 		url: string;
 		shellUrl: string;
 		rows: Array< { title: string; url: string } >;
+		/** Another install (a member looking at its hub), so a switch there mints a token. */
+		foreign?: boolean;
 	} | null;
 	/** Which instance this shell is: `network`, or the blog id. */
 	current: string;
@@ -1907,6 +1909,12 @@ export interface MultisiteConfig {
 		name: string;
 		shellUrl: string;
 		kind?: 'local' | 'member';
+		/**
+		 * Another install than this shell's, whatever its origin: a
+		 * switch there mints a login token. Absent or false for a site
+		 * of this very install, which shares its login already.
+		 */
+		foreign?: boolean;
 	} >;
 	/**
 	 * The route that mints a hop token towards a site on another origin,
@@ -2355,6 +2363,13 @@ export interface DesktopConfig {
 	 * Read once server-side and stripped like the other boot args.
 	 */
 	arrivalDirection?: 'next' | 'prev' | '';
+	/**
+	 * A switch from another install arrived with a login token while
+	 * this user was logged in, and no account is linked to it yet: who
+	 * arrived, from where, and the route that records the answer. The
+	 * shell asks once; null when there is nothing to ask.
+	 */
+	hopLinkOffer?: { site: string; name: string; email: string; url: string } | null;
 	/**
 	 * Progressive-web-app config — endpoint URLs and the per-user
 	 * installable-pill state. Always present in shell-mode requests.

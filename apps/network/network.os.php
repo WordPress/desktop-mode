@@ -364,6 +364,49 @@ function unpaired_view( State $state, Os $os ) {
 }
 
 /**
+ * The accounts on other installs this user linked to theirs: a switch
+ * from any of them logs this user in here. Nothing when there are none.
+ *
+ * @param Os $os Host.
+ */
+function links_section( Os $os ) {
+	$links = \openstation_network_linked_accounts( (int) $os->auth->user_id() );
+	if ( array() === $links ) {
+		return;
+	}
+	?>
+	<section class="os-network__section">
+		<h3 class="os-network__subtitle"><?php esc_html_e( 'Linked accounts', 'desktop-mode' ); ?></h3>
+		<p class="os-network__lede"><?php esc_html_e( 'A switch from any of these accounts logs you in here as you. Unlink one and that switch lands on the login screen again.', 'desktop-mode' ); ?></p>
+		<ul class="os-network__sites">
+			<?php foreach ( $links as $key => $link ) : ?>
+				<li class="os-network__site" os-key="<?php echo esc( $key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc() escapes. ?>">
+					<div class="os-network__site-main">
+						<strong class="os-network__site-name"><?php echo esc( '' !== $link['name'] ? $link['name'] : $key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc() escapes. ?></strong>
+						<span class="os-network__site-url"><?php echo esc( trim( $link['email'] . ' · ' . $link['site'], ' ·' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc() escapes. ?></span>
+					</div>
+					<div class="os-network__site-side">
+						<?php
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by tag(); see above.
+						echo tag(
+							'os-button',
+							array(
+								'variant'    => 'ghost',
+								'os-action'  => 'unlink',
+								'os-arg-key' => $key,
+							),
+							esc( __( 'Unlink', 'desktop-mode' ) )
+						);
+						?>
+					</div>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	</section>
+	<?php
+}
+
+/**
  * The body.
  *
  * @param State $state State.
@@ -380,6 +423,7 @@ function render( State $state, Os $os ) {
 	} else {
 		unpaired_view( $state, $os );
 	}
+	links_section( $os );
 	echo '</div>';
 }
 
@@ -451,6 +495,17 @@ return App::define( APP_ID )
 				// the switcher takes, slide and login token included.
 				$os->effects->add( 'hop', array( 'site' => $id ) );
 			}
+		}
+	)
+	->action(
+		'unlink',
+		static function ( State $state, Os $os, array $args ) {
+			$key = isset( $args['key'] ) && is_scalar( $args['key'] ) ? sanitize_text_field( (string) $args['key'] ) : '';
+			outcome(
+				$state,
+				\openstation_network_unlink( (int) $os->auth->user_id(), $key ) ? true : new \WP_Error( 'openstation_network_unknown', __( 'That account is not linked.', 'desktop-mode' ) ),
+				__( 'Unlinked. A switch from that account lands on the login screen now.', 'desktop-mode' )
+			);
 		}
 	)
 	->action(

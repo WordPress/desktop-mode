@@ -45,6 +45,7 @@ import { getExitOpenStationTileDef } from './exit-openstation';
 import { getNetworkAdminTileDef } from './multisite/dock-tiles';
 import { createHopMinter, hopToAdmin, type HopMinter } from './multisite/hop';
 import { buildSiteSwitcher, installSiteSwitcherKeys, switchToSite } from './multisite/site-switcher';
+import { createLinkPoster, offerAccountLink } from './multisite/link-offer';
 import { revealInstance, stampArrival } from './multisite/instance-transition';
 import { installOverviewHeader, refreshOverviewTopBar } from './window-manager/overview';
 import { deriveWindowId, urlMatchKey } from './utils';
@@ -2983,6 +2984,15 @@ function init(): void {
 		isShown: () => !! document.querySelector( '.os-area--overview .os-site-switcher' ),
 		mint: hopMinter,
 	} );
+	// A switch from another install arrived with a login token while
+	// this user was logged in, and no account is linked to it yet: ask
+	// once whether to link the two.
+	if ( config.hopLinkOffer ) {
+		void offerAccountLink( config.hopLinkOffer, {
+			confirm: ( options ) => osConfirm( options ),
+			post: createLinkPoster( config.restNonce ),
+		} );
+	}
 
 	bindAdminLinkDispatch( {
 		adminUrl: config.adminUrl,

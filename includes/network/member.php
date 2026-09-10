@@ -235,7 +235,8 @@ function openstation_network_member_payload() {
 	$current = '';
 	$sites   = array();
 	foreach ( $hub['list']['sites'] as $site ) {
-		if ( '' !== $site['publicKey'] && hash_equals( $site['publicKey'], $me ) ) {
+		$mine = '' !== $site['publicKey'] && hash_equals( $site['publicKey'], $me );
+		if ( $mine ) {
 			$current = $site['id'];
 		}
 		$sites[] = array(
@@ -243,6 +244,9 @@ function openstation_network_member_payload() {
 			'name'     => $site['name'],
 			'shellUrl' => $site['shellUrl'],
 			'kind'     => $site['kind'],
+			// Every entry but this install's own is another install: the
+			// hub's sites and the other members alike.
+			'foreign'  => ! $mine,
 		);
 	}
 	if ( '' === $current ) {
@@ -253,9 +257,13 @@ function openstation_network_member_payload() {
 			'name'     => (string) get_bloginfo( 'name' ),
 			'shellUrl' => esc_url_raw( admin_url( 'admin.php?page=' . OPENSTATION_SHELL_PAGE_SLUG ) ),
 			'kind'     => 'member',
+			'foreign'  => false,
 		);
 	}
 	$admin = $hub['list']['networkAdmin'];
+	if ( is_array( $admin ) ) {
+		$admin['foreign'] = true;
+	}
 	return array(
 		'isNetworkAdmin' => false,
 		'networkAdmin'   => ( $admin && current_user_can( 'manage_options' ) ) ? $admin : null,

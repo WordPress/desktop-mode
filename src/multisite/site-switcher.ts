@@ -47,6 +47,8 @@ export interface SiteSwitcherEntry {
 	shellUrl: string;
 	/** An install that joined from elsewhere, marked as such in the row. */
 	external: boolean;
+	/** Another install than this shell's, so a switch there mints a login token. */
+	foreign: boolean;
 }
 
 /** The direction arg a cross-origin arrival slides in from. Mirrors `OPENSTATION_NETWORK_HOP_FROM_ARG`. */
@@ -96,6 +98,7 @@ export function siteSwitcherEntries(
 			label: __( 'Network Admin' ),
 			shellUrl: multisite.networkAdmin.shellUrl,
 			external: false,
+			foreign: multisite.networkAdmin.foreign === true,
 		} );
 	}
 	for ( const site of multisite.sites ?? [] ) {
@@ -104,6 +107,7 @@ export function siteSwitcherEntries(
 			label: site.name,
 			shellUrl: site.shellUrl,
 			external: site.kind === 'member',
+			foreign: site.foreign === true,
 		} );
 	}
 	return entries;
@@ -139,14 +143,16 @@ export function switchToSite(
 	}
 	const entry = entries[ to ];
 	// Slide this desk out towards the site picked, then go; the shell
-	// that arrives slides its desk in from the same side. Another origin
-	// gets a login token minted meanwhile, so the user arrives logged
-	// in; a mint that fails hops without one.
+	// that arrives slides its desk in from the same side. Another
+	// INSTALL gets a login token minted meanwhile, so the user arrives
+	// logged in; a mint that fails hops without one. Origin is not the
+	// line: a separate install on this hostname shares nothing but the
+	// hostname, and a site of this install needs no token on any.
 	const from = entries.findIndex( ( x ) => x.value === current );
 	const direction: HopDirection = to > from ? 'next' : 'prev';
 	const plain = shellUrlInOverview( entry.shellUrl, direction );
 	const minted =
-		deps.mint && isOtherOrigin( entry.shellUrl )
+		deps.mint && entry.foreign
 			? deps.mint( entry.shellUrl, direction ).catch( () => null )
 			: Promise.resolve( null );
 	void Promise.all( [ leaveInstance( direction ), minted ] ).then(
@@ -285,11 +291,11 @@ export function buildSiteSwitcher(
 		e.preventDefault();
 		e.stopPropagation();
 		const plain = shellUrlInOverview( entry.shellUrl );
-		if ( ! deps.mint || ! isOtherOrigin( entry.shellUrl ) ) {
+		if ( ! deps.mint || ! entry.foreign ) {
 			hop( plain, e );
 			return;
 		}
-		// Another origin beside this one still wants the login token,
+		// Another install beside this one still wants the login token,
 		// but a tab opened after an await is a popup to the browser. So
 		// the tab opens inside the click, empty, and gets the minted URL
 		// once signed, the plain one when the mint fails; a blocked tab
