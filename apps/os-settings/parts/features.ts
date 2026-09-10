@@ -413,6 +413,11 @@ const extendedSection: Section = ( _s, ctx ) => {
 				__( 'Adds a Games app for every user: built-in games, scoreboards, and player-to-player challenges. Off by default — while off, nothing game-related runs anywhere, on the server or in the browser. Saved scores are kept across a disable and reappear when re-enabled.' ),
 			) }
 			${ toggle(
+				'network',
+				__( 'Enable OpenStation Network' ),
+				__( 'Pairs this install with other OpenStation installs into one network: a Network app in the dock, a key and a registry, and a site switcher that moves between installs and logs you in on arrival. Off by default — while off, none of the network module loads, on the server or in the browser, and a multisite keeps its own site switcher. Pairings are kept across a disable and reappear when re-enabled.' ),
+			) }
+			${ toggle(
 				'agents',
 				__( 'Enable AI agents' ),
 				__( 'Adds an Agents section to WP Explorer: durable AI workers that live on the site as login-blocked users, act through the WordPress Abilities API under their own role, and answer in a chat window. Requires a configured AI connector to run. Off by default — while off, nothing agent-related loads. Agent definitions are kept across a disable and reappear when re-enabled.' ),

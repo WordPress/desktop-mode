@@ -1771,6 +1771,18 @@ apply_filters( 'openstation_wallpapers', array $registry );
 
 ---
 
+### `openstation_network_enabled` — Experimental
+
+Whether the OpenStation Network is enabled site-wide. The default comes from the `network` extended option (OpenStation Preferences → Features → Extended options, admins only) — **off by default**: the network is opt-in. When the resolved value is `false`, `includes/network/bootstrap.php` loads **none** of the network module — no keypair, no identity or list route, no registry, no Network window, no hop token minted or spent — a single site has no site switcher, and a multisite keeps the one it has on its own. Pairings already made survive a disable. See [network.md](network.md).
+
+The load decision is made on `plugins_loaded` (priority 5), so hook the filter from any plugin's main file — just not later than that.
+
+```php
+apply_filters( 'openstation_network_enabled', bool $enabled );
+```
+
+---
+
 ### `openstation_games_enabled` — Experimental
 
 Whether the games framework is enabled site-wide. The default comes from the `games` extended option (OpenStation Preferences → Features → Extended options, admins only) — **off by default**: games are opt-in. When the resolved value is `false`, `includes/games/bootstrap.php` loads **none** of the games module — no Games window/icon, no `openstation_register_game()`, no REST routes, no Heartbeat challenge channel, no schema check — and the shell config ships `gamesEnabled: false` so the client skips the challenges channel too. For third-party plugins the disabled state looks exactly like OpenStation being inactive: guard `openstation_register_game()` calls with `function_exists()` (as [the recipe](./examples/register-game.md) already does).
