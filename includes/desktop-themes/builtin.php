@@ -193,4 +193,5 @@ function openstation_register_builtin_desktop_themes() {
  */
 if ( openstation_request_needs_admin_modules() ) {
 	add_action( 'init', 'openstation_register_builtin_desktop_themes', 5 );
+	add_action( 'init', 'openstation_register_brand_studio', 5 );
 }

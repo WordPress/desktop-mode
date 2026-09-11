@@ -37,21 +37,18 @@ export const toastStyles = css`
 		/* Longhand on purpose: the texture slot below owns
 		   background-image, and the shorthand would reset it.
 
-		   A toast is a dark chip whatever the admin colour scheme
-		   says, which is the same constraint the dialog surface has —
-		   so it chains through --os-ui-modal-bg rather than through
-		   --os-ui-surface, which a light theme sets to white and would
-		   pair with the light --os-ui-fg-on-accent text below.
-		   --os-ui-toast-bg stays as the per-instance hook. */
+		   Surface and ink follow the same modal family, which a
+		   theme may make light or dark. The toast background override
+		   stays available for per-instance styling. */
 		background-color: var( --os-ui-toast-bg, var( --os-ui-modal-bg, #1d2327 ) );
 		/* Desktop-theme texture slot: unset resolves to none. */
 		background-image: var( --os-ui-toast-bg-image, none );
 		background-repeat: var( --os-ui-toast-bg-image-repeat, repeat );
 		background-size: var( --os-ui-toast-bg-image-size, auto );
 		background-position: var( --os-ui-toast-bg-image-position, center );
-		color: var( --os-ui-fg-on-accent, #fff );
+		color: var( --os-ui-modal-text, var( --os-ui-fg-on-accent, #fff ) );
 		border-radius: 10px;
-		border: 1px solid var( --os-ui-border, rgba( 255, 255, 255, 0.12 ) );
+		border: 1px solid var( --os-ui-modal-border, var( --os-ui-border, rgba( 255, 255, 255, 0.12 ) ) );
 		box-shadow: 0 10px 30px rgba( 0, 0, 0, 0.4 ),
 			0 2px 6px rgba( 0, 0, 0, 0.18 ),
 			inset 0 0 0 1px rgba( 255, 255, 255, 0.04 );
@@ -85,6 +82,10 @@ export const toastStyles = css`
 		transition: opacity var( --_holo-t-fast ) linear,
 			transform var( --_holo-t ) var( --_holo-ease );
 	}
+	::selection {
+		background: var( --os-ui-selection-bg, rgba( 159, 152, 255, 0.6 ) );
+		color: var( --os-ui-selection-fg, #fffbff );
+	}
 	.os-toast__label {
 		flex: 1;
 	}
@@ -98,8 +99,8 @@ export const toastStyles = css`
 		padding: 4px 10px;
 		border: none;
 		border-radius: 4px;
-		background: var( --os-ui-hover, rgba( 255, 255, 255, 0.12 ) );
-		color: var( --os-ui-fg-on-accent, #fff );
+		background: var( --os-ui-modal-field-bg, var( --os-ui-hover, rgba( 255, 255, 255, 0.12 ) ) );
+		color: var( --os-ui-modal-text, var( --os-ui-fg-on-accent, #fff ) );
 		font: inherit;
 		font-size: 12px;
 		font-weight: 500;
@@ -107,10 +108,10 @@ export const toastStyles = css`
 		transition: background-color 0.12s ease;
 	}
 	button:hover {
-		background: var( --os-ui-scrim, rgba( 255, 255, 255, 0.22 ) );
+		background: var( --os-ui-modal-button-bg-hover, var( --os-ui-scrim, rgba( 255, 255, 255, 0.22 ) ) );
 	}
 	button:focus-visible {
-		outline: 2px solid var( --os-ui-border, rgba( 255, 255, 255, 0.6 ) );
+		outline: 2px solid var( --os-ui-accent-strong, var( --os-ui-border, rgba( 255, 255, 255, 0.6 ) ) );
 		outline-offset: 2px;
 	}
 	.os-toast__close {
@@ -120,11 +121,11 @@ export const toastStyles = css`
 		padding: 4px;
 		border-radius: 6px;
 		background: transparent;
-		color: var( --os-ui-fg-muted, rgba( 255, 255, 255, 0.7 ) );
+		color: var( --os-ui-modal-text-muted, var( --os-ui-fg-muted, rgba( 255, 255, 255, 0.7 ) ) );
 	}
 	.os-toast__close:hover {
-		background: var( --os-ui-hover, rgba( 255, 255, 255, 0.14 ) );
-		color: var( --os-ui-fg-on-accent, #fff );
+		background: var( --os-ui-modal-button-bg-hover, var( --os-ui-hover, rgba( 255, 255, 255, 0.14 ) ) );
+		color: var( --os-ui-modal-text, var( --os-ui-fg-on-accent, #fff ) );
 	}
 	@media ( prefers-reduced-motion: reduce ) {
 		:host {

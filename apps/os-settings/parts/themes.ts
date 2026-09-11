@@ -1,3 +1,6 @@
+import { canManageBranding } from '../../../src/settings/site-branding';
+import { BRAND_THEME_SLUG } from '../../../src/desktop-themes/brand-palette';
+import { renderBrandStudio } from './brand-studio';
 /**
  * Themes — a card grid of every desktop theme in the site's library,
  * plus "System default". Picking is per-user and open to everyone;
@@ -185,7 +188,15 @@ const themeCard = ( ctx: Ctx, theme: DesktopThemeEntry, selected: boolean, canMa
 			class="os-settings__theme-card"
 			aria-pressed=${ selected ? 'true' : 'false' }
 			data-theme-slug=${ theme.slug }
-			@click=${ () => update( { desktopTheme: theme.slug } ) }
+			?disabled=${ ! canManageBranding( ctx.data.isAdmin ) && ( theme.slug === BRAND_THEME_SLUG || settings().desktopTheme === BRAND_THEME_SLUG ) }
+			@click=${ () => {
+				update( { desktopTheme: theme.slug } );
+				if ( theme.slug === BRAND_THEME_SLUG ) {
+					requestAnimationFrame( () => ctx.root.querySelector( '.os-settings__brand-studio' )?.scrollIntoView( {
+						block: 'start', behavior: window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches ? 'auto' : 'smooth',
+					} ) );
+				}
+			} }
 		>
 			<span class="os-settings__theme-preview">
 				${ theme.previewUrl
@@ -218,15 +229,16 @@ const themeCard = ( ctx: Ctx, theme: DesktopThemeEntry, selected: boolean, canMa
 	</div>
 `;
 
-const systemCard = ( selected: boolean ) => html`
+const systemCard = ( ctx: Ctx, selected: boolean, locked = false ) => html`
 	<div class="os-settings__theme-card-wrap">
 		<button
 			type="button"
 			class="os-settings__theme-card os-settings__theme-card--system"
+			?disabled=${ locked }
 			aria-pressed=${ selected ? 'true' : 'false' }
 			@click=${ () => update( { desktopTheme: SYSTEM_DEFAULT } ) }
 		>
-			<span class="os-settings__theme-preview os-settings__theme-preview--system" aria-hidden="true"></span>
+			<span class="os-settings__theme-preview os-settings__theme-preview--system" aria-hidden="true"><img class="os-settings__theme-logo" src=${ `${ extraOf( ctx ).pluginUrl }/assets/images/logomark-holo.png` } alt="" draggable="false" /></span>
 			<span class="os-settings__theme-name">${ SYSTEM_DEFAULT_NAME }</span>
 			<span class="os-settings__theme-meta">${ __( 'The look OpenStation ships with' ) }</span>
 		</button>
@@ -314,19 +326,27 @@ export const renderThemes: Section = ( s, ctx ) => {
 	const themes = listDesktopThemes();
 	const canManage = ctx.data.canManageDesktopThemes;
 	const error = uiOf( ctx ).themes.error;
+	const admin = canManageBranding( ctx.data.isAdmin );
+	const locked = ! admin && s.desktopTheme === BRAND_THEME_SLUG;
 	// role="group", not radiogroup: the upload tile is the last cell
 	// of this grid, and a radiogroup may contain nothing but radios.
 	// The cards are toggle buttons carrying aria-pressed, which is
 	// what the wallpaper swatches already do.
 	return html`
 		${ error !== '' ? html`<os-notice tone="error">${ error }</os-notice>` : '' }
+		${ s.desktopTheme === BRAND_THEME_SLUG
+			? html`<os-notice tone="info">${ admin
+				? __( 'Brand Studio is active for everyone on this site. Choose another theme to release site branding and restore each user’s preferences.' )
+				: __( 'This site’s branding is managed by its administrators. Your other preferences remain personal.' ) }</os-notice>`
+			: html`<p>${ __( 'Brand Studio is site-wide. Only site administrators can activate or edit it.' ) }</p>` }
 		<os-section heading=${ __( 'Installed' ) }>
 			<div class="os-settings__theme-grid" role="group" aria-label=${ __( 'Desktop theme' ) }>
-				${ systemCard( s.desktopTheme === SYSTEM_DEFAULT ) }
+				${ systemCard( ctx, s.desktopTheme === SYSTEM_DEFAULT, locked ) }
 				${ themes.map( ( theme ) => themeCard( ctx, theme, s.desktopTheme === theme.slug, canManage ) ) }
 				${ canManage ? uploadTile( ctx ) : '' }
 			</div>
-			${ recommendationRow( s.desktopTheme, themes ) }
+			${ locked ? '' : recommendationRow( s.desktopTheme, themes ) }
 		</os-section>
+		${ renderBrandStudio( s, ctx ) }
 	`;
 };

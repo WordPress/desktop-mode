@@ -93,3 +93,10 @@ defined( 'ABSPATH' ) || exit;
 - [Observe safely aborted stored-file cleanup](./storage-cleanup-diagnostics.md)
 
 If your use case isn't here, check [Hooks Reference](../hooks-reference.md) and [JavaScript Reference](../javascript-reference.md) — everything we fire is documented there.
+
+- [Brand Studio](./brand-studio.md) — set brand colours through the existing settings API.
+
+- [Alpha-aware colour picker](os-color-picker.md) — RGB/RGBA editing, visible opacity, and inline HSV controls.
+
+- [AI-assisted site branding](brand-studio-ai.md) — Connector-backed research,
+  structured proposals and explicit acceptance.

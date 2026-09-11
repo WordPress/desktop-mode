@@ -2309,7 +2309,7 @@ apply_filters( 'openstation_ai_error_log_candidates', string[] $candidates );
 
 ### `openstation_ai_model_config` — Experimental
 
-Model config for one AI turn. Fires on every path that generates: the Copilot search loop, the command follow-up, the comment scorer, the Agents runner, and the Drafts widget's writing assistant.
+Model config for one AI turn. Fires on every path that generates: the Copilot search loop, the command follow-up, the comment scorer, the Agents runner, the Drafts widget's writing assistant, and Brand Studio proposals.
 
 ```php
 apply_filters( 'openstation_ai_model_config', array $config, array $context );
@@ -2317,7 +2317,7 @@ apply_filters( 'openstation_ai_model_config', array $config, array $context );
 // $context = { user_id, request_id, source, has_tools, has_schema }
 ```
 
-`model` takes a model id or an SDK `ModelInterface`; anything else is ignored. `custom_options` keys are **provider-native parameter names**, forwarded verbatim into the request body; nothing there is validated, and a bad key fails the turn as a `WP_Error`. `source` is one of `ai-copilot/search`, `ai-copilot/followup`, `ai-copilot/comment-analysis`, `agents/runner`, `widgets/drafts-suggestions`.
+`model` takes a model id or an SDK `ModelInterface`; anything else is ignored. `custom_options` keys are **provider-native parameter names**, forwarded verbatim into the request body; nothing there is validated, and a bad key fails the turn as a `WP_Error`. `source` is one of `ai-copilot/search`, `ai-copilot/followup`, `ai-copilot/comment-analysis`, `agents/runner`, `widgets/drafts-suggestions`, `brand-studio/research`, `brand-studio/proposal`.
 
 `custom_options` also feeds model discovery, not just the request body: the AI Client turns each key into a required option when it picks a model, so on a multi-provider connector an option only one model supports narrows the selection to it (or fails to match any).
 
@@ -5785,3 +5785,58 @@ reference until these graduate into a doc of their own.
 - [Native Desktop Host](./desktop-host.md) — solo mode, the Electron Adapter extension, and `wp.os.electron`.
 - [JavaScript Reference](./javascript-reference.md) — the event + postMessage side of the contract.
 - [Examples](./examples/README.md) — full-plugin recipes.
+
+
+## Site branding
+
+### `openstation_site_branding_updated` — Experimental
+
+Action: `do_action( 'openstation_site_branding_updated', $next, $previous )`.
+Fires after an administrator successfully saves changed site branding. Both
+arrays contain `enabled`, `brandPalette`, `brandFont`, `brandOpacity`,
+`brandAllowWallpaper`, and `revision`. The current
+blog owns the change; no network option or user-meta sweep occurs. It does not
+fire for rejected writes, unchanged data, or personal preference changes.
+
+```php
+add_action( 'openstation_site_branding_updated', function ( $next, $previous ) {
+    // Refresh your site's branded asset cache after an accepted change.
+    delete_transient( 'my_plugin_branded_header' );
+}, 10, 2 );
+```
+
+The read-only `heartbeat_received` integration contributes
+`openstation_site_branding` only for subscribed authenticated clients. See the
+[JavaScript contract](./javascript-reference.md#brandpalette--os-settings-key-experimental).
+
+### `openstation_brand_studio_generate` — Experimental
+
+```php
+apply_filters( 'openstation_brand_studio_generate', null, string $brief, array $current );
+```
+
+Runs after `manage_options` and brief validation on the read-only Brand Studio
+proposal route. Return `null` to use Core AI Client, `WP_Error` for a recoverable
+failure, or `{ proposal, webSearch, warning }`. `proposal` must contain `name`,
+all ten `brandPalette` roles, allowlisted `brandFont`, integer
+`brandOpacity` percentages and a `sources` list of `{ title, url }`. The result
+still passes the full schema and output sanitization. This hook does not save
+branding. `$current` is the current site's branding option after sanitization.
+
+The existing `openstation_ai_model_config` filter also receives
+`source: 'brand-studio/research'` or `'brand-studio/proposal'` for these turns.
+[Example](examples/brand-studio-ai.md).
+
+### `openstation_brand_ai_job_finished` — Experimental
+
+Fires after a background branding proposal stores its terminal outcome:
+
+```php
+do_action( 'openstation_brand_ai_job_finished', string $id, int $owner, array $status );
+```
+
+`$id` is the job UUID, `$owner` the requesting administrator and `$status` contains
+`jobId`, `status`, `createdAt`, `pollAfter`, `result` and `error`. A completed result
+is the validated proposal; a failure has a code/message. No site branding has
+been applied. The internal `openstation_brand_ai_job_run` and
+`openstation_brand_ai_job_cleanup` cron actions each receive the UUID.

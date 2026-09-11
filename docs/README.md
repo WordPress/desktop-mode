@@ -52,6 +52,8 @@ If you are **building a plugin** that interacts with the desktop shell — opens
 
 - **[Presence storage migration](./migration-presence-storage.md)** — atomic per-user storage, deployment bridge, failure recovery and rollback.
 
+- **[Brand Studio](./desktop-themes.md#brand-studio--experimental)** — *Experimental.* Administrator-managed site branding, ten colour roles, fonts, a matching backdrop, and [reviewable AI proposals](./examples/brand-studio-ai.md).
+
 ## Conventions used in this docs folder
 
 - **Status labels** — every hook, event, or API surface carries one of:

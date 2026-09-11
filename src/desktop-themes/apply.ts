@@ -1,3 +1,5 @@
+import { siteBranding } from '../settings/site-branding';
+import { applyBrandPalette } from './brand-apply';
 /**
  * Desktop-theme activation.
  *
@@ -157,7 +159,11 @@ export function applyDesktopTheme( themeId: string | null | undefined ): void {
 	const store = getStore();
 	const previous = store.state.activeId;
 
-	const requested = typeof themeId === 'string' ? themeId.trim() : '';
+	const policy = siteBranding();
+	let requested = typeof themeId === 'string' ? themeId.trim() : '';
+	if ( policy?.enabled && ! policy.canManage ) {
+		requested = 'openstation-brand-studio';
+	}
 	const theme = requested === '' ? null : getDesktopTheme( requested );
 	// An id that isn't in the library (deleted theme, deactivated
 	// plugin) degrades to the system default rather than erroring —
@@ -167,6 +173,13 @@ export function applyDesktopTheme( themeId: string | null | undefined ): void {
 	if ( nextId === previous ) {
 		return;
 	}
+
+	const config = ( window as unknown as {
+		openStationConfig?: { osSettings?: { brandPalette?: unknown; wallpaper?: string; brandFont?: string; brandOpacity?: unknown } };
+		wp?: { os?: { getOsSettings?: () => { brandPalette?: unknown; wallpaper?: string; brandFont?: string; brandOpacity?: unknown } } };
+	} );
+	const settings = config.wp?.os?.getOsSettings?.() ?? config.openStationConfig?.osSettings;
+	applyBrandPalette( nextId, settings?.brandPalette, settings?.wallpaper, settings?.brandFont, settings?.brandOpacity );
 
 	const shell = shellRoot();
 

@@ -2474,6 +2474,8 @@ export interface DesktopConfig {
 	 * Optional — absent on older PHP builds that predate this field.
 	 */
 	osSettings?: Record<string, unknown>;
+	/** Site-owned branding, independent of user preferences and network options. */
+	siteBranding?: import( './settings/site-branding' ).SiteBrandingSnapshot;
 	/**
 	 * REST endpoint for reading/writing OS settings.
 	 */

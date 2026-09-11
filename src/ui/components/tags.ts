@@ -21,6 +21,7 @@ export const OS_COMPONENT_TAGS = [
 	'os-option',
 	'os-multiselect',
 	'os-color-field',
+	'os-color-picker',
 	'os-range-field',
 	'os-text-field',
 	'os-number-field',

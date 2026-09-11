@@ -18,6 +18,7 @@ describe( '<os-range-field>', () => {
 		const input = field.shadowRoot!.querySelector(
 			'input',
 		) as HTMLInputElement;
+		expect( input.getAttribute( 'aria-label' ) ).toBe( 'Angle' );
 		let heard: number | null = null;
 		field.addEventListener( 'os-range-change', ( e ) => {
 			heard = ( e as CustomEvent ).detail.value;

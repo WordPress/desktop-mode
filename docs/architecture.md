@@ -803,3 +803,42 @@ per-user values, and the client preserves the mirrors during preference
 updates and resets. Each shell adopts changes on reload and configures
 the worker by message; the shared-cache PHP filter still has the final
 say. See [Performance settings migration](./migration-performance-options.md).
+
+
+### Site-wide Brand Studio
+
+`openstation_site_branding` is a per-site option containing activation, ten colour
+roles, a local font identifier, widget/dock opacity, `brandAllowWallpaper`, and a revision. It is independent of user meta and
+user feature gates. Multisite uses each blog's own options table. Site policy is
+applied after reading personal preferences, so it wins without rewriting users.
+Selecting another theme as an administrator releases the override; personal
+choices survive. `brandAllowWallpaper` defaults to true: wallpapers remain personal
+while colours and font stay shared. Turning it off overlays the brand backdrop
+without rewriting user meta; unlocking restores saved choices. Workspace overrides and personal resets cannot remove it.
+
+The existing settings REST route separates site writes from personal writes and
+requires `manage_options` for branding changes. The lower-level personal saver
+strips branding fields and cannot mutate policy. The server checks the full patch
+before either store is changed. `siteBranding` in the shell config carries the
+policy and editing capability independently of `osSettings`, which is the effective
+presentation snapshot. Heartbeat delivers site-scoped snapshots to existing
+sessions. The client merges only branding fields into its confirmed baseline and
+discards stale Heartbeat replies using a local edit-generation echo.
+
+`assets/desktop-themes/brand-studio/palette.json` owns explicit colour recipes and
+allowlisted local font stacks. PHP compiles site-owned values through the existing
+theme registry for first paint; TypeScript uses the same integer mixing for live
+previews. A single scoped stylesheet reaches shell and native-window controls,
+including body-mounted overlays. The `brand-studio` wallpaper resolver follows
+the current Canvas colour. Iframe WordPress pages keep their original styling.
+
+Brand Studio's AI proposal endpoint is read-only and separate from persistence.
+An admin brief enters Core AI Client through the configured Connector, optionally
+uses native web search, then becomes a strictly validated settings proposal. The
+window displays the unaccepted proposal. Short async submissions and status reads
+keep web research outside the browser request. Per-site non-autoloaded job options
+retain input/result for one day, with an execution claim shared by WP-Cron and
+an FPM post-response worker. Only the requesting administrator can read the job;
+generation never writes site branding or user preferences. Explicit
+acceptance uses the existing site-branding settings route. See
+[AI brand proposals](desktop-themes.md#ai-brand-proposals).

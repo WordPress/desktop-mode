@@ -14,6 +14,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once OPENSTATION_DIR . 'includes/desktop-themes/brand-studio.php';
+require_once OPENSTATION_DIR . 'includes/desktop-themes/brand-site-settings.php';
+
 /**
  * User meta key for OS Settings.
  *
@@ -138,6 +141,10 @@ function openstation_default_os_settings() {
 		// deleted theme degrades silently instead of needing a
 		// user-meta rewrite.
 		'desktopTheme'                => '',
+		'brandPalette'                => openstation_sanitize_brand_palette( array() ),
+		'brandFont'                   => 'geist',
+		'brandOpacity'                => openstation_sanitize_brand_opacity( array() ),
+		'brandAllowWallpaper'         => true,
 		// Slugs of the desktop themes whose `recommendedOsSettings`
 		// block has already been applied for this user. A theme's
 		// recommendations are seeded ONCE — the first time the user
@@ -332,6 +339,17 @@ function openstation_default_os_settings() {
  * @return array
  */
 function openstation_get_os_settings( $user_id ) {
+	return openstation_apply_site_branding( openstation_get_personal_os_settings( $user_id ) );
+}
+
+/**
+ * Read personal preferences without the site-owned branding overlay.
+ *
+ * @internal
+ * @param int $user_id User identifier.
+ * @return array Personal settings.
+ */
+function openstation_get_personal_os_settings( $user_id ) {
 	$user_id = (int) $user_id;
 	if ( $user_id <= 0 ) {
 		return openstation_sanitize_os_settings( array() );
@@ -342,7 +360,12 @@ function openstation_get_os_settings( $user_id ) {
 		return openstation_sanitize_os_settings( array() );
 	}
 
-	return openstation_sanitize_os_settings( $raw );
+	$settings = openstation_sanitize_os_settings( $raw );
+	// A pre-release user-owned Brand Studio selection cannot become site policy.
+	if ( 'openstation-brand-studio' === $settings['desktopTheme'] ) {
+		$settings['desktopTheme'] = '';
+	}
+	return $settings;
 }
 
 /**
@@ -359,6 +382,14 @@ function openstation_save_os_settings( $user_id, $settings ) {
 	}
 
 	$clean = openstation_sanitize_os_settings( $settings );
+	unset( $clean['brandPalette'], $clean['brandFont'], $clean['brandOpacity'], $clean['brandAllowWallpaper'] );
+	if ( 'openstation-brand-studio' === $clean['desktopTheme'] ) {
+		$clean['desktopTheme'] = openstation_get_personal_os_settings( $user_id )['desktopTheme'];
+	}
+	$brand = openstation_get_site_branding();
+	if ( $brand['enabled'] && ! $brand['brandAllowWallpaper'] ) {
+		$clean['wallpaper'] = openstation_get_personal_os_settings( $user_id )['wallpaper'];
+	}
 	return false !== update_user_meta( $user_id, OPENSTATION_OS_SETTINGS_META_KEY, $clean );
 }
 
@@ -486,7 +517,7 @@ function openstation_sanitize_os_settings( $raw ) {
 
 	// Dock behavior — must be one of the two known values. One answer
 	// per rail: the dock, and the Split layout's sidebar.
-	$dock_behavior = isset( $raw['dockBehavior'] )
+	$dock_behavior      = isset( $raw['dockBehavior'] )
 		&& in_array( $raw['dockBehavior'], OPENSTATION_OS_SETTINGS_DOCK_BEHAVIORS, true )
 		? (string) $raw['dockBehavior']
 		: $defaults['dockBehavior'];
@@ -983,6 +1014,10 @@ function openstation_sanitize_os_settings( $raw ) {
 		'sideDockBehavior'            => $side_dock_behavior,
 		'dockRailRenderer'            => $dock_rail_renderer,
 		'desktopTheme'                => $desktop_theme,
+		'brandPalette'                => openstation_sanitize_brand_palette( $raw['brandPalette'] ?? array() ),
+		'brandFont'                   => openstation_sanitize_brand_font( $raw['brandFont'] ?? 'geist' ),
+		'brandOpacity'                => openstation_sanitize_brand_opacity( $raw['brandOpacity'] ?? array() ),
+		'brandAllowWallpaper'         => isset( $raw['brandAllowWallpaper'] ) && is_bool( $raw['brandAllowWallpaper'] ) ? $raw['brandAllowWallpaper'] : true,
 		'appliedThemeRecommendations' => $applied_theme_recommendations,
 		'unfocusEffect'               => $unfocus_effect,
 		'windowReveal'                => $window_reveal,
@@ -1121,9 +1156,13 @@ function openstation_rest_save_os_settings( WP_REST_Request $request ) {
 		return rest_ensure_response( openstation_get_os_settings( $user_id ) );
 	}
 
+	$branding = openstation_save_site_branding_patch( $payload );
+	if ( is_wp_error( $branding ) ) {
+		return $branding;
+	}
 	openstation_save_os_settings(
 		$user_id,
-		array_merge( openstation_get_os_settings( $user_id ), $payload )
+		array_merge( openstation_get_personal_os_settings( $user_id ), $payload )
 	);
 	return rest_ensure_response( openstation_get_os_settings( $user_id ) );
 }

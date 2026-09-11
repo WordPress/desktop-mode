@@ -36,3 +36,5 @@ require_once OPENSTATION_DIR . 'includes/desktop-themes/assets.php';
 require_once OPENSTATION_DIR . 'includes/desktop-themes/wallpapers.php';
 // After registry.php — it registers through that file's public API.
 require_once OPENSTATION_DIR . 'includes/desktop-themes/builtin.php';
+
+require_once OPENSTATION_DIR . 'includes/desktop-themes/brand-ai.php';

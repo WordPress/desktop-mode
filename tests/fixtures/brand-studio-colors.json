@@ -1,0 +1,256 @@
+[
+	{
+		"palette": {},
+		"expected": {
+			"--os-ui-accent": "#3858e9",
+			"--os-ui-fg": "#1e1e1e",
+			"--os-ui-fg-muted": "#545454",
+			"--os-ui-surface-elevated": "#ffffff",
+			"--os-ui-border-strong": "#bcbcbc",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #c7d0f9 0%, #b9e4f9 52%, #e3f0ff 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #3858e9, #069eeb, #9ac9ff)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#cc2936",
+			"--os-ui-info-fg": "#3858e9",
+			"--os-ui-warning": "#a66900",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(16, 28, 75, 0.9), 0 0 0 4px #3858e9, 0 0 12px 2px color-mix(in srgb, #314dcd 30%, transparent)",
+			"--os-brand-primary-ink": "#ffffff",
+			"--os-brand-danger-ink": "#ffffff",
+			"--os-brand-desktop-ink": "#ffffff",
+			"--os-bg": "linear-gradient(145deg, #101c4b 0%, #0e1942 100%)",
+			"--os-dock-bg": "rgba(59, 69, 107, 0.94)",
+			"--os-dock-border": "#7c829c",
+			"--os-ui-color-surface": "rgba(255, 255, 255, 0.82)",
+			"--os-ui-color-text": "#1e1e1e",
+			"--os-ui-modal-button-bg-hover": "#e0e0e0",
+			"--os-ui-selection-bg": "#3858e9",
+			"--os-ui-selection-fg": "#ffffff"
+		},
+		"opacity": {
+			"widgets": 82,
+			"dock": 94
+		}
+	},
+	{
+		"palette": {
+			"primary": "#ffffff",
+			"surface": "#ffffff",
+			"text": "#ffffff",
+			"canvas": "#ffffff"
+		},
+		"expected": {
+			"--os-ui-accent": "#ffffff",
+			"--os-ui-fg": "#737373",
+			"--os-ui-fg-muted": "#707070",
+			"--os-ui-surface-elevated": "#ffffff",
+			"--os-ui-border-strong": "#d5d5d5",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #ffffff 0%, #b9e4f9 52%, #e3f0ff 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #ffffff, #069eeb, #9ac9ff)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#cc2936",
+			"--os-ui-info-fg": "#3858e9",
+			"--os-ui-warning": "#a66900",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 4px #ffffff, 0 0 12px 2px color-mix(in srgb, #ffffff 30%, transparent)",
+			"--os-brand-primary-ink": "#737373",
+			"--os-brand-danger-ink": "#ffffff",
+			"--os-brand-desktop-ink": "#000000",
+			"--os-bg": "linear-gradient(145deg, #ffffff 0%, #ffffff 100%)",
+			"--os-dock-bg": "rgba(209, 209, 209, 0.94)",
+			"--os-dock-border": "#8c8c8c",
+			"--os-ui-color-surface": "rgba(255, 255, 255, 0.82)",
+			"--os-ui-color-text": "#737373",
+			"--os-ui-modal-button-bg-hover": "#ffffff",
+			"--os-ui-selection-bg": "#ffffff",
+			"--os-ui-selection-fg": "#737373"
+		},
+		"opacity": {
+			"widgets": 82,
+			"dock": 94
+		}
+	},
+	{
+		"palette": {
+			"primary": "#000000",
+			"surface": "#000000",
+			"text": "#000000",
+			"canvas": "#000000"
+		},
+		"expected": {
+			"--os-ui-accent": "#000000",
+			"--os-ui-fg": "#808080",
+			"--os-ui-fg-muted": "#797979",
+			"--os-ui-surface-elevated": "#000000",
+			"--os-ui-border-strong": "#262626",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #b8b8b8 0%, #b9e4f9 52%, #e3f0ff 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #000000, #069eeb, #9ac9ff)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#d44954",
+			"--os-ui-info-fg": "#4c69eb",
+			"--os-ui-warning": "#b87500",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(0, 0, 0, 0.9), 0 0 0 4px #000000, 0 0 12px 2px color-mix(in srgb, #000000 30%, transparent)",
+			"--os-brand-primary-ink": "#ffffff",
+			"--os-brand-danger-ink": "#0d0d0d",
+			"--os-brand-desktop-ink": "#ffffff",
+			"--os-bg": "linear-gradient(145deg, #000000 0%, #000000 100%)",
+			"--os-dock-bg": "rgba(46, 46, 46, 0.94)",
+			"--os-dock-border": "#737373",
+			"--os-ui-color-surface": "rgba(0, 0, 0, 0.82)",
+			"--os-ui-color-text": "#808080",
+			"--os-ui-modal-button-bg-hover": "#121212",
+			"--os-ui-selection-bg": "#000000",
+			"--os-ui-selection-fg": "#ffffff"
+		},
+		"opacity": {
+			"widgets": 82,
+			"dock": 94
+		}
+	},
+	{
+		"palette": {
+			"primary": "#777777",
+			"surface": "#777777",
+			"text": "#777777",
+			"canvas": "#777777"
+		},
+		"expected": {
+			"--os-ui-accent": "#777777",
+			"--os-ui-fg": "#060606",
+			"--os-ui-fg-muted": "#050505",
+			"--os-ui-surface-elevated": "#828282",
+			"--os-ui-border-strong": "#555555",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #d9d9d9 0%, #b9e4f9 52%, #e3f0ff 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #777777, #069eeb, #9ac9ff)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#0a0203",
+			"--os-ui-info-fg": "#03040c",
+			"--os-ui-warning": "#090600",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(119, 119, 119, 0.9), 0 0 0 4px #777777, 0 0 12px 2px color-mix(in srgb, #777777 30%, transparent)",
+			"--os-brand-primary-ink": "#000000",
+			"--os-brand-danger-ink": "#ffffff",
+			"--os-brand-desktop-ink": "#000000",
+			"--os-bg": "linear-gradient(145deg, #777777 0%, #878787 100%)",
+			"--os-dock-bg": "rgba(98, 98, 98, 0.94)",
+			"--os-dock-border": "#414141",
+			"--os-ui-color-surface": "rgba(119, 119, 119, 0.82)",
+			"--os-ui-color-text": "#060606",
+			"--os-ui-modal-button-bg-hover": "#8d8d8d",
+			"--os-ui-selection-bg": "#777777",
+			"--os-ui-selection-fg": "#000000"
+		},
+		"opacity": {
+			"widgets": 82,
+			"dock": 94
+		}
+	},
+	{
+		"palette": {
+			"primary": "#0057b8",
+			"secondary": "#ffe500",
+			"highlight": "#ee8800",
+			"surface": "#ffffff",
+			"text": "#242021",
+			"canvas": "#101622"
+		},
+		"expected": {
+			"--os-ui-accent": "#0057b8",
+			"--os-ui-fg": "#242021",
+			"--os-ui-fg-muted": "#595656",
+			"--os-ui-surface-elevated": "#ffffff",
+			"--os-ui-border-strong": "#bdbcbc",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #b8d0eb 0%, #fff8b8 52%, #fadeb8 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #0057b8, #ffe500, #ee8800)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#cc2936",
+			"--os-ui-info-fg": "#3858e9",
+			"--os-ui-warning": "#a66900",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(16, 22, 34, 0.9), 0 0 0 4px #0057b8, 0 0 12px 2px color-mix(in srgb, #034b9d 30%, transparent)",
+			"--os-brand-primary-ink": "#ffffff",
+			"--os-brand-danger-ink": "#ffffff",
+			"--os-brand-desktop-ink": "#ffffff",
+			"--os-bg": "linear-gradient(145deg, #101622 0%, #0e131e 100%)",
+			"--os-dock-bg": "rgba(59, 64, 74, 0.94)",
+			"--os-dock-border": "#7c7f85",
+			"--os-ui-color-surface": "rgba(255, 255, 255, 0.82)",
+			"--os-ui-color-text": "#242021",
+			"--os-ui-modal-button-bg-hover": "#e0e0e0",
+			"--os-ui-selection-bg": "#0057b8",
+			"--os-ui-selection-fg": "#ffffff"
+		},
+		"opacity": {
+			"widgets": 82,
+			"dock": 94
+		}
+	},
+	{
+		"palette": {
+			"surface": "#ffffff80",
+			"primary": "#3858e980",
+			"text": "#00000080"
+		},
+		"opacity": {
+			"widgets": 0,
+			"dock": 50
+		},
+		"expected": {
+			"--os-ui-accent": "#6073c7",
+			"--os-ui-fg": "#25272d",
+			"--os-ui-fg-muted": "#25262c",
+			"--os-ui-surface-elevated": "#9297ac",
+			"--os-ui-border-strong": "#6a6f81",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #d2d8ef 0%, #b9e4f9 52%, #e3f0ff 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #6073c7, #069eeb, #9ac9ff)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#470e13",
+			"--os-ui-info-fg": "#16235d",
+			"--os-ui-warning": "#372300",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(16, 28, 75, 0.9), 0 0 0 4px #6073c7, 0 0 12px 2px color-mix(in srgb, #5263b1 30%, transparent)",
+			"--os-brand-primary-ink": "#000000",
+			"--os-brand-danger-ink": "#ffffff",
+			"--os-brand-desktop-ink": "#ffffff",
+			"--os-bg": "linear-gradient(145deg, #101c4b 0%, #0e1942 100%)",
+			"--os-dock-bg": "rgba(59, 69, 107, 0.5)",
+			"--os-dock-border": "#7c829c",
+			"--os-ui-color-surface": "rgba(136, 142, 165, 0)",
+			"--os-ui-color-text": "#85878f",
+			"--os-ui-modal-button-bg-hover": "#9ba0b3",
+			"--os-ui-selection-bg": "#6073c7",
+			"--os-ui-selection-fg": "#000000"
+		}
+	},
+	{
+		"palette": {
+			"canvas": "#ffffff00",
+			"surface": "#11111100",
+			"primary": "#00000000"
+		},
+		"opacity": {
+			"widgets": 0,
+			"dock": 50
+		},
+		"expected": {
+			"--os-ui-accent": "#101c4b",
+			"--os-ui-fg": "#8f8f8f",
+			"--os-ui-fg-muted": "#868892",
+			"--os-ui-surface-elevated": "#0f1a45",
+			"--os-ui-border-strong": "#363f5f",
+			"--os-ui-holo-fill": "linear-gradient(124deg, #bcbfcd 0%, #b9e4f9 52%, #e3f0ff 100%)",
+			"--os-ui-holo-edge": "linear-gradient(124deg, #101c4b, #069eeb, #9ac9ff)",
+			"--os-ui-notice-success-bg": "rgba(37, 133, 84, 0.12)",
+			"--os-ui-danger": "#db6972",
+			"--os-ui-info-fg": "#6a82ef",
+			"--os-ui-warning": "#bc7c0d",
+			"--os-ui-focus-ring": "0 0 0 2px rgba(16, 28, 75, 0.9), 0 0 0 4px #101c4b, 0 0 12px 2px color-mix(in srgb, #101c4b 30%, transparent)",
+			"--os-brand-primary-ink": "#ffffff",
+			"--os-brand-danger-ink": "#262626",
+			"--os-brand-desktop-ink": "#ffffff",
+			"--os-bg": "linear-gradient(145deg, #101c4b 0%, #0e1942 100%)",
+			"--os-dock-bg": "rgba(59, 69, 107, 0.5)",
+			"--os-dock-border": "#7c829c",
+			"--os-ui-color-surface": "rgba(16, 28, 75, 0)",
+			"--os-ui-color-text": "#8f8f8f",
+			"--os-ui-modal-button-bg-hover": "#0d183f",
+			"--os-ui-selection-bg": "#101c4b",
+			"--os-ui-selection-fg": "#ffffff"
+		}
+	}
+]

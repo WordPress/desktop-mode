@@ -156,3 +156,14 @@ describe( '<os-toast>', () => {
 		).toBe( 'status' );
 	} );
 } );
+
+test( 'message, actions and dismiss control follow the same modal surface family', () => {
+	const css = toastStyles.cssText;
+	expect( css ).toContain( 'background-color: var( --os-ui-toast-bg, var( --os-ui-modal-bg,' );
+	expect( css.match( /color: var\( --os-ui-modal-text,/g ) ).toHaveLength( 3 );
+	expect( css ).toContain( 'color: var( --os-ui-modal-text-muted,' );
+	expect( css ).toContain( 'background: var( --os-ui-modal-field-bg,' );
+	expect( css ).toContain( 'background: var( --os-ui-modal-button-bg-hover,' );
+	expect( css ).toContain( 'background: var( --os-ui-selection-bg,' );
+	expect( css ).toContain( 'color: var( --os-ui-selection-fg,' );
+} );
