@@ -1157,7 +1157,8 @@ body.os-has-fullscreen-window .os-shell {
  * no-op). The DOM node stays mounted either way so state flips
  * don't rebuild chrome.
  *
- * Styling mirrors the inline close button: 20×20 round tile,
+ * Styling mirrors the inline close button: 24×24 round tile
+ * (the WCAG 2.2 SC 2.5.8 target-size floor),
  * dimmed by default, full-opacity on hover / focus. Distinct hover
  * color (theme accent, not red) signals "put back" vs. "remove."
  */

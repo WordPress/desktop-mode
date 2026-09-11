@@ -16,12 +16,14 @@
  * buttons, not inline in a sentence; the size is not user-agent
  * controlled; and no equivalent control is offered elsewhere in the view.
  *
- * The spacing exception does not save them either. Redock and close are
- * adjacent flex siblings inside `.os-widgets__chrome` (`gap: 8px`), so at
- * their old sizes a 24px circle centred on one intersected the circle on
- * the other. At 24px each the centres sit 32px apart — clear of the 24px
- * the exception requires — which is why raising the size fixes the
- * spacing limb as well as the size limb.
+ * The spacing exception does not save them either, though not for the
+ * reason first claimed. Redock and close are adjacent flex siblings inside
+ * `.os-widgets__chrome` (`gap: 8px`); at the old sizes their centres were
+ * already 28px apart, so the spacing limb was satisfied. What carries this
+ * change is the size limb alone: the corner close at 22px fails it with no
+ * exception available, and `.os-widgets__chrome` is itself a pointer
+ * target (the drag handle) enclosing both buttons, so leaning on spacing
+ * there would be unwise even where the arithmetic works.
  *
  * Raising the box rather than adding an invisible hit area is deliberate:
  * `.os-widgets__chrome` is the drag handle (`cursor: grab`,
@@ -64,7 +66,9 @@ describe( 'widget chrome tap targets', () => {
 
 	test( 'the two chrome siblings stay clear of each other', () => {
 		// SC 2.5.8's spacing limb: 24px circles centred on adjacent targets
-		// must not intersect, i.e. centres at least 24px apart.
+		// must not intersect, i.e. centres at least 24px apart. This held on
+		// trunk too (10 + 8 + 10 = 28) — it is a standing guard on the gap,
+		// not a pin on anything this change fixed.
 		const chrome = /^\.os-widgets__chrome\s*\{([^}]*)\}/m.exec( DESKTOP );
 		expect( chrome, 'no .os-widgets__chrome rule' ).not.toBeNull();
 		const gap = /(?<!-)gap\s*:\s*([\d.]+)px/.exec( chrome![ 1 ] );
@@ -78,11 +82,8 @@ describe( 'widget chrome tap targets', () => {
 	} );
 
 	test( 'the reader can tell a short box from a tall one', () => {
-		// Negative control. Without it, a regex that stopped matching would
-		// report a clean sweep over nothing, and every pin above would pass
-		// while the stylesheet said 20px.
-		const short = /^\.os-widgets__grip\s*\{([^}]*)\}/m.exec( DESKTOP );
-		expect( short, 'no .os-widgets__grip rule to control against' ).not.toBeNull();
-		expect( boxOf( '.os-widgets__card-redock' ).width ).toBe( 24 );
+		// Negative control: the extractor must report a small box as small.
+		// A pin that only ever sees 24s cannot show it would notice a 20.
+		expect( boxOf( '.os-widgets__grip' ) ).toEqual( { width: 10, height: 16 } );
 	} );
 } );
