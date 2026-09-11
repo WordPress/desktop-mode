@@ -286,7 +286,7 @@ profile screen). AI agents are ordinary `wp_users` rows flagged with
 | `desktop_mode_files_schema_version` | Files | Installed schema version; a mismatch triggers the lazy install. |
 | `desktop_mode_games_schema_version` | Games | Same, for the two Games tables. |
 | `desktop_mode_migration_version` | Migrations | Last data migration applied (`includes/migrations.php`). |
-| `desktop_mode_extended_options` | Preferences | Site-wide extended options (the toggles that gate server-side registrations: Games, AI agents, the OpenStation Network). |
+| `desktop_mode_extended_options` | Preferences | Site-wide extended options: Media Library enhancement, Games, AI agents, OpenStation Network, plus `window_prewarm` and `admin_asset_cache` (both default `true`; administrator opt-outs apply on shell reload). |
 | `desktop_mode_desktop_themes` | Desktop themes | Themes uploaded as ZIPs and the active selection; their files go to `uploads/desktop-mode-themes/`. |
 | `desktop_mode_comments_ai_moderation` | AI Copilot | Whether comment moderation by AI is on. |
 | `desktop_mode_agents_defaults_seeded` | Agents | Flag: default agents already created. |

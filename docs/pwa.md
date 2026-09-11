@@ -201,45 +201,44 @@ of the app, or a navigation, is what picks those up.
 |---|---|---|
 | `/wp-content/plugins/desktop-mode/assets/**.{css,png,jpg,svg,…}` | Stale-while-revalidate (runtime cache) | Returning users open the shell instantly; the SW updates the cache in the background. |
 | `/wp-content/plugins/desktop-mode/assets/**.js` | Network-first with `cache: 'reload'` + cache fallback | JS bundles change per deploy — a fresh deploy reaches online users on the next load, with no stale-revalidate window where a freshly-pushed fix is invisible. The cache still serves offline users. |
-| **Opt-in** — versioned Core statics (`/wp-admin/**`, `/wp-includes/**` with `?ver=`) and `load-scripts.php` / `load-styles.php` | Exact-URL cache-first (`os-admin` bucket) | The `ver` query embeds the WordPress version, so bytes behind a URL only change when the URL changes — the same contract Core expresses by serving the loader endpoints with a one-year `Cache-Control`. A warm window-open costs zero HTTP requests for these. Requires the `openstation_pwa_admin_asset_cache` filter (default off). |
-| **Opt-in** — versioned plugin/theme statics (`/wp-content/plugins|themes/**` with `?ver=`) | Stale-while-revalidate (`os-admin` bucket) | Same `ver` contract in principle, but authors edit files without bumping versions often enough that cache-first would pin stale bytes; SWR serves instantly and self-heals on the next load. Uploads are excluded (quota, thumbnail regeneration keeps the URL). |
-| **Opt-in** — an iframe navigation to a document the shell asked for early | Served from the held response (never re-fetched) | The document is the one thing that can never be cached — admin HTML carries nonces — and it is the majority of a window open. Speculation does not make it cacheable; it moves the wait to before the click. See [Speculative documents](#speculative-documents-opt-in). |
+| **Opt-out** — versioned Core statics (`/wp-admin/**`, `/wp-includes/**` with `?ver=`) and `load-scripts.php` / `load-styles.php` | Exact-URL cache-first (`os-admin` bucket) | The `ver` query embeds the WordPress version, so bytes behind a URL only change when the URL changes — the same contract Core expresses by serving the loader endpoints with a one-year `Cache-Control`. A warm window-open costs zero HTTP requests for these. Enabled by the `admin_asset_cache` Extended option (default on), subject to the `openstation_pwa_admin_asset_cache` filter. |
+| **Opt-out** — versioned plugin/theme statics (`/wp-content/plugins|themes/**` with `?ver=`) | Stale-while-revalidate (`os-admin` bucket) | Same `ver` contract in principle, but authors edit files without bumping versions often enough that cache-first would pin stale bytes; SWR serves instantly and self-heals on the next load. Uploads are excluded (quota, thumbnail regeneration keeps the URL). |
+| **Opt-out** — an iframe navigation to a document the shell asked for early | Served from the held response (never re-fetched) | The document is the one thing that can never be cached — admin HTML carries nonces — and it is the majority of a window open. Speculation does not make it cacheable; it moves the wait to before the click. See [Speculative documents](#speculative-documents-opt-out). |
 | Navigation requests under our scope | Network-first with offline fallback | wp-admin HTML carries nonces and per-request screen state; caching it would desynchronise the user. The fallback is a tiny inline placeholder so an offline user sees something coherent. |
 | REST / AJAX / non-asset GETs / unversioned asset URLs | Pass-through (no SW handling) | Same reason as navigation — auth-bound dynamic content must hit the network; an asset URL without a `ver` cache-buster carries no immutability contract. |
 | `install`-time precache | A handful of CSS files, the three critical-path JS bundles (`desktop.min.js`, `window-system.min.js`, `shell-overlays.min.js`), and the plugin logo | Just enough to render the offline shell skeleton. Anything else is picked up at runtime by the caching paths above. |
 
-### The shared admin-asset cache (opt-in)
+### The shared admin-asset cache (opt-out)
 
-The two opt-in rows above are the **shared admin-asset cache**: because
+The two opt-out asset rows above are the **shared admin-asset cache**: because
 the SW is root-scoped, it sees asset requests from the shell *and from
 every window's chromeless iframe*, and Cache Storage is origin-wide —
 so a stylesheet fetched by one window is served locally to every later
 window, revalidation round-trips included.
 
-Users enable it per account in **OpenStation Preferences → Features →
-Beta features → "Shared asset cache (experimental)"**
-(`adminAssetCacheEnabled`, default off; applies after the next reload).
-That preference is the default of the `openstation_pwa_admin_asset_cache`
-filter, which operators can use to force it site-wide or veto every
-per-user opt-in:
+Both performance features are enabled site-wide by default. Administrators
+can disable them in **OpenStation Preferences → Features → Extended
+options** using **Preload windows on hover** (`window_prewarm`) and
+**Shared asset cache** (`admin_asset_cache`). Changes apply when each
+OpenStation shell reloads. Explicit site-wide opt-outs survive partial
+saves. The old per-user flags no longer decide these values; see
+[Performance settings migration](./migration-performance-options.md).
+
+The `openstation_pwa_admin_asset_cache` filter can force or veto the
+shared-cache option:
 
 ```php
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_true' );  // force on
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_false' ); // kill switch
 ```
 
-Per-user works because the SW script is fetched with credentials — the
-served bytes reflect whoever is logged in on that browser profile,
-which is also who the SW will be serving.
-
 Mechanics and caveats:
 
-- The flag (plus the plugin URL) reaches the SW as a
-  `self.__OS_SW_CONFIG = {…};` preamble injected by the PHP endpoint
-  that serves `sw.js`. Flipping the filter changes the served bytes,
-  which is exactly what the browser's SW update check watches — the
-  change takes effect via a normal SW update on the next load, with no
-  re-registration.
+- The shell posts both flags in an `os-sw-config` message at boot.
+  The shared-cache flag includes the PHP filter's result. The worker
+  starts with both flags off until configured. Its served script bytes
+  are identical for authenticated and anonymous requests; changing an
+  option requires a shell reload, with no worker update or re-registration.
 - Classification logic lives in `src/pwa/sw-policy.ts` (pure,
   unit-tested). Only `200`, non-redirected, same-origin responses
   without `no-store` / `private` are cached; `Range` requests bypass
@@ -260,7 +259,7 @@ The cache is keyed by version (`os-static-<v>`,
 key doesn't carry the current version, so a deploy doesn't accumulate
 stale buckets.
 
-## Speculative documents (opt-in)
+## Speculative documents (opt-out)
 
 The shared asset cache removes the network from a window's **assets**. It can never touch the **document**: admin HTML carries nonces and per-request screen state, so it is uncacheable by construction — and it is the majority of a window open (measured at ~2.1 s of a ~3.8 s tab click on production hosting).
 
@@ -284,11 +283,11 @@ Measured on production hosting: window-document TTFB **1,353 ms → ~1 ms**, who
 - **The store holds the in-flight promise, not the settled response**, so a navigation landing mid-fetch joins the request already running instead of starting a second one for the same screen.
 - **Answering an iframe navigation is safe only because the response is never re-fetched.** The worker otherwise refuses iframe navigations: re-fetching one makes Chrome send `Sec-Fetch-Dest: empty`, the server's chromeless detection falls through, and the whole desktop renders inside a window. A speculative document is fetched once, ahead of time, from a URL carrying the chromeless flag — which the server reads *before* it consults Sec-Fetch.
 - The speculative fetch is a plain same-origin GET and does not forward `Referer` or `Accept-Language` from the navigation it stands in for. Admin screens do not branch on either (locale comes from the user's profile, server-side).
-- Gated on the **hover-prewarm** opt-in (`windowPrewarmEnabled`), delivered to the worker as `windowPrewarm` in the `self.__OS_SW_CONFIG` preamble. Off by default, and checked on both sides: the shell skips the `postMessage` entirely, and the worker ignores either message if the flag is off. A user who never touches the setting does not pay so much as a message.
+- Gated on the site-wide **Preload windows on hover** option (`window_prewarm`, default on), exposed to the shell as `windowPrewarmEnabled` and posted to the worker as `windowPrewarm` in `os-sw-config`. Both sides check it: after an opt-out and reload, the shell skips speculative messages and the worker ignores them.
 
 ### Worker message surface
 
-Both messages are posted to `navigator.serviceWorker.controller` and are ignored unless the opt-in is on.
+Both messages are posted to `navigator.serviceWorker.controller` and are ignored unless preloading is enabled.
 
 ```js
 // Fetch this screen now; hold it for the navigation that follows.
@@ -329,7 +328,7 @@ Three more are not gated on any opt-in — they are how a new worker and the she
 | `openstation_pwa_admin_asset_cache_enabled()` | Whether the shared admin-asset cache is on (resolves the filter below). |
 | `openstation_shell_build_stamp()` | Content hash of the shell's built files (`assets/css/*.css`, `assets/js/*.js`); 16 hex characters, `''` when nothing is built. Carried by `openStationConfig.pwa.shellBuild` and by the worker preamble. |
 | `openstation_pwa_manifest` (filter) | Mutate manifest fields before encoding. |
-| `openstation_pwa_admin_asset_cache` (filter) | Force or veto the shared admin-asset cache site-wide. Default: the requesting user's `adminAssetCacheEnabled` preference (off until they opt in). |
+| `openstation_pwa_admin_asset_cache` (filter) | Force or veto the shared admin-asset cache site-wide. Default: the site-wide `admin_asset_cache` Extended option (on unless an administrator opts out). |
 
 REST routes:
 

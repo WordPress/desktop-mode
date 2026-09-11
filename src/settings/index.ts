@@ -58,7 +58,6 @@ import {
 } from './state';
 import { setActiveDockRailRenderer } from '../dock-rail';
 import { applyDesktopTheme } from '../desktop-themes/apply';
-import { notifyServiceWorkerPrewarm } from '../pwa/sw-register';
 import { applyThemeRecommendations } from './theme-recommendations';
 import type { RecommendedOsSettings } from '../desktop-themes';
 import type { OsSettingsState } from './types';
@@ -542,6 +541,9 @@ export class OsSettings {
 	): void {
 		const incoming: Record< string, unknown > = { ...patch };
 		delete incoming.appliedThemeRecommendations;
+		// These snapshot fields are controlled by site-wide Extended options.
+		delete incoming.adminAssetCacheEnabled;
+		delete incoming.windowPrewarmEnabled;
 
 		const next = sanitizeSettings( incoming, this.state );
 		const touched = OS_SETTINGS_KEYS.filter( ( key ) => key in incoming );
@@ -557,17 +559,6 @@ export class OsSettings {
 		}
 
 		Object.assign( this.state, next );
-
-		// The running service worker keeps its own copy of the
-		// prewarm flag, baked in when it installed; without telling
-		// it, turning this on leaves the worker dropping every
-		// speculation and turning it off leaves it speculating.
-		// `adminAssetCacheEnabled` needs no equivalent — it reaches
-		// the worker inside the served `sw.js` bytes, as a normal SW
-		// update.
-		if ( typeof incoming.windowPrewarmEnabled === 'boolean' ) {
-			notifyServiceWorkerPrewarm( incoming.windowPrewarmEnabled );
-		}
 
 		this.save( opts );
 		if ( seeded || touched.some( ( key ) => PRESENTATION_KEYS.has( key ) ) ) {
@@ -609,6 +600,8 @@ export class OsSettings {
 		const next = structuredDefaults();
 		next.wallpaper = getDefaultWallpaperId();
 		next.customImage = this.state.customImage;
+		next.adminAssetCacheEnabled = this.state.adminAssetCacheEnabled;
+		next.windowPrewarmEnabled = this.state.windowPrewarmEnabled;
 		Object.assign( this.state, next );
 		this.save( opts );
 		this.apply();

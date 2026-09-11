@@ -788,3 +788,18 @@ rerun because an ability might already have changed content. Input, result and
 claim are removed by `openstation_agent_job_cleanup` after one day. The job
 module remains loaded while Agents is disabled so queued work fails safely and
 cleanup still runs. Cron retention depends on the site's scheduler running.
+
+## Performance options
+
+Window preloading and shared admin-asset caching are site-wide Extended
+options, enabled by default. `desktop_mode_extended_options` stores
+`window_prewarm` and `admin_asset_cache`; missing keys resolve to `true`,
+and an explicit `false` survives partial saves. Only administrators can
+change them through Preferences or `/desktop-mode/v1/extended-options`.
+
+The settings snapshot retains `windowPrewarmEnabled` and
+`adminAssetCacheEnabled` as read-only mirrors. Server reads override old
+per-user values, and the client preserves the mirrors during preference
+updates and resets. Each shell adopts changes on reload and configures
+the worker by message; the shared-cache PHP filter still has the final
+say. See [Performance settings migration](./migration-performance-options.md).

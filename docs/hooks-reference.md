@@ -4707,7 +4707,7 @@ therefore won't fire `beforeinstallprompt`.
 
 ### `openstation_pwa_admin_asset_cache` — Experimental (filter)
 
-Opt in to the service worker's **shared admin-asset cache**. When
+Control the service worker's **shared admin-asset cache**. When
 enabled, versioned admin static assets — Core CSS/JS, the
 `load-scripts.php` / `load-styles.php` concat responses, and
 plugin/theme assets carrying a `?ver=` query — are served from one
@@ -4715,20 +4715,19 @@ origin-wide Cache Storage bucket shared by the shell and every window's
 chromeless iframe. An asset fetched by one window is answered locally
 for every later window, revalidation round-trips included.
 
-The filter's default is the requesting user's OpenStation preference
-(**OpenStation Preferences → Features → Beta features → "Shared asset
-cache (experimental)"**, `adminAssetCacheEnabled`, default `false`) —
-the toggle is the intended opt-in path. Hook the filter to force the
-cache site-wide or to veto every per-user opt-in:
+The filter's default is the site-wide `admin_asset_cache` Extended option
+(`true` by default). Administrators can opt out through **OpenStation
+Preferences → Features → Extended options → Shared asset cache**. Hook
+the filter to force or veto the option:
 
 ```php
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_true' );  // force on
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_false' ); // kill switch
 ```
 
-The value reaches the SW inside the served script bytes, so flipping
-the filter triggers a normal SW update on the next page load — no
-re-registration needed. Core-path assets are cached exact-URL
+The shell posts the filtered value to the running worker in `os-sw-config`
+on boot. Changes apply on shell reload, without a worker update or
+re-registration. Core-path assets are cached exact-URL
 cache-first (their `ver` embeds the WordPress version); plugin/theme
 assets use stale-while-revalidate so an author editing files without a
 version bump self-heals on the next load. Uploads, unversioned URLs,

@@ -330,16 +330,7 @@ const betaSection: Section = ( s ) => {
 				__( 'Use the native Comments window' ),
 				__( 'A native two-pane Comments window: a list of conversations beside the full reply thread.' ),
 			) }
-			${ beta(
-				'windowPrewarmEnabled',
-				__( 'Prewarm windows on hover (experimental)' ),
-				__( 'Starts loading a window while you hover its dock icon, so it appears already rendered when you click: an admin page in a hidden window, or a native window’s first request sent ahead of the open. Uses extra memory for one speculative page at a time.' ),
-			) }
-			${ beta(
-				'adminAssetCacheEnabled',
-				__( 'Shared asset cache (experimental)' ),
-				__( 'Serves the admin’s stylesheets and scripts from one cache shared by every window, so opening a window skips the network for files any window has already loaded. Unlike the other toggles here, this one takes effect after your next reload.' ),
-			) }
+
 		</os-section>
 	`;
 };
@@ -347,7 +338,7 @@ const betaSection: Section = ( s ) => {
 /**
  * Save the site-wide options through the `extended` action. The
  * server merges over the stored set, spends a menu refresh (every
- * option here gates a server-side registration — `games` decides
+ * registration option gates server-side features — `games` decides
  * whether the games module loads at all), and comes back with the
  * saved set; the announcement lets every window already on screen
  * reconcile against it.
@@ -402,6 +393,16 @@ const extendedSection: Section = ( _s, ctx ) => {
 			heading=${ __( 'Extended options' ) }
 			description=${ __( 'Site-wide enhancements that apply to every user. Toggling requires the affected page to be reloaded for the change to take effect.' ) }
 		>
+			${ toggle(
+				'window_prewarm',
+				__( 'Preload windows on hover' ),
+				__( 'Starts loading a window while you hover its dock icon, so it appears sooner when you click. Enabled by default for everyone; turn off to avoid the extra memory and background requests. Takes effect after reloading OpenStation.' ),
+			) }
+			${ toggle(
+				'admin_asset_cache',
+				__( 'Shared asset cache' ),
+				__( 'Shares cached admin stylesheets and scripts across windows to reduce network requests. Enabled by default for everyone; turn off to bypass the shared cache. Takes effect after reloading OpenStation.' ),
+			) }
 			${ toggle(
 				'media_library_enhanced',
 				__( 'Enable drag-and-drop in the Media Library' ),

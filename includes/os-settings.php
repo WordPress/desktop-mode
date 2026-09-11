@@ -235,19 +235,9 @@ function openstation_default_os_settings() {
 		// as a chromeless iframe until the user opts in via OS
 		// Settings → Features → Beta features.
 		'stationHomeEnabled'          => false,
-		// Per-user opt-IN for the service worker's shared admin-asset
-		// cache (Experimental). Defaults OFF. The value feeds the
-		// `openstation_pwa_admin_asset_cache` filter's default via
-		// `openstation_pwa_admin_asset_cache_enabled()` and reaches the
-		// SW inside the served `sw.js` bytes, so a change applies via a
-		// normal SW update on the user's next reload.
-		'adminAssetCacheEnabled'      => false,
-		// Per-user opt-IN for hover-intent window prewarming
-		// (Experimental). Defaults OFF. When on, a sustained mouse
-		// hover on a dock tile speculatively builds that page's window
-		// hidden so it appears already rendered on click. Read live by
-		// the dock JS; no server-side behavior attaches to it.
-		'windowPrewarmEnabled'        => false,
+		// Performance enhancements are enabled unless explicitly disabled.
+		'adminAssetCacheEnabled'      => true,
+		'windowPrewarmEnabled'        => true,
 		// When true, left-clicking the empty wallpaper triggers the
 		// "Show desktop" toggle (macOS-style) and the matching entry is
 		// hidden from the wallpaper context menu. When false (default),
@@ -344,12 +334,12 @@ function openstation_default_os_settings() {
 function openstation_get_os_settings( $user_id ) {
 	$user_id = (int) $user_id;
 	if ( $user_id <= 0 ) {
-		return openstation_default_os_settings();
+		return openstation_sanitize_os_settings( array() );
 	}
 
 	$raw = get_user_meta( $user_id, OPENSTATION_OS_SETTINGS_META_KEY, true );
 	if ( ! is_array( $raw ) ) {
-		return openstation_default_os_settings();
+		return openstation_sanitize_os_settings( array() );
 	}
 
 	return openstation_sanitize_os_settings( $raw );
@@ -454,7 +444,7 @@ function openstation_sanitize_os_settings( $raw ) {
 	$defaults = openstation_default_os_settings();
 
 	if ( ! is_array( $raw ) ) {
-		return $defaults;
+		$raw = array();
 	}
 
 	// Wallpaper — any non-empty string; registry membership is validated
@@ -807,13 +797,11 @@ function openstation_sanitize_os_settings( $raw ) {
 		? (bool) $raw['stationHomeEnabled']
 		: $defaults['stationHomeEnabled'];
 
-	$admin_asset_cache_enabled = isset( $raw['adminAssetCacheEnabled'] )
-		? (bool) $raw['adminAssetCacheEnabled']
-		: $defaults['adminAssetCacheEnabled'];
-
-	$window_prewarm_enabled = isset( $raw['windowPrewarmEnabled'] )
-		? (bool) $raw['windowPrewarmEnabled']
-		: $defaults['windowPrewarmEnabled'];
+	// Site-wide performance controls supersede the legacy per-user values.
+	// Keep the snapshot keys so existing window consumers can read them.
+	$extended_options          = openstation_get_extended_options();
+	$admin_asset_cache_enabled = $extended_options['admin_asset_cache'];
+	$window_prewarm_enabled    = $extended_options['window_prewarm'];
 
 	$show_desktop_on_wallpaper_click = isset( $raw['showDesktopOnWallpaperClick'] )
 		? (bool) $raw['showDesktopOnWallpaperClick']
