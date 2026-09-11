@@ -4707,7 +4707,7 @@ therefore won't fire `beforeinstallprompt`.
 
 ### `openstation_pwa_admin_asset_cache` — Experimental (filter)
 
-Opt in to the service worker's **shared admin-asset cache**. When
+Control the service worker's **shared admin-asset cache**. When
 enabled, versioned admin static assets — Core CSS/JS, the
 `load-scripts.php` / `load-styles.php` concat responses, and
 plugin/theme assets carrying a `?ver=` query — are served from one
@@ -4715,20 +4715,19 @@ origin-wide Cache Storage bucket shared by the shell and every window's
 chromeless iframe. An asset fetched by one window is answered locally
 for every later window, revalidation round-trips included.
 
-The filter's default is the requesting user's OpenStation preference
-(**OpenStation Preferences → Features → Beta features → "Shared asset
-cache (experimental)"**, `adminAssetCacheEnabled`, default `false`) —
-the toggle is the intended opt-in path. Hook the filter to force the
-cache site-wide or to veto every per-user opt-in:
+The filter's default is the site-wide `admin_asset_cache` Extended option
+(`true` by default). Administrators can opt out through **OpenStation
+Preferences → Features → Extended options → Shared asset cache**. Hook
+the filter to force or veto the option:
 
 ```php
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_true' );  // force on
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_false' ); // kill switch
 ```
 
-The value reaches the SW inside the served script bytes, so flipping
-the filter triggers a normal SW update on the next page load — no
-re-registration needed. Core-path assets are cached exact-URL
+The shell posts the filtered value to the running worker in `os-sw-config`
+on boot. Changes apply on shell reload, without a worker update or
+re-registration. Core-path assets are cached exact-URL
 cache-first (their `ver` embeds the WordPress version); plugin/theme
 assets use stale-while-revalidate so an author editing files without a
 version bump self-heals on the next load. Uploads, unversioned URLs,
@@ -5384,7 +5383,7 @@ Features → Extended options, admin-only, default off). While the flag
 is off none of these hooks exist — `includes/agents/bootstrap.php`
 skips every module file.
 
-**Two exceptions** load unconditionally, ahead of the flag:
+**Three exceptions** load unconditionally, ahead of the flag:
 
 - `includes/agents/guard.php` owns `openstation_agent_is_agent()` and
   every login/session block. Disabling the feature does not delete
@@ -5400,6 +5399,10 @@ skips every module file.
   `openstation_agent_avatar_url()` live in `bootstrap.php` for the
   same reason: the section descriptor needs them while `rest.php` and
   `identity.php` are unloaded.
+
+- `includes/agents/jobs.php` retains the worker and cleanup callbacks. Disabling
+  Agents makes queued jobs fail permission checks, while retained data still
+  expires. Its REST status route is registered only while Agents is enabled.
 
 An agent is a synthetic `wp_users` row (login-blocked) whose entire
 definition lives as user meta on that row: description, instructions
@@ -5422,6 +5425,20 @@ Whether the agents framework is enabled site-wide. Runs on
 all, and again wherever the enabled state is consulted.
 
 - **Param** `bool $enabled` — default: the `agents` extended option.
+
+### `openstation_agent_job_finished` — Experimental *(action)*
+
+Fires after an async agent job stores a completed or failed result and releases
+its admission slot. Parameters: `string $id` (job UUID), `int $owner` (human
+invoker), `array $status` (the public job snapshot, including result/error).
+A hard-killed process cannot fire this action. Status reads may report an
+interrupted job from its deadline without dispatching actions or running work.
+
+`openstation_agent_job_run( $id )` and
+`openstation_agent_job_cleanup( $id )` are internal WordPress cron hooks, not
+extension callbacks. Integrations submit through the async REST contract and
+observe `openstation_agent_job_finished`; see the [example](./examples/agents.md#queue-work-from-a-chat-or-another-client).
+
 
 ### `openstation_agent_created` — Experimental *(action)*
 

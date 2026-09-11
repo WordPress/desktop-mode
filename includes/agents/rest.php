@@ -194,12 +194,20 @@ function openstation_agents_register_rest_routes() {
 			'permission_callback' => 'openstation_agents_rest_invoke_permission',
 			'callback'            => 'openstation_agents_rest_invoke',
 			'args'                => array(
-				'message' => array(
+				'async'     => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'requestId' => array(
+					'type'   => 'string',
+					'format' => 'uuid',
+				),
+				'message'   => array(
 					'type'              => 'string',
 					'required'          => true,
 					'sanitize_callback' => 'sanitize_textarea_field',
 				),
-				'source'  => array(
+				'source'    => array(
 					'type'              => 'string',
 					'default'           => 'chat',
 					'enum'              => array( 'chat', 'drag', 'send-to' ),
@@ -209,7 +217,7 @@ function openstation_agents_register_rest_routes() {
 				// every message is a contextless run — a follow-up like
 				// "yes, do it" would be resolved against nothing and the
 				// agent could act on the wrong entity entirely.
-				'history' => array(
+				'history'   => array(
 					'type'    => 'array',
 					'default' => array(),
 					'items'   => array(
@@ -480,6 +488,10 @@ function openstation_agents_rest_invoke( WP_REST_Request $request ) {
 			__( 'You do not have permission to invoke this agent.', 'desktop-mode' ),
 			array( 'status' => rest_authorization_required_code() )
 		);
+	}
+
+	if ( $request['async'] ) {
+		return openstation_agents_rest_enqueue_job( $request );
 	}
 
 	$result = openstation_agent_invoke(

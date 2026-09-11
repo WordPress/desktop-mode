@@ -29,6 +29,10 @@ import { join } from 'node:path';
 const ROOT = join( __dirname, '../..' );
 const VARIABLES = readFileSync( join( ROOT, 'assets/css/variables.css' ), 'utf8' );
 const DESKTOP = readFileSync( join( ROOT, 'assets/css/desktop.css' ), 'utf8' );
+const POST_STATS = readFileSync(
+	join( ROOT, 'src/plugins/post-stats-widget/index.ts' ),
+	'utf8'
+);
 const STARTER = readFileSync(
 	join( ROOT, 'src/plugins/starter-widget/styles.css' ),
 	'utf8'
@@ -207,6 +211,33 @@ describe( 'the widget card token contract', () => {
 		expect( PALETTE.get( '--os-ui-color-accent' ) ).toContain(
 			'var(--os-ui-accent'
 		);
+	} );
+
+	test( 'canvas ink follows the tokens too, not a hardcoded value', () => {
+		// The contract is about what a widget READS, and a <canvas> reads
+		// nothing by itself. Post Stats painted its grid, y-axis ticks and
+		// month labels with literal black — `rgba(0,0,0,0.07)` / `0.35` /
+		// `0.5` — so on the card's dark glass they measured 1.01:1 and
+		// 1.02:1 while the widget's own DOM text, which does use the
+		// tokens, stayed legible. The bars survived only because they use
+		// the explicit COLORS map.
+		expect( POST_STATS ).not.toMatch( /rgba\(\s*0\s*,\s*0\s*,\s*0/ );
+		expect( POST_STATS ).toContain( '--os-ui-color-border' );
+		expect( POST_STATS ).toContain( '--os-ui-color-text-subtle' );
+	} );
+
+	test( 'the canvas fallbacks are legible on the glass, not the old black', () => {
+		// A fallback is the value that ships when the token does not
+		// resolve, so a black one would restore the bug in exactly the
+		// case the token was meant to cover. Both fallbacks here are the
+		// dark-glass values from variables.css.
+		const ink = POST_STATS.slice(
+			POST_STATS.indexOf( 'const RULE =' ),
+			POST_STATS.indexOf( '\n', POST_STATS.indexOf( 'const LABEL =' ) )
+		);
+		expect( ink ).not.toBe( '' );
+		expect( ink ).toContain( '255, 251, 255' );
+		expect( ink ).not.toMatch( /0\s*,\s*0\s*,\s*0/ );
 	} );
 
 	test( 'the card paints the surface token it publishes', () => {
