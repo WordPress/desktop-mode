@@ -7,6 +7,9 @@
  * they affect every user on the site. Admin-only to read or write.
  *
  * Current options:
+ *   - window_prewarm: preload windows on hover. Defaults to true.
+ *   - admin_asset_cache: share cached admin assets across windows.
+ *     Defaults to true. Both performance options apply on shell reload.
  *   - media_library_enhanced: when true, enqueues a small JS shim on
  *     every admin page that makes Media Library .attachment tiles
  *     draggable — users can drag images out of the library into any
@@ -60,11 +63,13 @@ const OPENSTATION_EXTENDED_OPTIONS_KEY = 'desktop_mode_extended_options';
 /**
  * Returns the extended options with defaults filled in.
  *
- * @return array{ media_library_enhanced: bool, games: bool, agents: bool, network: bool }
+ * @return array{ media_library_enhanced: bool, games: bool, agents: bool, network: bool, window_prewarm: bool, admin_asset_cache: bool }
  */
 function openstation_get_extended_options() {
 	$defaults = array(
 		'media_library_enhanced' => true,
+		'window_prewarm'         => true,
+		'admin_asset_cache'      => true,
 		'games'                  => false,
 		'agents'                 => false,
 		'network'                => false,

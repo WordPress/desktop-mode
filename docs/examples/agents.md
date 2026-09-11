@@ -199,3 +199,32 @@ add_filter( 'openstation_agent_tool_result', function ( $output, $slug ) {
 	return $output;
 }, 10, 2 );
 ```
+
+## Queue work from a chat or another client
+
+Keep the returned `jobId` until the answer arrives. The same UUID and input
+can be submitted again if the submission response is lost; WordPress returns
+the existing job rather than repeating its abilities.
+
+```js
+const requestId = crypto.randomUUID();
+const path = `${restRoot}desktop-mode/v1/agents/${agentId}`;
+const response = await wp.os.fetch(`${path}/invoke`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': restNonce },
+    body: JSON.stringify({ message: 'Review this post.', async: true, requestId })
+});
+const job = await response.json(); // HTTP 202: { jobId, status, pollAfter, … }
+// After at least job.pollAfter seconds, read status. Await each request before
+// scheduling another; stop at completed/failed and back off on network errors.
+const statusResponse = await wp.os.fetch(`${path}/jobs/${job.jobId}`, {
+    headers: { 'X-WP-Nonce': restNonce }, cache: 'no-store'
+}, { source: 'my-plugin/agent-status', silent: true });
+const status = await statusResponse.json();
+// status.result carries the existing invocation result when completed.
+```
+
+These endpoints require the invoking user's authentication. Jobs preserve the
+human's capability ceiling, even when a cron worker starts without a session.
+See [async agent jobs](../architecture.md#async-agent-jobs) for scheduling,
+retention and host requirements.

@@ -242,6 +242,7 @@ shared-store + registries. Index:
 |---|---|---|
 | Trust model, capability ceiling, untrusted tool output | [`agents-security.md`](./agents-security.md) | Experimental |
 | `/desktop-mode/v1/agents[…]` REST routes | [`includes/rest/README.md`](../includes/rest/README.md) | Experimental |
+| Async invocation + owner-only job status | [`architecture.md`](./architecture.md#async-agent-jobs), [`javascript-reference.md`](./javascript-reference.md#async-invocation-experimental) | Experimental |
 | `openstation_agent_*` PHP helpers, actions, filters | [`hooks-reference.md`](./hooks-reference.md#ai-agents) | Experimental |
 | `desktop-mode/agents-chat` shared-store key + `desktop-mode-agent-run` window | [`javascript-reference.md`](./javascript-reference.md#ai-agents--client-surface-experimental) | Experimental |
 | Agents section in the WP Explorer app | `apps/my-wordpress/parts/agents*` | Experimental |

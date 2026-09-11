@@ -58,6 +58,22 @@ beforeEach( () => {
 } );
 
 describe( 'updateOsSettings — writers', () => {
+	test( 'site-wide performance defaults are on', () => {
+		expect( h.store.state.windowPrewarmEnabled ).toBe( true );
+		expect( h.store.state.adminAssetCacheEnabled ).toBe( true );
+	} );
+
+	test( 'per-user writes and reset preserve site-wide performance opt-outs', () => {
+		h.store.state.windowPrewarmEnabled = false;
+		h.store.state.adminAssetCacheEnabled = false;
+		h.api.updateOsSettings( { windowPrewarmEnabled: true, adminAssetCacheEnabled: true } );
+		expect( h.store.state.windowPrewarmEnabled ).toBe( false );
+		expect( h.store.state.adminAssetCacheEnabled ).toBe( false );
+		h.api.resetOsSettings();
+		expect( h.store.state.windowPrewarmEnabled ).toBe( false );
+		expect( h.store.state.adminAssetCacheEnabled ).toBe( false );
+	} );
+
 	test( 'writes desktopTheme, and treats "" as a real value', () => {
 		h.api.updateOsSettings( { desktopTheme: 'acme-neon' } );
 		expect( h.store.state.desktopTheme ).toBe( 'acme-neon' );

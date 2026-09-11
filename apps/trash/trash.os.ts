@@ -27,6 +27,10 @@ import { __, defineApp, html, sprintf, type TemplateResult } from '@openstation/
 import { beginTrashChange, projectTrash, trashKey, watchTrashChanges } from '../../src/desktop-files/trash-optimistic';
 import { isMobileStamped } from '../../src/mode/stamp';
 import { stackOnPhone } from '../../src/ui/components/os-table/stack-on-phone';
+// Register before updated() assigns data and columns. A type-only import
+// leaves own properties on an unupgraded element, shadowing the table's
+// setters when the lazy component kit eventually loads.
+import '../../src/ui/components/os-table/os-table';
 import { runEmptyLoop } from './parts/empty-loop';
 import * as realtime from './parts/realtime';
 import {
@@ -460,6 +464,10 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		// broadcasts; these cover trash actions inside chromeless
 		// iframes and other tabs.
 		realtime.start();
+		// The first mount may be a hover-prewarmed snapshot from before
+		// a deletion. Reconcile after subscribing so that snapshot cannot
+		// leave a newly opened bin empty until the next notification.
+		void ctx.dispatch( 'refresh' );
 		let refreshing: Promise< unknown > | null = null;
 		const unwatch = watchTrashChanges( () => ctx.repaint(), () => {
 			refreshing ??= Promise.resolve().then( () => {

@@ -10,6 +10,7 @@
  * @public
  */
 
+import { agentRequestId, runAgentJob } from '../../../src/agents-jobs';
 import { trackedFetch } from '../../../src/tracked-fetch';
 import type {
 	AgentDraft,
@@ -156,10 +157,7 @@ export function invokeAgent(
 	id: number,
 	message: string,
 ): Promise< AgentInvokeResult > {
-	return request< AgentInvokeResult >( agentsUrl( `/${ id }/invoke` ), {
-		method: 'POST',
-		body: JSON.stringify( { message } ),
-	} );
+	return runAgentJob( id, { message, source: 'chat', history: [] }, shellRest(), agentRequestId() );
 }
 
 export function fetchAbilitiesCatalogue(): Promise< Ability[] > {

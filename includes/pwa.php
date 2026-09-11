@@ -164,19 +164,13 @@ function openstation_pwa_force_replace_sw() {
  * window, revalidation round-trips included. See `src/pwa/sw-policy.ts`
  * for the exact classification rules.
  *
- * Off by default while the feature proves itself: the failure mode of
- * cache-first (an asset edited without a `ver` bump staying pinned) is
- * silent, so users opt in deliberately — via **OpenStation Preferences →
- * Features → Beta features** (`adminAssetCacheEnabled`, per user), or
- * site-wide via the filter below.
+ * Enabled by default. Administrators can opt out site-wide through
+ * OpenStation Preferences → Features → Extended options → Shared asset
+ * cache. The filter below can force or veto the site-wide setting.
  *
- * Per-user works even though a service worker is origin-wide because
- * the answer never travels in the worker's own bytes. It is resolved
- * per request here and pushed to the running worker as an `os-sw-config`
- * message when the shell boots, and again whenever the preference
- * changes — see {@see openstation_pwa_sw_config_preamble()} for why
- * baking it into the script was abandoned. The worker starts with the
- * cache off, so until that message lands it does less, never more.
+ * The shell posts the resolved flag to the running worker at boot.
+ * Changes apply after reloading OpenStation; the served worker bytes
+ * remain identical for logged-in and anonymous requests.
  *
  * @return bool
  */
@@ -189,14 +183,13 @@ function openstation_pwa_admin_asset_cache_enabled() {
 	 *
 	 * Return `true` to let the service worker cache versioned admin
 	 * static assets in a shared, origin-wide bucket, or `false` to
-	 * veto it site-wide regardless of per-user opt-ins. The value
+	 * veto it regardless of the Extended option. The value
 	 * reaches the worker as an `os-sw-config` message on the next shell
 	 * boot, so a change takes effect without altering the served script
 	 * — no SW update, no URL change, no re-registration.
 	 *
-	 * @param bool $enabled Defaults to the requesting user's
-	 *                      `adminAssetCacheEnabled` OpenStation
-	 *                      preference (`false` until they opt in).
+	 * @param bool $enabled The site-wide `admin_asset_cache` Extended
+	 *                      option, enabled by default.
 	 */
 	return (bool) apply_filters( 'openstation_pwa_admin_asset_cache', $enabled );
 }

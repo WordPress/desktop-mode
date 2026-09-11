@@ -70,6 +70,31 @@ afterEach( () => {
 } );
 
 describe( 'the trash app view', () => {
+	it( 'renders rows on the first open without another window loading the table component', async () => {
+		const { root } = mount();
+		const table = root.querySelector( '[data-os-trash-table]' )!;
+		await Promise.resolve();
+		await Promise.resolve();
+		expect( customElements.get( 'os-table' ) ).toBeDefined();
+		expect( table.shadowRoot?.textContent ).toContain( 'Doomed post' );
+	} );
+
+	it( 'reconciles an empty prewarmed snapshot when the bin opens', async () => {
+		const { root, ctx } = mount( {}, { items: [], total: 0 } );
+		ctx.dispatch = vi.fn( async () => {
+			ctx.data.items = [ item() ];
+			ctx.data.total = 1;
+			ctx.repaint();
+			return true;
+		} );
+		const dispose = app.mounted( ctx );
+		await Promise.resolve();
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'refresh' );
+		expect( root.querySelector( 'os-empty-state' )!.hasAttribute( 'hidden' ) ).toBe( true );
+		expect( ( root.querySelector( '[data-os-trash-table]' ) as HTMLElement & { data: RecycleBinItem[] } ).data ).toHaveLength( 1 );
+		dispose?.();
+	} );
+
 	it( 'shows the toolbar + table against items, the empty state otherwise', () => {
 		const { root } = mount();
 		expect( root.querySelector( '.os-recycle-bin__toolbar' )!.hasAttribute( 'hidden' ) ).toBe( false );
