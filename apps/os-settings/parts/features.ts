@@ -394,16 +394,6 @@ const extendedSection: Section = ( _s, ctx ) => {
 			description=${ __( 'Site-wide enhancements that apply to every user. Toggling requires the affected page to be reloaded for the change to take effect.' ) }
 		>
 			${ toggle(
-				'window_prewarm',
-				__( 'Preload windows on hover' ),
-				__( 'Starts loading a window while you hover its dock icon, so it appears sooner when you click. Enabled by default for everyone; turn off to avoid the extra memory and background requests. Takes effect after reloading OpenStation.' ),
-			) }
-			${ toggle(
-				'admin_asset_cache',
-				__( 'Shared asset cache' ),
-				__( 'Shares cached admin stylesheets and scripts across windows to reduce network requests. Enabled by default for everyone; turn off to bypass the shared cache. Takes effect after reloading OpenStation.' ),
-			) }
-			${ toggle(
 				'media_library_enhanced',
 				__( 'Enable drag-and-drop in the Media Library' ),
 				__( 'Makes every item in the WordPress Media Library draggable. Drop a media item into text fields, rich-text editors, Gutenberg blocks, or any target that accepts images or files. No replacement of the library — just a drag-and-drop layer on top of the one you already know.' ),
@@ -422,6 +412,16 @@ const extendedSection: Section = ( _s, ctx ) => {
 				'games',
 				__( 'Enable games' ),
 				__( 'Adds a Games app for every user: built-in games, scoreboards, and player-to-player challenges. Off by default — while off, nothing game-related runs anywhere, on the server or in the browser. Saved scores are kept across a disable and reappear when re-enabled.' ),
+			) }
+			${ toggle(
+				'window_prewarm',
+				__( 'Preload windows on hover' ),
+				__( 'Starts loading a window while you hover its dock icon, so it appears sooner when you click. Enabled by default for everyone; turn off to avoid the extra memory and background requests. Takes effect after reloading OpenStation.' ),
+			) }
+			${ toggle(
+				'admin_asset_cache',
+				__( 'Shared asset cache' ),
+				__( 'Shares cached admin stylesheets and scripts across windows to reduce network requests. Enabled by default for everyone; turn off to bypass the shared cache. Takes effect after reloading OpenStation.' ),
 			) }
 			${ ui.extendedError ? html`<p class="os-ext__error">${ ui.extendedError }</p>` : '' }
 			${ ui.extendedSaving ? html`<p class="os-ext__saving">${ __( 'Saving…' ) }</p>` : '' }
