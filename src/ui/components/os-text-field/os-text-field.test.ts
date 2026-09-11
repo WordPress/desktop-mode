@@ -169,7 +169,9 @@ describe( '<os-text-field>', () => {
 		const el = host.querySelector( 'os-text-field' )!;
 		expect( el.shadowRoot!.querySelector( 'label' ) ).toBeNull();
 		const input = el.shadowRoot!.querySelector( 'input' ) as HTMLInputElement;
-		expect( input.getAttribute( 'aria-label' ) ).toBe( '' );
+		// The renderer drops an empty aria-label entirely, so the absence
+		// reads as null — no attribute — rather than an empty string.
+		expect( input.getAttribute( 'aria-label' ) ).toBeNull();
 	} );
 
 	test( 'invalid attribute surfaces aria-invalid on the native input', async () => {
