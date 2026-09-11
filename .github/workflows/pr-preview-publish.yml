@@ -92,7 +92,24 @@ jobs:
             );
             const pr = matches.find((p) => p.state === 'open') ?? matches[0];
             if (!pr) {
-              core.setFailed(`No pull request for ${headOwner}:${headBranch} at head SHA ${headSha}; refusing to publish a preview.`);
+              // Not a failure. The realistic causes are all benign races: a
+              // push or force-push landed while the build was still running, so
+              // the PR's head has moved past the commit this run built; or the
+              // head fork was deleted, leaving `head.repo` null. Either way the
+              // built commit is superseded and there is nothing worth
+              // publishing — the newer commit's own build/publish pair posts
+              // the preview, and a preview of the older code under the current
+              // PR would actively mislead a reviewer.
+              //
+              // Skipping keeps the security property intact: a preview is still
+              // only ever published to a PR positively identified from the
+              // trusted payload. What it stops is a red run in the trunk
+              // Actions tab (`workflow_run` runs are attributed to the default
+              // branch) every time someone pushes twice in quick succession.
+              // Genuine trouble still fails loudly: a malformed payload is
+              // caught above, and an API or permission error throws out of
+              // `paginate` rather than returning an empty list.
+              core.warning(`No pull request for ${headOwner}:${headBranch} at head SHA ${headSha}; the head has moved on, skipping the preview.`);
               return;
             }
             core.setOutput('pr-number', String(pr.number));
@@ -105,6 +122,11 @@ jobs:
         # one and trunk-build.yml's) then failed with HTTP 422. Sweep before
         # uploading so a full release frees room instead of failing.
         # Fail-open on purpose: a cleanup hiccup must never cost a preview.
+        #
+        # Gated on the PR number like every step below it: with no PR resolved
+        # there is no current-PR number to exclude, so the sweep would treat
+        # the PR being built as just another candidate.
+        if: steps.meta.outputs.pr-number != ''
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
@@ -172,6 +194,7 @@ jobs:
             core.info(`${assets.length} assets on ci-artifacts; ${closed.length} closed PRs; deleted ${deleted} zip(s).`);
 
       - name: Expose built artifact on a public URL
+        if: steps.meta.outputs.pr-number != ''
         id: expose
         uses: WordPress/action-wp-playground-pr-preview/.github/actions/expose-artifact-on-public-url@43fc435558bc6cee69f5b214d6b8ca4f9f80c31d # v3
         with:
@@ -183,6 +206,7 @@ jobs:
           artifact-source-run-id: ${{ github.event.workflow_run.id }}
 
       - name: Build blueprint
+        if: steps.meta.outputs.pr-number != ''
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: blueprint
         env:
@@ -198,6 +222,7 @@ jobs:
           result-encoding: string
 
       - name: Post preview to PR
+        if: steps.meta.outputs.pr-number != ''
         uses: WordPress/action-wp-playground-pr-preview@43fc435558bc6cee69f5b214d6b8ca4f9f80c31d # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
