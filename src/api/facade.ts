@@ -514,15 +514,10 @@ export function buildPublicApi( deps: BuildPublicApiDeps ): OpenStationPublicApi
 			resolveIcon: resolveThemedIcon,
 			resolveIconColor: resolveThemedIconColor,
 			applyRecommendedOsSettings: ( themeId ) => {
-				const target = themeId ?? getActiveDesktopThemeId() ?? '';
-				if ( target === '' ) {
-					return {};
-				}
+				const target = themeId !== undefined ? themeId : ( getActiveDesktopThemeId() ?? '' );
 				// Forced, because this entry point IS the deliberate
-				// re-apply. First-activation seeding happens when the
-				// theme is activated (`updateOsSettings( { desktopTheme } )`
-				// or the Themes tab); a caller reaching for this is
-				// asking for the author's arrangement back.
+				// re-apply. A caller reaching for this is asking for the
+				// author's arrangement back (including OpenStation's system default).
 				return osSettings.applyThemeRecommendations( target );
 			},
 		},

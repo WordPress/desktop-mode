@@ -188,28 +188,28 @@ describe( 'updateOsSettings — persist and apply', () => {
 } );
 
 describe( 'updateOsSettings — theme activation', () => {
-	test( 'activating the system default seeds its recommended accent once', () => {
+	test( 'activating a theme preserves user preferences and does not silently overwrite accent or layout', () => {
 		h.api.updateOsSettings( { accent: 'teal', desktopTheme: 'acme-neon' } );
 		expect( h.store.state.accent ).toBe( 'teal' );
-		// Back to the shell's own look: it recommends Pulse, the accent
-		// its palette was drawn against, and records the offer.
+		expect( h.store.state.desktopTheme ).toBe( 'acme-neon' );
+		// Switching to another theme preserves the custom accent.
 		h.api.updateOsSettings( { desktopTheme: '' } );
-		expect( h.store.state.accent ).toBe( 'pulse' );
-		expect( h.store.state.appliedThemeRecommendations ).toEqual( [ 'system-default' ] );
-		// A second activation never overwrites a choice made since.
-		h.api.updateOsSettings( { accent: 'teal', desktopTheme: 'acme-neon' } );
-		h.api.updateOsSettings( { desktopTheme: '' } );
+		expect( h.store.state.desktopTheme ).toBe( '' );
 		expect( h.store.state.accent ).toBe( 'teal' );
 	} );
 
 	test( 'the deliberate re-apply goes through desktopThemes.applyRecommendedOsSettings', () => {
 		h.api.updateOsSettings( { desktopTheme: '' } );
-		h.api.updateOsSettings( { accent: 'teal' } );
+		h.api.updateOsSettings( { accent: 'teal', desktopLayout: 'classic', dockPlacement: 'left' } );
 		const applied = h.api.desktopThemes.applyRecommendedOsSettings( '' );
-		// '' is the system default, which the facade reads as "the
-		// active theme, if any" — nothing to re-apply for no theme.
-		expect( applied ).toEqual( {} );
-		expect( h.store.state.accent ).toBe( 'teal' );
+		expect( applied ).toEqual( {
+			accent: 'pulse',
+			desktopLayout: 'unified',
+			dockPlacement: 'bottom',
+		} );
+		expect( h.store.state.accent ).toBe( 'pulse' );
+		expect( h.store.state.desktopLayout ).toBe( 'unified' );
+		expect( h.store.state.dockPlacement ).toBe( 'bottom' );
 	} );
 } );
 

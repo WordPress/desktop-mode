@@ -548,20 +548,10 @@ export class OsSettings {
 		const next = sanitizeSettings( incoming, this.state );
 		const touched = OS_SETTINGS_KEYS.filter( ( key ) => key in incoming );
 
-		let seeded = false;
-		if (
-			touched.includes( 'desktopTheme' ) &&
-			next.desktopTheme !== this.state.desktopTheme
-		) {
-			seeded =
-				Object.keys( applyThemeRecommendations( next, next.desktopTheme ) )
-					.length > 0;
-		}
-
 		Object.assign( this.state, next );
 
 		this.save( opts );
-		if ( seeded || touched.some( ( key ) => PRESENTATION_KEYS.has( key ) ) ) {
+		if ( touched.some( ( key ) => PRESENTATION_KEYS.has( key ) ) ) {
 			this.apply();
 		}
 	}
