@@ -113,6 +113,16 @@ function drawChart( canvas: HTMLCanvasElement, buckets: Bucket[] ): void {
 	}
 	ctx.scale( dpr, dpr );
 
+	const W = rect.width;
+	const H = rect.height;
+	const PAD = { top: 18, right: 10, bottom: 22, left: 28 };
+	const chartW = W - PAD.left - PAD.right;
+	const chartH = H - PAD.top - PAD.bottom;
+
+	if ( chartW <= 0 || chartH <= 0 ) {
+		return;
+	}
+
 	// Canvas ink, read from the same custom properties this widget's own
 	// stylesheet already uses for its DOM text. The chrome was hardcoded
 	// black, which is why the bars survived and everything drawn as text or
@@ -127,16 +137,6 @@ function drawChart( canvas: HTMLCanvasElement, buckets: Bucket[] ): void {
 		ink.getPropertyValue( token ).trim() || fallback;
 	const RULE = inkOf( '--os-ui-color-border', 'rgba( 255, 251, 255, 0.12 )' );
 	const LABEL = inkOf( '--os-ui-color-text-subtle', 'rgba( 255, 251, 255, 0.7 )' );
-
-	const W = rect.width;
-	const H = rect.height;
-	const PAD = { top: 18, right: 10, bottom: 22, left: 28 };
-	const chartW = W - PAD.left - PAD.right;
-	const chartH = H - PAD.top - PAD.bottom;
-
-	if ( chartW <= 0 || chartH <= 0 ) {
-		return;
-	}
 
 	const maxVal = Math.max( 1, ...buckets.map( ( b ) => b.published + b.pending + b.draft ) );
 	const barGroupW = chartW / buckets.length;
