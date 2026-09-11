@@ -153,7 +153,7 @@ export function pageRows( ctx: Ctx ): PageRow[] {
 			icon: NAV_ICONS.features,
 			panel: ( s, c ) => html`${ pageHeader(
 				__( 'Features' ),
-				__( 'The assistant, the developer tools, and the betas. Every switch here affects only your account and takes effect immediately.' ),
+				__( 'The assistant, developer tools, and beta features for your account, plus site-wide Extended options for administrators.' ),
 			) }${ renderFeatures( s, c ) }`,
 		},
 	];

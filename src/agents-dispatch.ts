@@ -19,8 +19,7 @@
  */
 
 import { __, sprintf } from './i18n';
-import { trackedFetch } from './tracked-fetch';
-import { joinRestUrl } from './rest-url';
+import { agentRequestId, runAgentJob } from './agents-jobs';
 import {
 	agentsChatStore,
 	openAgentChat,
@@ -29,7 +28,6 @@ import {
 	type AgentChatMessage,
 } from './agents-chat-store';
 import { persistAgentTranscript } from './agents-conversations';
-import type { AgentInvokeResult } from './agents-types';
 
 /** Entity kinds agents understand — mirrors the trigger config enum. */
 export type DroppedEntityKind = 'post' | 'page' | 'media' | 'user' | 'comment';
@@ -199,7 +197,7 @@ export function composeSendToMessage( entity: DroppedEntity ): string {
 
 /**
  * Full "Send to" dispatch: seed the chat store, surface the chat
- * window, run the invocation.
+ * window, queue the invocation and poll for its result.
  *
  * @public
  */
@@ -293,49 +291,21 @@ export async function invokeAgentIntoTranscript(
 	agentsChatStore.notify();
 
 	try {
-		const res = await trackedFetch(
-			joinRestUrl(
-				rest.restRoot,
-				`desktop-mode/v1/agents/${ agent.id }/invoke`,
-			),
-			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'X-WP-Nonce': rest.restNonce,
-				},
-				body: JSON.stringify( { message, source, history } ),
+		const result = await runAgentJob(
+			agent.id,
+			{ message, source, history },
+			rest,
+			agentRequestId(),
+			( status ) => {
+				const labels = {
+					queued: __( 'Queued — waiting for a WordPress worker…', 'desktop-mode' ),
+					reconnecting: __( 'Reconnecting to the background job…', 'desktop-mode' ),
+					running: __( 'Working in the background…', 'desktop-mode' ),
+				};
+				pending.text = labels[ status ];
+				agentsChatStore.notify();
 			},
-			{ source: 'desktop-mode/agents' },
 		);
-		const body = ( await res.json().catch( () => null ) ) as
-			| ( AgentInvokeResult & { message?: string } )
-			| { message?: string }
-			| null;
-		if ( ! res.ok ) {
-			// A 504 never comes from WordPress: it is the gateway in
-			// front of PHP giving up on a run that is still going (a
-			// long task can take ninety seconds against nginx's default
-			// sixty). The run finishes on the server regardless, so the
-			// message says what happened in the user's terms and warns
-			// against the retry that would run it all again.
-			if ( 504 === res.status ) {
-				throw new Error(
-					__(
-						'The agent took too long to reply, so the answer never arrived. It may still be finishing the work: give it a moment before asking again.',
-						'desktop-mode',
-					),
-				);
-			}
-			const detail =
-				body &&
-				typeof body === 'object' &&
-				typeof body.message === 'string'
-					? body.message
-					: `HTTP ${ res.status }`;
-			throw new Error( detail );
-		}
-		const result = body as AgentInvokeResult;
 		pending.text =
 			result.text ||
 			__( 'The agent finished without a text answer.', 'desktop-mode' );

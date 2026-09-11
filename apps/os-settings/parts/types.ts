@@ -27,6 +27,8 @@ export interface AppState extends Record< string, unknown > {
 
 /** The site-wide, admin-only Extended Options. */
 export interface ExtendedOptions {
+	window_prewarm: boolean;
+	admin_asset_cache: boolean;
 	media_library_enhanced: boolean;
 	games: boolean;
 	agents: boolean;

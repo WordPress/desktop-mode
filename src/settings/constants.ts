@@ -320,12 +320,9 @@ export const DEFAULTS: OsSettingsState = {
 	// so a custom dashboard keeps rendering in the chromeless iframe
 	// until the user deliberately switches.
 	stationHomeEnabled: false,
-	// Shared admin-asset cache (Experimental) — off until the user
-	// opts in; the SW picks the change up on the next reload.
-	adminAssetCacheEnabled: false,
-	// Hover-intent window prewarming (Experimental) — off until the
-	// user opts in; read live by the dock at hover time.
-	windowPrewarmEnabled: false,
+	// Performance enhancements are enabled unless explicitly disabled.
+	adminAssetCacheEnabled: true,
+	windowPrewarmEnabled: true,
 	showDesktopOnWallpaperClick: false,
 	// Ask before the close-all chord wipes the desk. The dialog's
 	// "Don't ask again" checkbox is what turns this off; Preferences →
