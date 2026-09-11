@@ -85,7 +85,7 @@ export class OsTextField extends Component {
 					'Label text. Rendered above the input and used as the accessible name. Pair with `hide-label` for a compact control that still has a name.',
 			},
 			{
-				name: 'hideLabel',
+				name: 'hide-label',
 				type: 'boolean attribute',
 				description:
 					'Keeps the label as the accessible name but takes it out of the visual flow — for toolbar searches and other compact fields with no room for it.',
