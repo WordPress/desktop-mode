@@ -450,6 +450,8 @@ export default defineApp< AppState, AppData >( 'my-wordpress', {
 				${ section && ! inFolder && ! isAgents && ! inFootprint
 					? html`<div class="os-mywp__search">
 						<os-text-field
+							label=${ __( 'Search this section' ) }
+							hide-label
 							value=${ state.query }
 							placeholder=${ sprintf(
 								/* translators: %s: section label, lowercased. */

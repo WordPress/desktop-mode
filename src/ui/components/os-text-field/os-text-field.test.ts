@@ -127,6 +127,53 @@ describe( '<os-text-field>', () => {
 		expect( el.shadowRoot!.querySelector( '.os-text-field__clear' ) ).toBeNull();
 	} );
 
+	test( 'a labelled field pairs <label for> with the input AND names it', async () => {
+		host.innerHTML = `<os-text-field id="f" label="Search notes"></os-text-field>`;
+		await tick();
+
+		const el = host.querySelector( 'os-text-field' )!;
+		const label = el.shadowRoot!.querySelector( 'label' ) as HTMLLabelElement;
+		const input = el.shadowRoot!.querySelector( 'input' ) as HTMLInputElement;
+
+		expect( label ).not.toBeNull();
+		expect( label.getAttribute( 'for' ) ).toBe( input.id );
+		expect( input.getAttribute( 'aria-label' ) ).toBe( 'Search notes' );
+		expect( label.className ).not.toContain( 'os-text-field__label--hidden' );
+	} );
+
+	test( 'hide-label keeps the label and the name, and only takes the label out of the visual flow', async () => {
+		host.innerHTML = `<os-text-field id="g" label="Search notes" hide-label></os-text-field>`;
+		await tick();
+
+		const el = host.querySelector( 'os-text-field' )!;
+		const label = el.shadowRoot!.querySelector( 'label' ) as HTMLLabelElement;
+		const input = el.shadowRoot!.querySelector( 'input' ) as HTMLInputElement;
+
+		// Still rendered, still paired, still the accessible name. Hiding it
+		// with `display: none` or dropping the element would remove it from
+		// the accessibility tree, which is the opposite of the point.
+		expect( label ).not.toBeNull();
+		expect( label.textContent ).toBe( 'Search notes' );
+		expect( label.getAttribute( 'for' ) ).toBe( input.id );
+		expect( input.getAttribute( 'aria-label' ) ).toBe( 'Search notes' );
+		expect( label.className ).toContain( 'os-text-field__label--hidden' );
+	} );
+
+	test( 'hide-label without a label names nothing — a placeholder is not an accessible name', async () => {
+		// Negative control. `hide-label` is a presentation switch, not a
+		// source of names: without `label` there is nothing to hide and
+		// nothing to announce, and the test must not read a pass into that.
+		host.innerHTML = `<os-text-field id="h" hide-label placeholder="Search…"></os-text-field>`;
+		await tick();
+
+		const el = host.querySelector( 'os-text-field' )!;
+		expect( el.shadowRoot!.querySelector( 'label' ) ).toBeNull();
+		const input = el.shadowRoot!.querySelector( 'input' ) as HTMLInputElement;
+		// The renderer drops an empty aria-label entirely, so the absence
+		// reads as null — no attribute — rather than an empty string.
+		expect( input.getAttribute( 'aria-label' ) ).toBeNull();
+	} );
+
 	test( 'invalid attribute surfaces aria-invalid on the native input', async () => {
 		host.innerHTML = `<os-text-field value="x" invalid></os-text-field>`;
 		await tick();
