@@ -1050,8 +1050,10 @@ body.os-has-fullscreen-window .os-shell {
 	position: absolute;
 	top: 6px;
 	inset-inline-end: 6px;
-	width: 22px;
-	height: 22px;
+	/* 24px is the WCAG 2.2 SC 2.5.8 floor. The glyph inside is unchanged;
+	   only the target grows. */
+	width: 24px;
+	height: 24px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1138,8 +1140,8 @@ body.os-has-fullscreen-window .os-shell {
 .os-widgets__chrome .os-widgets__card-close {
 	position: static;
 	opacity: 0.7;
-	width: 20px;
-	height: 20px;
+	width: 24px;
+	height: 24px;
 }
 
 .os-widgets__chrome .os-widgets__card-close:hover,
@@ -1155,7 +1157,8 @@ body.os-has-fullscreen-window .os-shell {
  * no-op). The DOM node stays mounted either way so state flips
  * don't rebuild chrome.
  *
- * Styling mirrors the inline close button: 20×20 round tile,
+ * Styling mirrors the inline close button: 24×24 round tile
+ * (the WCAG 2.2 SC 2.5.8 target-size floor),
  * dimmed by default, full-opacity on hover / focus. Distinct hover
  * color (theme accent, not red) signals "put back" vs. "remove."
  */
@@ -1168,8 +1171,8 @@ body.os-has-fullscreen-window .os-shell {
 	background: var( --os-ui-scrim, rgba( 0, 0, 0, 0.55 ) );
 	color: rgba( 255, 255, 255, 0.75 );
 	border-radius: 50%;
-	width: 20px;
-	height: 20px;
+	width: 24px;
+	height: 24px;
 	cursor: pointer;
 	opacity: 0.7;
 	transition:
