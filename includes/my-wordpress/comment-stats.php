@@ -19,9 +19,14 @@
  *     low-capability author cannot read comments on posts they can't
  *     otherwise see: private, sealed behind a password, or of a post
  *     type with no readable front end at all.
- *   - Past those two gates, the comment itself must be visible:
- *     approved, OR the user can `moderate_comments`, OR they're
- *     the comment author.
+ *   - Past those two gates, the comment itself must be visible —
+ *     `openstation_my_wordpress_comment_is_visible()`: approved, OR the
+ *     user can `moderate_comments`, OR they're the comment author.
+ *   - The thread around it (parent, replies) is scoped to the post
+ *     those two gates just authorized, and each member runs the same
+ *     visibility test. `comment_post_ID` and `comment_parent` are
+ *     independent columns, so "the parent of a readable comment" is not
+ *     by itself a readable comment.
  *   - Author email / IP / user-agent only ship to viewers with
  *     `moderate_comments`.
  *
@@ -109,6 +114,32 @@ function openstation_my_wordpress_can_read_comment_post( $post ) {
 }
 
 /**
+ * Whether a comment's own moderation state lets the current user see it.
+ *
+ * The parent-post gate above decides whether the caller may see comments
+ * on that post at all; this decides whether they may see *this* comment:
+ * approved ones are public, anything pending, spam or trashed is for
+ * moderators and for the person who wrote it.
+ *
+ * Applied to the requested comment and to the thread parent alike —
+ * the parent is reached by id, not by a query that filters on status,
+ * so without this its excerpt would ship whatever its status.
+ *
+ * @param WP_Comment $comment Comment to test.
+ * @return bool
+ */
+function openstation_my_wordpress_comment_is_visible( $comment ) {
+	if ( '1' === (string) $comment->comment_approved ) {
+		return true;
+	}
+	if ( current_user_can( 'moderate_comments' ) ) {
+		return true;
+	}
+	$author_id = (int) $comment->user_id;
+	return $author_id > 0 && (int) get_current_user_id() === $author_id;
+}
+
+/**
  * Aggregator callback.
  *
  * @param WP_REST_Request $request REST request.
@@ -116,8 +147,13 @@ function openstation_my_wordpress_can_read_comment_post( $post ) {
  */
 function openstation_my_wordpress_comment_stats_callback( $request ) {
 	global $wpdb;
+	// `\d+` matches 0 and absint() keeps it, so the zero has to be
+	// refused here: get_comment( 0 ) falls back to $GLOBALS['comment'],
+	// which would answer /comment-stats/0 with whatever comment another
+	// plugin happened to leave in the global instead of the documented
+	// 404. Same hazard as get_post( 0 ) below, one level up.
 	$comment_id = (int) $request->get_param( 'id' );
-	$comment    = get_comment( $comment_id );
+	$comment    = $comment_id > 0 ? get_comment( $comment_id ) : null;
 	if ( ! $comment ) {
 		return new WP_Error(
 			'openstation_comment_not_found',
@@ -146,11 +182,8 @@ function openstation_my_wordpress_comment_stats_callback( $request ) {
 
 	$can_moderate = current_user_can( 'moderate_comments' );
 	$is_approved  = '1' === (string) $comment->comment_approved;
-	$is_self      = is_user_logged_in()
-		&& (int) get_current_user_id() === (int) $comment->user_id
-		&& (int) $comment->user_id > 0;
 
-	if ( ! $is_approved && ! $can_moderate && ! $is_self ) {
+	if ( ! openstation_my_wordpress_comment_is_visible( $comment ) ) {
 		return new WP_Error(
 			'openstation_comment_forbidden',
 			__( 'You do not have permission to view this comment.', 'desktop-mode' ),
@@ -238,10 +271,19 @@ function openstation_my_wordpress_comment_stats_callback( $request ) {
 	}
 
 	// ----- Parent comment (if this is a reply) -------------------------
+	// Only the thread above it on the SAME post, and only if its own
+	// status allows. The gates at the top authorized one post and one
+	// comment; `comment_post_ID` and `comment_parent` are independent
+	// columns, and wp_insert_comment() will happily write a parent that
+	// lives on another post, so an excerpt from an unreadable post could
+	// otherwise ride in here on a readable comment.
 	$parent_payload = null;
 	if ( (int) $comment->comment_parent > 0 ) {
 		$parent_comment = get_comment( (int) $comment->comment_parent );
-		if ( $parent_comment ) {
+		if ( $parent_comment
+			&& (int) $parent_comment->comment_post_ID === (int) $comment->comment_post_ID
+			&& openstation_my_wordpress_comment_is_visible( $parent_comment )
+		) {
 			$parent_payload = array(
 				'id'         => (int) $parent_comment->comment_ID,
 				'authorName' => (string) $parent_comment->comment_author,
@@ -255,6 +297,11 @@ function openstation_my_wordpress_comment_stats_callback( $request ) {
 	}
 
 	// ----- Replies (direct children) -----------------------------------
+	// Scoped to the authorized post for the same reason as the parent
+	// above: `comment_parent` alone would pull in a comment stored
+	// against a post the caller cannot read. A reply on another post is
+	// not a reply to this thread anyway.
+	//
 	// Static SQL literal — must not go through a %s placeholder, which
 	// would quote it into an adjacent string literal and break the clause.
 	$reply_status_sql = $can_moderate
@@ -267,10 +314,12 @@ function openstation_my_wordpress_comment_stats_callback( $request ) {
 				comment_date_gmt, comment_content, comment_approved, user_id
 			FROM {$wpdb->comments}
 			WHERE comment_parent = %d
+				AND comment_post_ID = %d
 				AND {$reply_status_sql}
 			ORDER BY comment_date_gmt ASC
 			LIMIT 20",
-			$comment->comment_ID
+			$comment->comment_ID,
+			$comment->comment_post_ID
 		),
 		ARRAY_A
 	);

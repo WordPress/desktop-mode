@@ -33,6 +33,7 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 	const INTERNAL_TYPE = 'os_test_internal';
 
 	private $published_post_id;
+	private $private_post_id;
 	private $published_comment_id;
 	private $private_comment_id;
 	private $protected_comment_id;
@@ -74,7 +75,7 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 				'post_status' => 'publish',
 			)
 		);
-		$private_post_id = self::factory()->post->create(
+		$this->private_post_id = self::factory()->post->create(
 			array(
 				'post_author' => self::$admin_id,
 				'post_status' => 'private',
@@ -103,7 +104,7 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 		);
 		$this->private_comment_id = self::factory()->comment->create(
 			array(
-				'comment_post_ID'  => $private_post_id,
+				'comment_post_ID'  => $this->private_post_id,
 				'comment_approved' => '1',
 			)
 		);
@@ -287,6 +288,102 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 		$response = $this->dispatch( $this->orphan_comment_id );
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertNull( $response->get_data()['post'] );
+	}
+
+	/**
+	 * `comment_post_ID` and `comment_parent` are independent columns, so
+	 * a comment on a readable post can name a parent that lives on an
+	 * unreadable one. The thread payload is scoped to the authorized
+	 * post, so neither direction carries an excerpt across: not the
+	 * parent of the readable comment, and not a reply stored against the
+	 * private post.
+	 *
+	 * @covers ::openstation_my_wordpress_comment_stats_callback
+	 */
+	public function test_thread_does_not_cross_into_an_unreadable_post() {
+		$on_private = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->private_post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Secret thread content.',
+			)
+		);
+		// A readable comment whose parent lives on the private post.
+		$child = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->published_post_id,
+				'comment_parent'   => $on_private,
+				'comment_approved' => '1',
+			)
+		);
+		// ...and a reply stored against the private post, pointing at a
+		// comment on the public one.
+		$cross_reply = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->private_post_id,
+				'comment_parent'   => $this->published_comment_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Secret reply content.',
+			)
+		);
+
+		wp_set_current_user( self::$author_id );
+
+		$data = $this->dispatch( $child )->get_data();
+		$this->assertNull( $data['parent'], 'A parent on another post is not this thread.' );
+
+		$data = $this->dispatch( $this->published_comment_id )->get_data();
+		$this->assertNotContains(
+			$cross_reply,
+			wp_list_pluck( $data['replies'], 'id' ),
+			'A reply stored against another post is not this thread.'
+		);
+	}
+
+	/**
+	 * The thread parent is reached by id, not by a query that filters on
+	 * status, so its own visibility has to be tested: a pending parent
+	 * stays out for a caller who cannot moderate.
+	 *
+	 * @covers ::openstation_my_wordpress_comment_is_visible
+	 */
+	public function test_pending_thread_parent_is_hidden_from_non_moderators() {
+		$pending = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->published_post_id,
+				'comment_approved' => '0',
+			)
+		);
+		$child = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->published_post_id,
+				'comment_parent'   => $pending,
+				'comment_approved' => '1',
+			)
+		);
+
+		wp_set_current_user( self::$author_id );
+		$this->assertNull( $this->dispatch( $child )->get_data()['parent'] );
+
+		wp_set_current_user( self::$admin_id );
+		$this->assertSame( $pending, $this->dispatch( $child )->get_data()['parent']['id'] );
+	}
+
+	/**
+	 * `/comment-stats/0` matches the route's `\d+`, and get_comment( 0 )
+	 * falls back to `$GLOBALS['comment']` — so a stray global must not
+	 * stand in for the comment that was asked for.
+	 *
+	 * @covers ::openstation_my_wordpress_comment_stats_callback
+	 */
+	public function test_zero_id_is_not_found_even_with_a_global_comment() {
+		wp_set_current_user( self::$admin_id );
+
+		$GLOBALS['comment'] = get_comment( $this->published_comment_id );
+		$status             = $this->dispatch( 0 )->get_status();
+		unset( $GLOBALS['comment'] );
+
+		$this->assertSame( 404, $status );
 	}
 
 	/**
