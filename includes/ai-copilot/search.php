@@ -617,6 +617,17 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
  * verdict when the comment-moderation analysis happens to have run, but
  * its absence never blocks the entity from being returned.
  *
+ * The `$entity_id` arrives from the model's structured answer, not from a
+ * server-side search result, so it is untrusted: the model can name any id
+ * whether or not a search tool ever surfaced it. Every branch therefore
+ * re-checks the current user's authorization against the resolved object
+ * before emitting anything. The id must resolve to a real post or page (not
+ * a CPT row of some other plugin); a private/draft/pending/future post is
+ * withheld unless the user can `read_post` it; an unapproved comment (and its
+ * moderation verdicts) is withheld unless the user can `moderate_comments`.
+ * The edit link follows the matching edit capability. Model output is never
+ * an authorization decision.
+ *
  * @param string $entity_type 'post' | 'page' | 'comment'.
  * @param int    $entity_id
  * @return array|null
@@ -626,9 +637,20 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 
 	if ( in_array( $entity_type, array( 'post', 'page' ), true ) ) {
 		$post = get_post( $entity_id );
-		if ( ! $post instanceof WP_Post ) {
+
+		// The id must resolve to an actual post or page — the only types the
+		// search tools surface. Without this, a model-named id could resolve
+		// a plugin's non-public CPT row, whose `publish` status would satisfy
+		// the viewability check below even though the type is never queryable.
+		if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
 			return null;
 		}
+
+		// A publicly viewable post is public; anything else needs read authorization.
+		if ( ! is_post_publicly_viewable( $post ) && ! current_user_can( 'read_post', $entity_id ) ) {
+			return null;
+		}
+
 		return array(
 			'id'       => $entity_id,
 			'type'     => $post->post_type,
@@ -646,9 +668,16 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 		if ( ! $comment instanceof WP_Comment ) {
 			return null;
 		}
-		$meta        = openstation_ai_get_meta( 'comment', $entity_id );
+
+		// An approved comment is public; unapproved/spam needs moderation rights.
+		$can_moderate = current_user_can( 'moderate_comments' );
+		if ( '1' !== $comment->comment_approved && ! $can_moderate ) {
+			return null;
+		}
+
+		$meta        = $can_moderate ? openstation_ai_get_meta( 'comment', $entity_id ) : null;
 		$parent_post = get_post( $comment->comment_post_ID );
-		return array(
+		$entity      = array(
 			'id'         => $entity_id,
 			'type'       => 'comment',
 			'excerpt'    => openstation_ai_search_excerpt( $comment->comment_content ),
@@ -656,10 +685,18 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 			'post_title' => $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '',
 			'post_url'   => $parent_post ? (string) get_permalink( $parent_post ) : '',
 			'url'        => (string) get_comment_link( $comment ),
-			'edit_url'   => admin_url( 'comment.php?action=editcomment&c=' . $entity_id ),
-			'harmful'    => $meta ? (bool) ( $meta['harmful'] ?? false ) : false,
-			'spam'       => $meta ? (bool) ( $meta['spam'] ?? false ) : false,
+			'edit_url'   => current_user_can( 'edit_comment', $entity_id )
+				? admin_url( 'comment.php?action=editcomment&c=' . $entity_id )
+				: '',
 		);
+
+		// Moderation verdicts are for moderators only.
+		if ( $can_moderate ) {
+			$entity['harmful'] = $meta ? (bool) ( $meta['harmful'] ?? false ) : false;
+			$entity['spam']    = $meta ? (bool) ( $meta['spam'] ?? false ) : false;
+		}
+
+		return $entity;
 	}
 
 	return null;

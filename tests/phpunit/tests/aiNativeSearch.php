@@ -201,4 +201,162 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 			'A duplicate label means a resumable tool fell through to the default post wording.'
 		);
 	}
+
+	/**
+	 * The model can name any id; a Subscriber must not read a private post
+	 * through it. The entity builder re-checks authorization instead of
+	 * trusting the model-supplied id.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_private_post_from_subscriber() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $subscriber );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $post_id ),
+			'A Subscriber must not read a private post through the entity builder.'
+		);
+	}
+
+	/**
+	 * A draft/pending/future post is equally withheld — the guard keys off
+	 * read authorization, not the single `private` status.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_draft_post_from_subscriber() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'draft', 'post_title' => 'Unpublished' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull( openstation_ai_search_build_entity( 'post', $post_id ) );
+	}
+
+	/**
+	 * An administrator, who can read private content, still gets the record.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_returns_private_post_for_administrator() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'post', $post_id );
+		$this->assertIsArray( $entity );
+		$this->assertSame( 'private', $entity['status'] );
+		$this->assertSame( 'Secret plans', $entity['title'] );
+	}
+
+	/**
+	 * A model-named id resolving to a non-public CPT row is withheld even
+	 * though its status is `publish` — the branch pins the actual post type
+	 * to post/page, because a non-viewable type's public status would
+	 * otherwise satisfy both the viewability check and `read_post`.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_non_public_cpt_row() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'os_secret_cpt',
+				'post_status'  => 'publish',
+				'post_title'   => 'Internal record',
+				'post_content' => 'Plugin-private data.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $post_id ),
+			'A non-public CPT row must not be readable through the entity builder.'
+		);
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
+	 * An unapproved comment (its content and moderation verdicts) is
+	 * withheld from a Subscriber.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_unapproved_comment_from_subscriber() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '0',
+				'comment_content'  => 'Pending moderation.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $comment_id ),
+			'A Subscriber must not read an unapproved comment through the entity builder.'
+		);
+	}
+
+	/**
+	 * A non-moderator viewing an approved comment gets the public record but
+	 * neither the moderation verdicts nor the wp-admin edit link.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_suppresses_moderation_fields_for_non_moderator() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Great write-up.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		$this->assertIsArray( $entity );
+		$this->assertArrayNotHasKey( 'harmful', $entity, 'Verdicts are moderator-only.' );
+		$this->assertArrayNotHasKey( 'spam', $entity, 'Verdicts are moderator-only.' );
+		$this->assertSame( '', $entity['edit_url'], 'The edit link needs edit_comment.' );
+	}
+
+	/**
+	 * A moderator viewing an approved comment still sees the verdicts and
+	 * the edit link — the gate withholds nothing they are entitled to.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_exposes_moderation_fields_to_moderator() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Great write-up.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		$this->assertIsArray( $entity );
+		$this->assertArrayHasKey( 'harmful', $entity );
+		$this->assertArrayHasKey( 'spam', $entity );
+		$this->assertNotSame( '', $entity['edit_url'] );
+	}
 }
