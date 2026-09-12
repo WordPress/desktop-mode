@@ -199,6 +199,15 @@ Registering an ability agents can call:
 
 - [ ] Does its `permission_callback` check a capability for the
       **specific object**, not just a blanket `edit_posts`?
+- [ ] If it returns a post body, does it gate the **post password**
+      separately from `read_post`? WordPress splits the two on purpose:
+      `read_post` decides visibility (published / private / draft),
+      `post_password_required()` decides whether the body may be shown.
+      A read ability that returns raw `post_content` has no empty
+      rendered field to fall back to, so it must refuse a sealed post
+      unless the caller can `edit_post` it — the escape hatch Core's
+      `WP_REST_Posts_Controller::check_password_required()` grants.
+      `desktop-mode/get-post` is the worked example.
 - [ ] Would a contributor invoking it through an admin-role agent get
       more than they should? (If the ceiling is doing all the work,
       say so in the ability's description.)
