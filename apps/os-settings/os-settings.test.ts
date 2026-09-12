@@ -122,6 +122,20 @@ describe( 'OpenStation Preferences — the frame', () => {
 		expect( tabCtx.getOsSettings() ).toMatchObject( { accent: 'pulse' } );
 	} );
 
+	test( 'a registry tab draws the icon-set glyph it names, and a spacer otherwise', () => {
+		registerSettingsTab( { id: 'acme', label: 'Acme', icon: 'bell', render: () => undefined } );
+		paint();
+		const named = root.querySelector( '#os-settings-nav > os-tab[value="ext-acme"]' );
+		expect( named?.querySelector( 'svg' ) ).not.toBeNull();
+		expect( named?.querySelector( '.os-settings__nav-glyph-blank' ) ).toBeNull();
+
+		registerSettingsTab( { id: 'acme', label: 'Acme', icon: 'not-an-icon', render: () => undefined } );
+		paint();
+		const unknown = root.querySelector( '#os-settings-nav > os-tab[value="ext-acme"]' );
+		expect( unknown?.querySelector( 'svg' ) ).toBeNull();
+		expect( unknown?.querySelector( '.os-settings__nav-glyph-blank' ) ).not.toBeNull();
+	} );
+
 	test( 'an admin-only registry tab is hidden from an editor', () => {
 		registerSettingsTab( { id: 'acme', label: 'Acme', capability: 'manage_options', render: () => undefined } );
 		paint( false );

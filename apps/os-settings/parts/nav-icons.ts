@@ -43,7 +43,7 @@
  * needing a second set of rules to keep the two in step.
  */
 
-import { osIcon } from '../../../src/ui/icons';
+import { isOsIconName, osIcon } from '../../../src/ui/icons';
 
 /**
  * Partial because most ids have no glyph: only the built-in pages
@@ -65,10 +65,10 @@ const NAV = { size: null } as const;
  * Tab id to glyph. Ids match the page table in `pages.ts`.
  *
  * A tab with no entry renders without a glyph and keeps its label
- * aligned with the rest, which is the case every third-party tab is
- * in: the settings-tab registry has no icon field, so a plugin cannot
- * supply one even if it wanted to. See the note on the empty-icon
- * spacer in `os-settings.css`.
+ * aligned with the rest. Registry tabs name their own glyph through
+ * `icon` on the registration — see `registryNavIcon()` — and land
+ * here only when they don't. See the note on the empty-icon spacer
+ * in `os-settings.css`.
  */
 export const NAV_ICONS: NavIconMap = {
 	/*
@@ -176,3 +176,14 @@ export const NAV_ICONS: NavIconMap = {
 	 */
 	about: () => osIcon( 'info', NAV ),
 };
+
+/**
+ * Glyph for a registry tab: the icon-set name it registered, else the
+ * shell's own table by raw id (File Associations), else none.
+ */
+export function registryNavIcon( id: string, icon?: string ): ( () => SVGSVGElement ) | undefined {
+	if ( icon && isOsIconName( icon ) ) {
+		return () => osIcon( icon, NAV );
+	}
+	return NAV_ICONS[ id ];
+}
