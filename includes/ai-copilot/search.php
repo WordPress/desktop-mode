@@ -464,8 +464,13 @@ function openstation_ai_search_excerpt( $content ) {
  * comment text or the parent title. Mirrors Core's
  * `WP_REST_Comments_Controller::check_read_post_permission()`:
  *
- * - a password-protected parent is readable only by someone who could edit it
- *   (there is no way to supply the password over the ability's GET dispatch);
+ * - a password-protected parent needs the password satisfied or `edit_post`.
+ *   `post_password_required()` honours the `wp-postpass` cookie Core's
+ *   password form sets, and that is deliberate Core parity, not a gap: the
+ *   cookie only exists because the caller already entered the correct
+ *   password, and Core's comments controller reads the same cookie. The
+ *   ability itself has no password input, so a caller who never unlocked
+ *   the post front-end is refused;
  * - a publicly viewable parent (public status AND viewable post type) is
  *   readable by anyone the ability admits;
  * - a parent whose post TYPE is not viewable (an internal/admin-only CPT)

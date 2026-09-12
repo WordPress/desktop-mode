@@ -288,9 +288,9 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A Subscriber must not read a comment on a PASSWORD-PROTECTED post
-	 * through `search_comments` — there is no way to supply the password over
-	 * the ability's GET dispatch.
+	 * A Subscriber who never satisfied the post password must not read a
+	 * comment on a PASSWORD-PROTECTED post through `search_comments` — the
+	 * ability itself has no password input.
 	 *
 	 * @covers ::openstation_ai_search_fetch_comments
 	 * @covers ::openstation_ai_can_read_comment_parent
@@ -317,6 +317,55 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 
 		$ids = wp_list_pluck( $result['items'], 'id' );
 		$this->assertNotContains( $hidden, $ids, 'A Subscriber must not see a comment on a password-protected post.' );
+	}
+
+	/**
+	 * A caller who HAS satisfied the post password — the `wp-postpass`
+	 * cookie Core's password form sets after the correct password is
+	 * entered — reads the discussion again. Deliberate Core parity, not a
+	 * bypass: `post_password_required()` honours that cookie everywhere,
+	 * including `WP_REST_Comments_Controller::check_read_post_permission()`,
+	 * and refusing cookie-holders would lock out readers the author gave
+	 * the password to.
+	 *
+	 * @covers ::openstation_ai_can_read_post
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_search_comments_honours_a_satisfied_post_password() {
+		$protected_id = self::factory()->post->create(
+			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
+		);
+		$comment_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $protected_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Unlocked marker greenhouse behind a password.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		// The cookie wp-login.php?action=postpass sets for the correct password.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher = new PasswordHash( 8, true );
+
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'hunter2' );
+		try {
+			$result = openstation_ai_search_dispatch_tool(
+				'search_comments',
+				array( 'query' => 'greenhouse', 'offset' => 0 )
+			);
+			$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		} finally {
+			unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+		}
+
+		$this->assertContains(
+			$comment_id,
+			wp_list_pluck( $result['items'], 'id' ),
+			'A caller who entered the post password reads its discussion, as on the front end.'
+		);
+		$this->assertIsArray( $entity, 'Entity hydration honours the satisfied password too.' );
 	}
 
 	/**
