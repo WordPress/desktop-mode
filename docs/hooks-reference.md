@@ -4109,6 +4109,8 @@ apply_filters( 'openstation_my_wordpress_term_stats', array $payload, string $ta
 
 The per-term stats payload returned by `GET /desktop-mode/v1/term-stats/<taxonomy>/<id>` — profile, counts, recent posts, top authors, co-terms, activity, and milestones. Filter it to splice in extra metrics before it reaches the WP Explorer window.
 
+The payload is **viewer-dependent**: `counts.posts` and `recent` only cover post statuses the current user may read (unpublished rows are additionally filtered per-row through `current_user_can( 'read_post', … )`), so a subscriber's `counts.posts.total` counts published posts only while an editor's includes drafts, pending and scheduled ones. Never cache the filtered payload under a term-only key — a copy built for a privileged viewer would hand another author's unpublished posts to everyone else.
+
 ### `openstation_my_wordpress_post_contributors` — Experimental (filter)
 
 ```php
