@@ -9,13 +9,16 @@
  * is selected.
  *
  * Permissions, in gate order:
- *   - The route wears the same (filterable) gate as the My
- *     WordPress window: `openstation_my_wordpress_user_can_use()`,
- *     `edit_posts` by default.
+ *   - The route wears the module's authorization gate,
+ *     `openstation_my_wordpress_user_can_use()` — `edit_posts` by
+ *     default, filterable. (That gate does *not* decide WP Explorer's
+ *     window or launcher; the app declares its own capabilities. See
+ *     the helper's docblock in `window.php`.)
  *   - The caller must be able to read the comment's parent post —
  *     see `openstation_my_wordpress_can_read_comment_post()` — so a
- *     low-capability author cannot read comments on private or
- *     password-protected posts they can't otherwise see.
+ *     low-capability author cannot read comments on posts they can't
+ *     otherwise see: private, sealed behind a password, or of a post
+ *     type with no readable front end at all.
  *   - Past those two gates, the comment itself must be visible:
  *     approved, OR the user can `moderate_comments`, OR they're
  *     the comment author.
@@ -38,10 +41,11 @@ function openstation_my_wordpress_register_comment_stats_route() {
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => 'openstation_my_wordpress_comment_stats_callback',
 			'permission_callback' => static function () {
-				// The dossier is an author's tool: it wears the same
-				// filterable gate as the My WordPress window itself.
-				// Bare is_user_logged_in() let any subscriber read
-				// it (OPENSTA-155).
+				// The dossier is an author's tool, so it wears the
+				// module's authorization gate rather than a gate of its
+				// own. Bare is_user_logged_in() let any subscriber read
+				// it (OPENSTA-155). WP Explorer's window and launcher
+				// are gated separately, by the app's own capabilities.
 				return openstation_my_wordpress_user_can_use();
 			},
 			'args'                => array(
@@ -59,11 +63,33 @@ add_action( 'rest_api_init', 'openstation_my_wordpress_register_comment_stats_ro
 /**
  * Whether the current user may read the post a comment belongs to.
  *
- * Mirrors `WP_REST_Comments_Controller::check_read_post_permission()`:
- * a password-protected parent needs `edit_post`; any other parent
- * needs `read_post`. An orphaned comment (its post is gone) is
- * moderators-only. Without this, an approved comment on a private or
- * password-protected post read exactly like one on a public post.
+ * Three gates, in order:
+ *
+ *   1. **No parent at all.** An orphaned comment (`comment_post_ID` of
+ *      0, or a post since deleted) has nothing to authorize against, so
+ *      it is moderators-only.
+ *   2. **A sealed parent** needs `edit_post` — the escape hatch
+ *      `WP_REST_Posts_Controller::check_password_required()` grants.
+ *      Note `post_password_required()` reads the `wp-postpass` cookie:
+ *      a caller who has already entered the password is *not* looking at
+ *      a sealed post, and falls through to the gates below like any
+ *      other reader.
+ *   3. **A parent whose post type has no readable front end** needs
+ *      `edit_post` too. This is the branch `read_post` alone misses:
+ *      `map_meta_cap()` resolves `read_post` on a *published* post to
+ *      the type's `read` capability, which is plain `read` on any post
+ *      type registered with `map_meta_cap`, and every logged-in user
+ *      holds it. So a published post of an internal post type — a
+ *      plugin's submission log, queue or internal note, none of which
+ *      a visitor can open — would otherwise read like a public post.
+ *      `openstation_ai_can_read_post()` takes the same position.
+ *
+ * Anything else is Core's `read_post`, matching
+ * `WP_REST_Comments_Controller::check_read_post_permission()`. Unlike
+ * the AI sibling this keeps `read_post` as the floor for viewable types
+ * rather than short-circuiting publicly viewable posts: that helper
+ * serves search, which is about public content, while this one mirrors
+ * Core's single-comment read.
  *
  * @param WP_Post|null $post Parent post, or null when it no longer exists.
  * @return bool
@@ -72,7 +98,11 @@ function openstation_my_wordpress_can_read_comment_post( $post ) {
 	if ( ! $post ) {
 		return current_user_can( 'moderate_comments' );
 	}
-	if ( post_password_required( $post ) ) {
+	if ( post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID ) ) {
+		return false;
+	}
+	$post_type = get_post_type_object( $post->post_type );
+	if ( ! $post_type || ! is_post_type_viewable( $post_type ) ) {
 		return current_user_can( 'edit_post', $post->ID );
 	}
 	return current_user_can( 'read_post', $post->ID );

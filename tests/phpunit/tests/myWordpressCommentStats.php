@@ -3,12 +3,14 @@
  * Tests for the `/desktop-mode/v1/comment-stats/<id>` REST
  * endpoint's authorization model (OPENSTA-155).
  *
- * The route wears the My WordPress window's own filterable gate
+ * The route wears the My WordPress module's authorization gate
  * (`openstation_my_wordpress_user_can_use()`, `edit_posts` by
- * default), and the handler additionally refuses when the caller
- * can't read the comment's parent post. A low-capability account
- * must not read comments on private or password-protected posts it
- * can't otherwise see, and an orphaned comment (its post is gone)
+ * default — it does not gate WP Explorer's window or launcher, which
+ * the app's own capabilities decide), and the handler additionally
+ * refuses when the caller can't read the comment's parent post. A
+ * low-capability account must not read comments on a post it can't
+ * otherwise see: private, sealed behind a password, or of a post type
+ * with no readable front end. An orphaned comment (its post is gone)
  * is moderators-only.
  *
  * @package WordPress
@@ -23,10 +25,18 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 	protected static $subscriber_id;
 	protected static $author_id;
 
+	/**
+	 * An internal post type: not publicly queryable, so it has no
+	 * readable front end, but `map_meta_cap` is on — which is what makes
+	 * `read_post` on a *published* one resolve to plain `read`.
+	 */
+	const INTERNAL_TYPE = 'os_test_internal';
+
 	private $published_post_id;
 	private $published_comment_id;
 	private $private_comment_id;
 	private $protected_comment_id;
+	private $internal_comment_id;
 	private $orphan_comment_id;
 
 	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
@@ -40,6 +50,20 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 
 		wp_set_current_user( self::$admin_id );
 		do_action( 'rest_api_init' );
+
+		// The shape a plugin's submission log / queue / internal note
+		// takes: comments, `publish` status, no front end. Unregistered
+		// again in tear_down — the test suite only resets post types for
+		// core's own tests.
+		register_post_type(
+			self::INTERNAL_TYPE,
+			array(
+				'public'             => false,
+				'publicly_queryable' => false,
+				'map_meta_cap'       => true,
+				'supports'           => array( 'title', 'editor', 'comments' ),
+			)
+		);
 
 		// An administrator-owned published, private and
 		// password-protected post, each with one approved comment —
@@ -63,6 +87,13 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 				'post_password' => 'secret',
 			)
 		);
+		$internal_post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$admin_id,
+				'post_status' => 'publish',
+				'post_type'   => self::INTERNAL_TYPE,
+			)
+		);
 
 		$this->published_comment_id = self::factory()->comment->create(
 			array(
@@ -82,12 +113,23 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 				'comment_approved' => '1',
 			)
 		);
+		$this->internal_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $internal_post_id,
+				'comment_approved' => '1',
+			)
+		);
 		$this->orphan_comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => 0,
 				'comment_approved' => '1',
 			)
 		);
+	}
+
+	public function tear_down() {
+		unregister_post_type( self::INTERNAL_TYPE );
+		parent::tear_down();
 	}
 
 	/**
@@ -143,6 +185,62 @@ class Tests_OpenStation_MyWordpressCommentStats extends WP_UnitTestCase {
 	public function test_author_cannot_read_comment_on_protected_post() {
 		wp_set_current_user( self::$author_id );
 		$this->assertSame( 403, $this->dispatch( $this->protected_comment_id )->get_status() );
+	}
+
+	/**
+	 * ...but a caller who has already entered the password is no longer
+	 * looking at a sealed post: `post_password_required()` reads the
+	 * `wp-postpass` cookie, so the read falls through to `read_post` and
+	 * the `edit_post` requirement never applies.
+	 *
+	 * @covers ::openstation_my_wordpress_can_read_comment_post
+	 */
+	public function test_author_reads_comment_on_unlocked_protected_post() {
+		wp_set_current_user( self::$author_id );
+
+		// The same hasher and cookie name post_password_required() reads;
+		// it require_once's the class lazily, so pull it in first.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret' );
+
+		$status = $this->dispatch( $this->protected_comment_id )->get_status();
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertSame( 200, $status );
+	}
+
+	/**
+	 * An author is refused a comment on a *published* post of a post
+	 * type with no readable front end. This is the branch `read_post`
+	 * alone misses: it resolves to plain `read` on a published post, and
+	 * every logged-in user holds that, so without the post-type
+	 * viewability check an internal submission log or queue would read
+	 * like a public post.
+	 *
+	 * @covers ::openstation_my_wordpress_can_read_comment_post
+	 */
+	public function test_author_cannot_read_comment_on_internal_post_type() {
+		wp_set_current_user( self::$author_id );
+
+		// The leak this guards: the caller does hold the capability
+		// `read_post` resolves to here.
+		$this->assertTrue(
+			current_user_can( 'read_post', get_comment( $this->internal_comment_id )->comment_post_ID ),
+			'read_post alone would have authorized this read.'
+		);
+		$this->assertSame( 403, $this->dispatch( $this->internal_comment_id )->get_status() );
+	}
+
+	/**
+	 * An administrator can `edit_post` the internal parent, so the
+	 * dossier still opens for whoever actually administers the type.
+	 *
+	 * @covers ::openstation_my_wordpress_can_read_comment_post
+	 */
+	public function test_admin_reads_comment_on_internal_post_type() {
+		wp_set_current_user( self::$admin_id );
+		$this->assertSame( 200, $this->dispatch( $this->internal_comment_id )->get_status() );
 	}
 
 	/**
