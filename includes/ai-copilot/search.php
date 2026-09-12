@@ -382,7 +382,7 @@ function openstation_ai_search_dispatch_tool( $tool_name, array $args ) {
  * (`WP_Query` `s=`), returning data rich enough for the agent to compare
  * AND for the UI to render links.
  *
- * No AI analysis is required — every published post/page is searchable.
+ * No AI analysis is required — every published, non-password-protected post/page is searchable.
  *
  * Password-protected posts are excluded (`has_password => false`): `publish`
  * is also the status of a password-protected post, and this tool emits the
