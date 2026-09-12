@@ -415,7 +415,13 @@ function openstation_ai_search_can_read_post( $post ) {
  * (`WP_Query` `s=`), returning data rich enough for the agent to compare
  * AND for the UI to render links.
  *
- * No AI analysis is required — every published post/page is searchable.
+ * No AI analysis is required — every published, non-password-protected post/page is searchable.
+ *
+ * Password-protected posts are excluded (`has_password => false`): `publish`
+ * is also the status of a password-protected post, and this tool emits the
+ * stored body as an excerpt without ever passing through `post_password_required()`.
+ * Filtering at the query level keeps them out of both `items` and `found_posts`,
+ * so the `total` counter cannot become an oracle for their contents either.
  *
  * @param string $post_type 'post' | 'page'.
  * @param string $query     Keyword search terms (may be empty to list newest).
@@ -427,6 +433,7 @@ function openstation_ai_search_fetch_posts( $post_type, $query, $offset ) {
 		array(
 			'post_type'              => $post_type,
 			'post_status'            => 'publish',
+			'has_password'           => false,
 			's'                      => (string) $query,
 			'posts_per_page'         => OPENSTATION_AI_SEARCH_BATCH_SIZE,
 			'offset'                 => $offset,
