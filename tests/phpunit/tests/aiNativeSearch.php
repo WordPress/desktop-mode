@@ -79,6 +79,49 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A password-protected post is never returned — its body is content
+	 * WordPress withholds behind `post_password_required()`, and `publish`
+	 * is also the status of a password-protected post. It must not appear in
+	 * `items`, and it must not be counted in `total` (or the counter becomes
+	 * an oracle for the protected body).
+	 *
+	 * @covers ::openstation_ai_search_fetch_posts
+	 */
+	public function test_search_posts_excludes_password_protected_posts() {
+		$public_id = self::factory()->post->create(
+			array(
+				'post_status'  => 'publish',
+				'post_title'   => 'Public paella recipe',
+				'post_content' => 'A Valencian rice dish, freely readable.',
+			)
+		);
+		$secret_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Secret paella recipe',
+				'post_content'  => 'The paella secret nobody should read.',
+			)
+		);
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_posts',
+			array( 'query' => 'paella', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertContains( $public_id, $ids, 'The public post should be found.' );
+		$this->assertNotContains( $secret_id, $ids, 'The password-protected post must not leak its body.' );
+
+		$this->assertSame( 1, $result['count'], 'Only the public post should be counted in the batch.' );
+		$this->assertSame(
+			1,
+			$result['total'],
+			'The protected post must not inflate total — that counter is an oracle for its contents.'
+		);
+	}
+
+	/**
 	 * Comments are found by their text with native comment search, with no
 	 * analysis meta present.
 	 *
