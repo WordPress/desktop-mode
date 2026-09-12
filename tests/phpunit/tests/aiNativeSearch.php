@@ -201,4 +201,139 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 			'A duplicate label means a resumable tool fell through to the default post wording.'
 		);
 	}
+
+	/**
+	 * A Subscriber must not read a comment on a PRIVATE post through
+	 * `search_comments`. "Approved" is a moderation decision, not a grant of
+	 * visibility on the parent discussion.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_hides_comments_on_private_posts_from_subscriber() {
+		$author_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$private_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_author' => $author_id )
+		);
+		$public_id  = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		$hidden  = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Secret marker paellamarker on a private post.',
+			)
+		);
+		$visible = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $public_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Public marker paellamarker on a published post.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'paellamarker', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $hidden, $ids, 'A Subscriber must not see a comment on a private post.' );
+		$this->assertContains( $visible, $ids, 'A comment on a published post is still returned.' );
+	}
+
+	/**
+	 * A Subscriber must not read a comment on a PASSWORD-PROTECTED post
+	 * through `search_comments` — there is no way to supply the password over
+	 * the ability's GET dispatch.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_hides_comments_on_password_posts_from_subscriber() {
+		$protected_id = self::factory()->post->create(
+			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
+		);
+
+		$hidden = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $protected_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Secret marker walledgarden behind a password.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'walledgarden', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $hidden, $ids, 'A Subscriber must not see a comment on a password-protected post.' );
+	}
+
+	/**
+	 * An Administrator, who holds `read_private_posts`, still finds comments
+	 * on private posts — the gate is per-caller readability, not a blanket
+	 * publish-only filter.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_still_shows_private_comments_to_admin() {
+		$private_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Admin-visible marker paellamarker on a private post.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'paellamarker', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertContains( $comment_id, $ids, 'An administrator can read comments on private posts.' );
+	}
+
+	/**
+	 * `search_comments_by_post` on a private post returns nothing — and never
+	 * the parent title — for a Subscriber.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments_by_post
+	 * @covers ::openstation_ai_can_read_post
+	 */
+	public function test_search_comments_by_post_hides_private_post_from_subscriber() {
+		$private_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret roadmap' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'A comment on the secret roadmap.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments_by_post',
+			array( 'post_id' => $private_id, 'query' => '', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $comment_id, $ids, 'A Subscriber must not read comments on a private post.' );
+		$this->assertSame( 0, $result['count'] );
+		$this->assertArrayNotHasKey( 'post_title', $result, 'The private parent title must not leak.' );
+	}
 }

@@ -447,6 +447,64 @@ function openstation_ai_search_excerpt( $content ) {
 }
 
 /**
+ * Whether the current user may read a post the comment tools are about to
+ * surface.
+ *
+ * A comment being `approved` is a moderation decision — it says nothing about
+ * who may see the discussion. An approved comment can hang on a private,
+ * draft, or password-protected post the caller cannot reach, so the comment
+ * search tools must gate on the PARENT POST's visibility before returning the
+ * comment text or the parent title. Mirrors Core's
+ * `WP_REST_Comments_Controller::check_read_post_permission()`:
+ *
+ * - a password-protected parent is readable only by someone who could edit it
+ *   (there is no way to supply the password over the ability's GET dispatch);
+ * - a non-published parent needs the `read_post` capability for that post.
+ *
+ * @param int|WP_Post $post Post ID or object.
+ * @return bool
+ */
+function openstation_ai_can_read_post( $post ) {
+	// An id of 0 must stay unreadable: get_post( 0 ) falls back to the global
+	// $post, which would judge an orphaned comment against an unrelated post.
+	if ( is_numeric( $post ) && (int) $post <= 0 ) {
+		return false;
+	}
+
+	$post = get_post( $post );
+	if ( ! $post instanceof WP_Post ) {
+		return false;
+	}
+
+	if ( post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID ) ) {
+		return false;
+	}
+
+	if ( 'publish' !== $post->post_status && ! current_user_can( 'read_post', $post->ID ) ) {
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Whether the current user may read the post a comment is attached to.
+ *
+ * Used to drop comments on posts the caller cannot see from the comment
+ * search results. See {@see openstation_ai_can_read_post()}.
+ *
+ * @param int|WP_Comment $comment Comment ID or object.
+ * @return bool
+ */
+function openstation_ai_can_read_comment_parent( $comment ) {
+	$comment = get_comment( $comment );
+	if ( ! $comment instanceof WP_Comment ) {
+		return false;
+	}
+	return openstation_ai_can_read_post( (int) $comment->comment_post_ID );
+}
+
+/**
  * Keyword-searches approved comments across all posts with WordPress's
  * native comment search (`get_comments` `search=`).
  *
@@ -489,6 +547,12 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 	if ( $parent_ids ) {
 		_prime_post_caches( $parent_ids, false, false );
 	}
+
+	// "Approved" is a moderation decision, not a visibility one: drop comments
+	// whose parent post the caller cannot read (private / draft / password),
+	// so the comment text and the parent title never leak. See
+	// openstation_ai_can_read_comment_parent().
+	$comments = array_values( array_filter( $comments, 'openstation_ai_can_read_comment_parent' ) );
 
 	$items = array();
 	foreach ( $comments as $comment ) {
@@ -551,6 +615,23 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
 			'total'    => 0,
 			'has_more' => false,
 			'error'    => 'post_id must be a positive integer.',
+		);
+	}
+
+	// Gate on the parent post's visibility before touching its comments or
+	// title: an approved comment on a private / password-protected post must
+	// not leak through the "by post" tool either. See
+	// openstation_ai_can_read_post().
+	if ( ! openstation_ai_can_read_post( $post_id ) ) {
+		return array(
+			'tool'     => 'search_comments_by_post',
+			'post_id'  => $post_id,
+			'offset'   => $offset,
+			'items'    => array(),
+			'count'    => 0,
+			'total'    => 0,
+			'has_more' => false,
+			'error'    => 'Post not found or not readable.',
 		);
 	}
 
