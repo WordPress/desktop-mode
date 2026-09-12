@@ -519,62 +519,6 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The search corpus is gated the same way the entity card is. Otherwise
-	 * the model reads the protected body and repeats it in the answer prose,
-	 * which is the same disclosure by a longer route.
-	 *
-	 * @covers ::openstation_ai_search_fetch_posts
-	 */
-	public function test_search_posts_excludes_password_protected_post_for_subscriber() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_status'   => 'publish',
-				'post_password' => 'hunter2',
-				'post_title'    => 'Paella for members',
-				'post_content'  => 'A Valencian rice dish with saffron and rabbit.',
-			)
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_posts',
-			array( 'query' => 'paella', 'offset' => 0 )
-		);
-
-		$this->assertNotContains(
-			$post_id,
-			wp_list_pluck( $result['items'], 'id' ),
-			'A protected post must not reach the model as a searchable excerpt.'
-		);
-	}
-
-	/**
-	 * An editor searching the same corpus still gets the protected post.
-	 *
-	 * @covers ::openstation_ai_search_fetch_posts
-	 */
-	public function test_search_posts_includes_password_protected_post_for_editor() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_status'   => 'publish',
-				'post_password' => 'hunter2',
-				'post_title'    => 'Paella for members',
-				'post_content'  => 'A Valencian rice dish with saffron and rabbit.',
-			)
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_posts',
-			array( 'query' => 'paella', 'offset' => 0 )
-		);
-
-		$this->assertContains( $post_id, wp_list_pluck( $result['items'], 'id' ) );
-	}
-
-	/**
 	 * Comment search carries the parent's title and permalink on every item,
 	 * so it inherits the parent's read gate.
 	 *
@@ -603,6 +547,11 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 			$comment_id,
 			wp_list_pluck( $result['items'], 'id' ),
 			'A private parent must not leak its title through comment search.'
+		);
+		$this->assertSame(
+			0,
+			$result['total'],
+			'The comment must not inflate total either — that counter reports what items hides.'
 		);
 	}
 

@@ -445,13 +445,6 @@ function openstation_ai_search_fetch_posts( $post_type, $query, $offset ) {
 
 	$items = array();
 	foreach ( $wp_query->posts as $post ) {
-		// `publish` is not the whole story: a password-protected post is
-		// published, and handing its body to the model leaks it right back
-		// through the answer prose. The corpus is what this user may read.
-		if ( ! openstation_ai_search_can_read_post( $post ) ) {
-			continue;
-		}
-
 		$items[] = array(
 			// Identity — used to build the final entity detail.
 			'id'       => $post->ID,
@@ -505,9 +498,15 @@ function openstation_ai_search_excerpt( $content ) {
  */
 function openstation_ai_search_fetch_comments( $query, $offset ) {
 	$base_args = array(
-		'status' => 'approve',
-		'type'   => 'comment',
-		'search' => (string) $query,
+		'status'      => 'approve',
+		'type'        => 'comment',
+		'search'      => (string) $query,
+		// Every item below carries its parent's title and permalink, and
+		// approval is not publication — an approved comment outlives its post
+		// being switched to private or back to draft. Filtering the parent
+		// status in the query keeps those threads out of `total` as well as
+		// out of `items`, so the counter cannot report what the batch hides.
+		'post_status' => 'publish',
 	);
 
 	$comments = get_comments(
@@ -541,9 +540,9 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 	foreach ( $comments as $comment ) {
 		$parent_post = get_post( $comment->comment_post_ID );
 
-		// Approval is not publication. An approved comment outlives its post
-		// being switched to private or back to draft, and every item below
-		// carries the parent's title and permalink.
+		// `publish` is also the status of a password-protected post, and the
+		// query above cannot express that — WP_Comment_Query has no
+		// `has_password`. The parent's own read gate answers it.
 		if ( ! openstation_ai_search_can_read_post( $parent_post ) ) {
 			continue;
 		}

@@ -208,6 +208,14 @@ Registering an ability agents can call:
       unless the caller can `edit_post` it — the escape hatch Core's
       `WP_REST_Posts_Controller::check_password_required()` grants.
       `desktop-mode/get-post` is the worked example.
+- [ ] If it returns a **child** object, does it gate the **parent** too?
+      A comment record carries its post's title and permalink, so
+      approval alone does not make it public: an approved comment
+      outlives its post being switched to private or back to draft, and
+      returning it hands out exactly what the post's own gate withholds.
+      Gate the parent by the same rule as the post itself, and prefer
+      the query (`post_status` on `WP_Comment_Query`) over a per-row
+      skip so the batch's `total` cannot report what `items` hides.
 - [ ] Would a contributor invoking it through an admin-role agent get
       more than they should? (If the ceiling is doing all the work,
       say so in the ability's description.)
