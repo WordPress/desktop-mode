@@ -178,13 +178,17 @@ describe( 'Plugins update action with timeout integration', () => {
 		// Render the update button
 		const buttons = pluginActionButtons( host, row );
 		const updateBtn = buttons[ 0 ];
-		expect( updateBtn.textContent ).toBe( 'Update to 2.0.0' );
+		expect( updateBtn.textContent ).toBe( 'Update' );
 
 		// Click the Update button
 		updateBtn.click();
 
 		// Check that row is marked busy immediately
 		expect( host.busy.updating.has( row.plugin ) ).toBe( true );
+		const busyBtn = pluginActionButtons( host, row )[ 0 ];
+		expect( busyBtn.textContent ).toBe( 'Updating…' );
+		expect( busyBtn.hasAttribute( 'disabled' ) ).toBe( true );
+		expect( busyBtn.getAttribute( 'aria-busy' ) ).toBe( 'true' );
 
 		// Clicking again while in flight is ignored
 		updateBtn.click();
@@ -199,12 +203,16 @@ describe( 'Plugins update action with timeout integration', () => {
 		// Failure toast must be shown
 		expect( host.toasts.length ).toBeGreaterThanOrEqual( 1 );
 		expect( host.toasts[ 0 ] ).toContain( 'Update request timed out' );
+		const retryBtn = pluginActionButtons( host, row )[ 0 ];
+		expect( retryBtn.textContent ).toBe( 'Update' );
+		expect( retryBtn.hasAttribute( 'disabled' ) ).toBe( false );
+		expect( retryBtn.hasAttribute( 'aria-busy' ) ).toBe( false );
 
 		// Further clicks work again and trigger a new update attempt
 		( host.rest.updateInstalledPlugin as ReturnType< typeof vi.fn > ).mockImplementation(
 			async () => ( { newVersion: '2.0.0' } ),
 		);
-		updateBtn.click();
+		retryBtn.click();
 
 		expect( host.busy.updating.has( row.plugin ) ).toBe( true );
 		expect( host.rest.updateInstalledPlugin ).toHaveBeenCalledTimes( 2 );
