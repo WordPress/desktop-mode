@@ -24,8 +24,8 @@
  * recent list is gated per row with `read_post`. Otherwise a
  * subscriber could read an administrator's private and draft post
  * titles, authors and dates, and the per-status counts would leak how
- * many hidden posts a term holds. See
- * `openstation_my_wordpress_term_stats_readable_status_clause()`.
+ * many hidden posts a term holds. The readable-status clause is built
+ * in the callback, right above the queries that splice it in.
  *
  * @package OpenStation
  */
@@ -61,82 +61,6 @@ function openstation_my_wordpress_register_term_stats_route() {
 	);
 }
 add_action( 'rest_api_init', 'openstation_my_wordpress_register_term_stats_route' );
-
-/**
- * SQL clause matching the posts in a term the caller may actually read.
- *
- * The endpoint authorises on the *term* (public data), but the posts
- * inside it are not public — a subscriber must never receive another
- * author's private, draft, pending or scheduled post, nor a per-status
- * count that betrays one exists. This returns a parenthesised boolean
- * expression on the aliased posts table `p` admitting only statuses
- * the caller may read, resolved from the registered status objects so
- * a plugin's custom status follows its own visibility flags:
- *
- *   - public statuses, for everyone;
- *   - private-flagged statuses with the post type's
- *     `read_private_posts` capability;
- *   - the remaining non-internal statuses (draft, pending, future and
- *     any registered workflow status — trash and auto-draft are
- *     internal) with `edit_others_posts`, because core maps reading
- *     them to editing them; a scheduled post additionally needs
- *     `edit_published_posts`, mirroring `map_meta_cap()`;
- *   - the caller's own posts in any of those statuses — core grants
- *     an author `read` on their own post whatever its status.
- *
- * The fragment is a static string of `%s` / `%d` placeholders; the
- * caller splices it into a larger query and threads the returned args
- * into the same `$wpdb->prepare()` call in position (right after the
- * `term_taxonomy_id`). It is a close approximation of `read_post` used
- * where a per-row gate is impossible (aggregate counts); the recent
- * list re-checks `current_user_can( 'read_post' )` per row as the
- * authoritative gate.
- *
- * @return array{0:string,1:array} SQL fragment and its prepare args, in order.
- */
-function openstation_my_wordpress_term_stats_readable_status_clause() {
-	$type = get_post_type_object( 'post' );
-
-	$statuses = array_values( get_post_stati( array( 'public' => true ) ) );
-
-	$private_stati = array_values( get_post_stati( array( 'private' => true ) ) );
-	if ( current_user_can( $type->cap->read_private_posts ) ) {
-		$statuses = array_merge( $statuses, $private_stati );
-	}
-
-	$hidden_stati = array_values(
-		get_post_stati(
-			array(
-				'internal' => false,
-				'public'   => false,
-				'private'  => false,
-			)
-		)
-	);
-	if ( current_user_can( $type->cap->edit_others_posts ) ) {
-		foreach ( $hidden_stati as $status ) {
-			if ( 'future' === $status && ! current_user_can( $type->cap->edit_published_posts ) ) {
-				continue;
-			}
-			$statuses[] = $status;
-		}
-	}
-
-	$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
-	$parts        = array( "p.post_status IN ( $placeholders )" );
-	$args         = $statuses;
-
-	$user_id = get_current_user_id();
-	$own     = array_values( array_diff( array_merge( $private_stati, $hidden_stati ), $statuses ) );
-	if ( $user_id > 0 && $own ) {
-		$own_ph  = implode( ', ', array_fill( 0, count( $own ), '%s' ) );
-		$parts[] = "( p.post_author = %d AND p.post_status IN ( $own_ph ) )";
-		$args[]  = $user_id;
-		$args    = array_merge( $args, $own );
-	}
-
-	return array( '( ' . implode( ' OR ', $parts ) . ' )', $args );
-}
 
 /**
  * Aggregator callback. See file docblock for return shape.
@@ -204,7 +128,57 @@ function openstation_my_wordpress_term_stats_callback( $request ) {
 	// titles, authors and dates of administrator-owned drafts/private
 	// posts, and the per-status counts become an oracle for content
 	// they cannot see.
-	list( $status_clause, $status_args ) = openstation_my_wordpress_term_stats_readable_status_clause();
+	//
+	// The sets come from the registered status objects, so a plugin's
+	// custom status follows its own visibility flags: public statuses
+	// for everyone; private-flagged ones with the post type's
+	// read_private_posts; the remaining non-internal statuses (draft,
+	// pending, future and any registered workflow status — trash and
+	// auto-draft are internal) with edit_others_posts, because core
+	// maps reading them to editing them, plus edit_published_posts for
+	// a scheduled post, mirroring map_meta_cap(); and the caller's own
+	// posts in any of those statuses, since core grants an author read
+	// on their own post whatever its status. The clause is a close
+	// approximation of read_post used where a per-row gate is
+	// impossible (the counts); the recent list re-checks read_post per
+	// row as the authoritative gate. It is built inline, from literal
+	// %s/%d placeholder lists only, so its values are visibly bound
+	// through prepare() at both use sites.
+	$type          = get_post_type_object( 'post' );
+	$statuses      = array_values( get_post_stati( array( 'public' => true ) ) );
+	$private_stati = array_values( get_post_stati( array( 'private' => true ) ) );
+	$hidden_stati  = array_values(
+		get_post_stati(
+			array(
+				'internal' => false,
+				'public'   => false,
+				'private'  => false,
+			)
+		)
+	);
+	if ( current_user_can( $type->cap->read_private_posts ) ) {
+		$statuses = array_merge( $statuses, $private_stati );
+	}
+	if ( current_user_can( $type->cap->edit_others_posts ) ) {
+		foreach ( $hidden_stati as $status ) {
+			if ( 'future' === $status && ! current_user_can( $type->cap->edit_published_posts ) ) {
+				continue;
+			}
+			$statuses[] = $status;
+		}
+	}
+
+	$placeholders  = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+	$status_clause = "p.post_status IN ( {$placeholders} )";
+	$status_args   = $statuses;
+
+	$user_id = get_current_user_id();
+	$own     = array_values( array_diff( array_merge( $private_stati, $hidden_stati ), $statuses ) );
+	if ( $user_id > 0 && $own ) {
+		$own_ph        = implode( ', ', array_fill( 0, count( $own ), '%s' ) );
+		$status_clause = "( {$status_clause} OR ( p.post_author = %d AND p.post_status IN ( {$own_ph} ) ) )";
+		$status_args   = array_merge( $status_args, array( $user_id ), $own );
+	}
 
 	// ----- Counts ------------------------------------------------------
 	// Post-status breakdown, restricted to the readable set so the

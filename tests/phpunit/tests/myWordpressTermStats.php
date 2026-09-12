@@ -177,7 +177,7 @@ class Tests_OpenStation_MyWordpressTermStats extends WP_UnitTestCase {
 	 * driven by the registered visibility flags, not a hardcoded
 	 * status list.
 	 *
-	 * @covers ::openstation_my_wordpress_term_stats_readable_status_clause
+	 * @covers ::openstation_my_wordpress_term_stats_callback
 	 */
 	public function test_custom_public_status_is_visible_to_subscribers() {
 		register_post_status( 'showcase', array( 'public' => true ) );
