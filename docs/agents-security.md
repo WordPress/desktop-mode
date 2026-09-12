@@ -213,9 +213,13 @@ Registering an ability agents can call:
       approval alone does not make it public: an approved comment
       outlives its post being switched to private or back to draft, and
       returning it hands out exactly what the post's own gate withholds.
-      Gate the parent by the same rule as the post itself, and prefer
-      the query (`post_status` on `WP_Comment_Query`) over a per-row
-      skip so the batch's `total` cannot report what `items` hides.
+      Gate the parent by the same rule as the post itself. Note the
+      trade: per-caller readability cannot be expressed as query vars —
+      an Administrator reads private posts, a reader who entered a post
+      password reads that post — so the filter runs per row and `total`
+      counts rows the batch withholds. Gate in the query only where the
+      rule is the same for every caller, as `search_posts` does with
+      `has_password => false`.
 - [ ] Would a contributor invoking it through an admin-role agent get
       more than they should? (If the ceiling is doing all the work,
       say so in the ability's description.)

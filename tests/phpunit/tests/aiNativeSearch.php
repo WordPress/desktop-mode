@@ -519,69 +519,6 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Comment search carries the parent's title and permalink on every item,
-	 * so it inherits the parent's read gate.
-	 *
-	 * @covers ::openstation_ai_search_fetch_comments
-	 */
-	public function test_search_comments_excludes_comment_on_private_parent() {
-		$post_id    = self::factory()->post->create(
-			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
-		);
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => $post_id,
-				'comment_approved' => '1',
-				'comment_content'  => 'Absolutely loved the saffron tip.',
-			)
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_comments',
-			array( 'query' => 'saffron', 'offset' => 0 )
-		);
-
-		$this->assertNotContains(
-			$comment_id,
-			wp_list_pluck( $result['items'], 'id' ),
-			'A private parent must not leak its title through comment search.'
-		);
-		$this->assertSame(
-			0,
-			$result['total'],
-			'The comment must not inflate total either — that counter reports what items hides.'
-		);
-	}
-
-	/**
-	 * `search_comments_by_post` takes its post id from the model, so it is
-	 * untrusted the same way an entity id is.
-	 *
-	 * @covers ::openstation_ai_search_fetch_comments_by_post
-	 */
-	public function test_search_comments_by_post_refuses_unreadable_parent() {
-		$post_id = self::factory()->post->create(
-			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
-		);
-		self::factory()->comment->create(
-			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_comments_by_post',
-			array( 'post_id' => $post_id, 'query' => '', 'offset' => 0 )
-		);
-
-		$this->assertSame( 0, $result['count'] );
-		$this->assertSame( '', (string) ( $result['post_title'] ?? '' ), 'The parent title must not be echoed back.' );
-		$this->assertArrayHasKey( 'error', $result );
-	}
-
-	/**
 	 * A comment hanging off a non-public CPT row is internal plugin data —
 	 * WooCommerce order notes are comments on `shop_order`. The parent's
 	 * `publish` status resolves `read_post` to plain `read`, so the type has
@@ -617,123 +554,6 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The same row is out of the comment-search corpus, and out of `total`
-	 * with it — a keyword that matches only there must report nothing.
-	 *
-	 * @covers ::openstation_ai_search_fetch_comments
-	 */
-	public function test_search_comments_excludes_non_public_cpt_parent() {
-		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
-		$post_id    = self::factory()->post->create(
-			array( 'post_type' => 'os_secret_cpt', 'post_status' => 'publish' )
-		);
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => $post_id,
-				'comment_approved' => '1',
-				'comment_content'  => 'Refunded via gateway, saffron ref 8812.',
-			)
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_comments',
-			array( 'query' => 'saffron', 'offset' => 0 )
-		);
-
-		$this->assertNotContains( $comment_id, wp_list_pluck( $result['items'], 'id' ) );
-		$this->assertSame( 0, $result['total'], 'The row must not be counted either.' );
-
-		_unregister_post_type( 'os_secret_cpt' );
-	}
-
-	/**
-	 * A password-protected parent is `publish`, so only the clause filter
-	 * keeps it out. `total` has to drop with `items` or the counter answers
-	 * keyword questions about a body the caller cannot read.
-	 *
-	 * @covers ::openstation_ai_search_fetch_comments
-	 */
-	public function test_search_comments_excludes_comment_on_password_protected_parent() {
-		$post_id    = self::factory()->post->create(
-			array(
-				'post_status'   => 'publish',
-				'post_password' => 'hunter2',
-				'post_title'    => 'Members only',
-			)
-		);
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => $post_id,
-				'comment_approved' => '1',
-				'comment_content'  => 'The saffron tip was the best part.',
-			)
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_comments',
-			array( 'query' => 'saffron', 'offset' => 0 )
-		);
-
-		$this->assertNotContains( $comment_id, wp_list_pluck( $result['items'], 'id' ) );
-		$this->assertSame(
-			0,
-			$result['total'],
-			'A sealed parent must not leave its comments countable.'
-		);
-	}
-
-	/**
-	 * The gates live in the query, so a batch is never thinned after the
-	 * fact: `count` agrees with `items`, and a readable comment is not
-	 * displaced from its page by a hidden neighbour.
-	 *
-	 * @covers ::openstation_ai_search_fetch_comments
-	 */
-	public function test_search_comments_batch_is_not_thinned_by_hidden_rows() {
-		$sealed_id = self::factory()->post->create(
-			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
-		);
-		foreach ( range( 1, 12 ) as $n ) {
-			self::factory()->comment->create(
-				array(
-					'comment_post_ID'  => $sealed_id,
-					'comment_approved' => '1',
-					'comment_content'  => "Hidden saffron note {$n}.",
-				)
-			);
-		}
-
-		$public_id  = self::factory()->post->create( array( 'post_status' => 'publish' ) );
-		$visible_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => $public_id,
-				'comment_approved' => '1',
-				'comment_content'  => 'Public saffron note.',
-			)
-		);
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-
-		$result = openstation_ai_search_dispatch_tool(
-			'search_comments',
-			array( 'query' => 'saffron', 'offset' => 0 )
-		);
-
-		$this->assertSame(
-			array( $visible_id ),
-			wp_list_pluck( $result['items'], 'id' ),
-			'Twelve hidden rows must not push the one readable comment off the first page.'
-		);
-		$this->assertSame( 1, $result['count'] );
-		$this->assertSame( 1, $result['total'] );
-		$this->assertFalse( $result['has_more'] );
-	}
-
-	/**
 	 * The `by post` tool refuses a non-public CPT parent for the same reason
 	 * the entity card does.
 	 *
@@ -762,25 +582,345 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A comment whose parent post is gone resolves to nothing rather than to
-	 * whatever `get_post( 0 )` hands back from the global.
+	 * A Subscriber must not read a comment on a PRIVATE post through
+	 * `search_comments`. "Approved" is a moderation decision, not a grant of
+	 * visibility on the parent discussion.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_hides_comments_on_private_posts_from_subscriber() {
+		$author_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$private_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_author' => $author_id )
+		);
+		$public_id  = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		$hidden  = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Secret marker paellamarker on a private post.',
+			)
+		);
+		$visible = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $public_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Public marker paellamarker on a published post.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'paellamarker', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $hidden, $ids, 'A Subscriber must not see a comment on a private post.' );
+		$this->assertContains( $visible, $ids, 'A comment on a published post is still returned.' );
+	}
+
+	/**
+	 * A Subscriber who never satisfied the post password must not read a
+	 * comment on a PASSWORD-PROTECTED post through `search_comments` — the
+	 * ability itself has no password input.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_hides_comments_on_password_posts_from_subscriber() {
+		$protected_id = self::factory()->post->create(
+			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
+		);
+
+		$hidden = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $protected_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Secret marker walledgarden behind a password.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'walledgarden', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $hidden, $ids, 'A Subscriber must not see a comment on a password-protected post.' );
+	}
+
+	/**
+	 * A caller who HAS satisfied the post password — the `wp-postpass`
+	 * cookie Core's password form sets after the correct password is
+	 * entered — reads the discussion again. Deliberate Core parity, not a
+	 * bypass: `post_password_required()` honours that cookie everywhere,
+	 * including `WP_REST_Comments_Controller::check_read_post_permission()`,
+	 * and refusing cookie-holders would lock out readers the author gave
+	 * the password to.
+	 *
+	 * @covers ::openstation_ai_can_read_post
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_search_comments_honours_a_satisfied_post_password() {
+		$protected_id = self::factory()->post->create(
+			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
+		);
+		$comment_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $protected_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Unlocked marker greenhouse behind a password.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		// The cookie wp-login.php?action=postpass sets for the correct password.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher = new PasswordHash( 8, true );
+
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'hunter2' );
+		try {
+			$result = openstation_ai_search_dispatch_tool(
+				'search_comments',
+				array( 'query' => 'greenhouse', 'offset' => 0 )
+			);
+			$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		} finally {
+			unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+		}
+
+		$this->assertContains(
+			$comment_id,
+			wp_list_pluck( $result['items'], 'id' ),
+			'A caller who entered the post password reads its discussion, as on the front end.'
+		);
+		$this->assertIsArray( $entity, 'Entity hydration honours the satisfied password too.' );
+	}
+
+	/**
+	 * An Administrator, who holds `read_private_posts`, still finds comments
+	 * on private posts — the gate is per-caller readability, not a blanket
+	 * publish-only filter.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_still_shows_private_comments_to_admin() {
+		$private_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Admin-visible marker paellamarker on a private post.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'paellamarker', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertContains( $comment_id, $ids, 'An administrator can read comments on private posts.' );
+	}
+
+	/**
+	 * `search_comments_by_post` on a private post returns nothing — and never
+	 * the parent title — for a Subscriber.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments_by_post
+	 * @covers ::openstation_ai_can_read_post
+	 */
+	public function test_search_comments_by_post_hides_private_post_from_subscriber() {
+		$private_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret roadmap' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'A comment on the secret roadmap.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments_by_post',
+			array( 'post_id' => $private_id, 'query' => '', 'offset' => 0 )
+		);
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $comment_id, $ids, 'A Subscriber must not read comments on a private post.' );
+		$this->assertSame( 0, $result['count'] );
+		$this->assertArrayNotHasKey( 'post_title', $result, 'The private parent title must not leak.' );
+	}
+
+	/**
+	 * An orphaned comment (comment_post_ID of 0) is never readable — even
+	 * with a readable post in the global $post. get_post( 0 ) falls back to
+	 * that global, so without the explicit id guard the orphan would be
+	 * judged against an unrelated post and leak.
+	 *
+	 * @covers ::openstation_ai_can_read_post
+	 * @covers ::openstation_ai_can_read_comment_parent
+	 */
+	public function test_search_comments_hides_orphaned_comments_despite_global_post() {
+		$public_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$orphan    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => 0,
+				'comment_approved' => '1',
+				'comment_content'  => 'Orphan marker driftwood with no parent post.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		// The trap the guard defuses: a readable post sitting in the global.
+		$GLOBALS['post'] = get_post( $public_id );
+		try {
+			$result = openstation_ai_search_dispatch_tool(
+				'search_comments',
+				array( 'query' => 'driftwood', 'offset' => 0 )
+			);
+		} finally {
+			unset( $GLOBALS['post'] );
+		}
+
+		$ids = wp_list_pluck( $result['items'], 'id' );
+		$this->assertNotContains( $orphan, $ids, 'An orphaned comment must not be judged against the global $post.' );
+	}
+
+	/**
+	 * A published post of a NON-VIEWABLE post type (an internal/admin-only
+	 * CPT) is not readable to a Subscriber: `publish` alone is not
+	 * visibility, and `read_post` resolves to plain `read` for any public
+	 * status, so the gate falls back to `edit_post` for such types.
+	 *
+	 * @covers ::openstation_ai_can_read_post
+	 */
+	public function test_search_comments_hides_comments_on_non_viewable_post_types() {
+		register_post_type(
+			'os_internal',
+			array(
+				'public'       => false,
+				'map_meta_cap' => true,
+			)
+		);
+
+		try {
+			$cpt_id = self::factory()->post->create(
+				array( 'post_type' => 'os_internal', 'post_status' => 'publish' )
+			);
+			$hidden = self::factory()->comment->create(
+				array(
+					'comment_post_ID'  => $cpt_id,
+					'comment_approved' => '1',
+					'comment_content'  => 'Internal marker backstage on an admin-only type.',
+				)
+			);
+
+			wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+			$result = openstation_ai_search_dispatch_tool(
+				'search_comments',
+				array( 'query' => 'backstage', 'offset' => 0 )
+			);
+			$this->assertNotContains(
+				$hidden,
+				wp_list_pluck( $result['items'], 'id' ),
+				'A Subscriber must not see comments on a non-viewable post type.'
+			);
+
+			wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+			$result = openstation_ai_search_dispatch_tool(
+				'search_comments',
+				array( 'query' => 'backstage', 'offset' => 0 )
+			);
+			$this->assertContains(
+				$hidden,
+				wp_list_pluck( $result['items'], 'id' ),
+				'Someone who can edit the post still sees its discussion.'
+			);
+		} finally {
+			_unregister_post_type( 'os_internal' );
+		}
+	}
+
+	/**
+	 * The entity builder re-checks readability on the id it is handed: the
+	 * id comes from the model's final answer, and model output is untrusted,
+	 * so a hidden id must hydrate to null exactly like a nonexistent one —
+	 * for the comment branch AND the post branch.
 	 *
 	 * @covers ::openstation_ai_search_build_entity
 	 */
-	public function test_build_entity_withholds_orphaned_comment() {
-		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
-		$comment_id = self::factory()->comment->create(
-			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+	public function test_build_entity_hides_unreadable_targets_from_subscriber() {
+		$private_id     = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret roadmap' )
 		);
-		wp_update_comment(
-			array( 'comment_ID' => $comment_id, 'comment_post_ID' => 0 )
+		$hidden_comment = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'A comment on the secret roadmap.',
+			)
+		);
+		$password_id    = self::factory()->post->create(
+			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
 		);
 
-		$GLOBALS['post'] = get_post( $post_id );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
 
-		$this->assertNull( openstation_ai_search_build_entity( 'comment', $comment_id ) );
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $hidden_comment ),
+			'A model-supplied comment id on a private post must not hydrate.'
+		);
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $private_id ),
+			'A model-supplied private post id must not hydrate.'
+		);
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $password_id ),
+			'A model-supplied password-protected post id must not hydrate.'
+		);
+	}
 
-		unset( $GLOBALS['post'] );
+	/**
+	 * Entity hydration also honours the comment's own moderation status —
+	 * an unapproved comment is only readable by someone who could edit it.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_hides_unapproved_comments_from_non_moderators() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$pending = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '0',
+				'comment_content'  => 'A pending comment awaiting moderation.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $pending ),
+			'A Subscriber must not hydrate an unapproved comment.'
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertIsArray(
+			openstation_ai_search_build_entity( 'comment', $pending ),
+			'A moderator still hydrates the pending comment.'
+		);
 	}
 }
