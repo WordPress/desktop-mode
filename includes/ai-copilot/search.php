@@ -459,7 +459,13 @@ function openstation_ai_search_excerpt( $content ) {
  *
  * - a password-protected parent is readable only by someone who could edit it
  *   (there is no way to supply the password over the ability's GET dispatch);
- * - a non-published parent needs the `read_post` capability for that post.
+ * - a publicly viewable parent (public status AND viewable post type) is
+ *   readable by anyone the ability admits;
+ * - a parent whose post TYPE is not viewable (an internal/admin-only CPT)
+ *   needs `edit_post` — `read_post` cannot stand in, because a public status
+ *   resolves it to plain `read` whatever the type's visibility, which is how
+ *   Core's REST layer needs its own post-type gate too;
+ * - any other parent (private, draft, pending, …) needs `read_post`.
  *
  * @param int|WP_Post $post Post ID or object.
  * @return bool
@@ -480,11 +486,16 @@ function openstation_ai_can_read_post( $post ) {
 		return false;
 	}
 
-	if ( 'publish' !== $post->post_status && ! current_user_can( 'read_post', $post->ID ) ) {
-		return false;
+	if ( is_post_publicly_viewable( $post ) ) {
+		return true;
 	}
 
-	return true;
+	$post_type = get_post_type_object( $post->post_type );
+	if ( ! $post_type || ! is_post_type_viewable( $post_type ) ) {
+		return current_user_can( 'edit_post', $post->ID );
+	}
+
+	return current_user_can( 'read_post', $post->ID );
 }
 
 /**
@@ -698,6 +709,16 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
  * verdict when the comment-moderation analysis happens to have run, but
  * its absence never blocks the entity from being returned.
  *
+ * The id arrives from the MODEL's final answer, and model output is
+ * untrusted — a search turn can be driven by attacker-controlled content, so
+ * an injected instruction could name an entity the search tools never
+ * surfaced. Hydration therefore re-checks readability itself instead of
+ * trusting that the id came out of a filtered tool result: posts/pages go
+ * through {@see openstation_ai_can_read_post()}, comments additionally
+ * require approved status (or `edit_comment`), mirroring Core's
+ * `WP_REST_Comments_Controller::check_read_permission()`. Unreadable ids
+ * resolve to null, indistinguishable from nonexistent ones.
+ *
  * @param string $entity_type 'post' | 'page' | 'comment'.
  * @param int    $entity_id
  * @return array|null
@@ -707,7 +728,7 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 
 	if ( in_array( $entity_type, array( 'post', 'page' ), true ) ) {
 		$post = get_post( $entity_id );
-		if ( ! $post instanceof WP_Post ) {
+		if ( ! $post instanceof WP_Post || ! openstation_ai_can_read_post( $post ) ) {
 			return null;
 		}
 		return array(
@@ -724,7 +745,10 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 
 	if ( 'comment' === $entity_type ) {
 		$comment = get_comment( $entity_id );
-		if ( ! $comment instanceof WP_Comment ) {
+		if ( ! $comment instanceof WP_Comment || ! openstation_ai_can_read_comment_parent( $comment ) ) {
+			return null;
+		}
+		if ( '1' !== (string) $comment->comment_approved && ! current_user_can( 'edit_comment', $entity_id ) ) {
 			return null;
 		}
 		$meta        = openstation_ai_get_meta( 'comment', $entity_id );
