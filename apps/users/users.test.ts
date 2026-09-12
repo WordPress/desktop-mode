@@ -3,35 +3,11 @@
  * selection and the preserved details table.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { OsTable } from '../../src/ui/components/os-table/os-table';
 import { mockViewContext } from '../../src/app-runtime/testing';
 import { STATUS_SEGMENTS, applyStatusFilter, buildColumns, rowKey } from './parts/table';
 import type { ProfileConfig, RowActions, UserListItem, UsersData, UsersState } from './parts/types';
 import app from './users.os';
-
-// A stand-in for `<os-table>` — the sync drives it through properties.
-class FakeTable extends HTMLElement {
-	columns: unknown = [];
-	data: UserListItem[] = [];
-	selection: string[] = [];
-	sort: unknown = null;
-	getRowId: unknown = null;
-	cleared = 0;
-	select( id: number ): void {
-		this.selection = [ ...this.selection, String( id ) ];
-		this.dispatchEvent( new CustomEvent( 'os-table-selection-change' ) );
-	}
-	deselect( id: number ): void {
-		this.selection = this.selection.filter( ( key ) => key !== String( id ) );
-		this.dispatchEvent( new CustomEvent( 'os-table-selection-change' ) );
-	}
-	clearSelection(): void {
-		this.selection = [];
-		this.cleared += 1;
-	}
-}
-if ( ! customElements.get( 'os-table' ) ) {
-	customElements.define( 'os-table', FakeTable );
-}
 
 function user( over: Partial< UserListItem > = {} ): UserListItem {
 	return {
@@ -93,7 +69,7 @@ function mount( state: Partial< UsersState > = {}, data: Partial< UsersData > = 
 	ctx.repaint = () => app.render( ctx );
 	ctx.dispatch = vi.fn( async () => true );
 	app.render( ctx );
-	return { root, ctx, table: root.querySelector< FakeTable >( 'os-table' ) };
+	return { root, ctx, table: root.querySelector< OsTable< UserListItem > >( 'os-table' ) };
 }
 
 beforeEach( () => {
@@ -107,6 +83,13 @@ afterEach( () => {
 } );
 
 describe( 'the users app view', () => {
+	it( 'registers its preserved table and renders rows without opening another app first', async () => {
+		const { table } = mount();
+		expect( customElements.get( 'os-table' ) ).toBeDefined();
+		await Promise.resolve();
+		expect( table?.shadowRoot?.textContent ).toContain( 'Ada Lovelace' );
+	} );
+
 	it( 'declares a placeholder: the frame paints before mount with the table in its skeleton and no page summary', () => {
 		const placeholder = app.placeholder!( { page: 1, perPage: 20 } ) as UsersData;
 		expect( placeholder ).toEqual( { list: { items: [], total: 0, pages: 0, page: 1, perPage: 20 } } );
@@ -140,12 +123,12 @@ describe( 'the users app view', () => {
 		const checkbox = card.querySelector( 'os-checkbox' )!;
 		const structure = card.querySelectorAll( '*' ).length;
 		checkbox.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
-		expect( table!.selection ).toEqual( [ '2' ] );
+		expect( Array.from( table!.selection, String ) ).toEqual( [ '2' ] );
 		expect( card.querySelectorAll( '*' ).length ).toBe( structure );
 		expect( card.classList.contains( 'is-selected' ) ).toBe( true );
 		expect( root.querySelector( '[data-os-users-bulk]' )?.hasAttribute( 'hidden' ) ).toBe( false );
 		checkbox.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: false } } ) );
-		expect( table!.selection ).toEqual( [] );
+		expect( Array.from( table!.selection ) ).toEqual( [] );
 	} );
 
 	it( 'the role filter is server state bound to filter, spelled as users.php spells it', () => {
@@ -311,11 +294,11 @@ describe( 'updated() keeps the preserved table in step', () => {
 		Object.assign( ctx, { data: { list: { items: [ user( { id: 2 } ) ], total: 1, pages: 1, page: 1, perPage: 20 } } } );
 		ctx.repaint();
 		await Promise.resolve();
-		expect( Array.from( table!.selection ) ).toEqual( [ '2' ] );
+		expect( Array.from( table!.selection, String ) ).toEqual( [ '2' ] );
 
 		ctx.state.search = 'ada';
 		ctx.repaint();
-		expect( table!.cleared ).toBe( 1 );
+		expect( table!.selection.size ).toBe( 0 );
 	} );
 
 	it( 'only a changed row rebuilds its cells', () => {

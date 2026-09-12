@@ -17,6 +17,7 @@ import type { PluginsRest } from './rest';
 /** The declared state — what the server echoes back. */
 export interface AppState extends Record< string, unknown > {
 	tab: PluginsTab;
+	installedView: 'cards' | 'table';
 	status: string;
 	search: string;
 	browse: BrowseFilter;

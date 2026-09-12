@@ -363,6 +363,12 @@ The one decision every interaction needs, and the one a wrong default makes slow
 
 When in doubt: put it in `data()` and slice locally. The framework guards the two wrong turns that used to fail silently — a rendered `os-action` that nothing implements warns in the console at paint time (not at click time), and a write to a state key `App::state()` does not declare warns once with the fix in the message.
 
+### Preserved components need runtime imports
+
+The component loader skips `os-preserve` elements and their descendants. Import every component used there for its runtime side effect before rendering it, for example `import '../../src/ui/components/os-table/os-table';` from an app entry. An `import type { OsTable }` only describes the TypeScript type; it does not register `<os-table>`. Neither does `createListTableSync()`. Without registration, the browser displays the table's light-DOM empty slot even when the app has assigned rows to `.data`. Opening another window that imports the table can mask the problem.
+
+Test these views using their production imports and the real components. Registering a fake `<os-table>` in the test hides missing imports; assert that its shadow DOM actually renders a supplied row as well as checking its data properties. Third-party bundles can instead await `wp.os.loadComponents( [ 'os-table' ] )` before constructing and assigning properties to a preserved table.
+
 ### Debugging a dispatch
 
 A dispatch crosses more layers than a click handler ever did — trigger → binding → wire → `State` coercion → `data()` → render — so the runtime carries its own trace. `wp.os.apps.debug( windowId )` (or `debug( '*' )` for every app window) logs one collapsed console group per dispatch: the action, its arguments, the elapsed time, exactly which state keys changed and to what, and the effects that ran; local actions log a single `debug` line; failures log the error with the elapsed time. `debug( windowId, false )` turns it off.

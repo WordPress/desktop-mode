@@ -262,7 +262,7 @@ profile screen). AI agents are ordinary `wp_users` rows flagged with
 | `desktop_mode_game_playtime` | Games | Lifetime play time per game. |
 | `desktop_mode_game_playtime_days` | Games | Play time per day (rolling window). |
 | `openstation_station_home_card_preferences` | Station Home | Which home cards are shown or hidden. |
-| `openstation_app_store` | App Framework | The `Store` contract with `user` scope, a key → value map. The same name with `site` scope is an option. |
+| `openstation_app_store` | App Framework | The `Store` contract with `user` scope, a key → value map. Plugins stores `desktop-mode-plugins:installed-view` here (`cards` or `table`, default `cards`). The same name with `site` scope is an option. |
 | `_desktop_mode_last_login_at` | Users | Last login time. |
 | `_desktop_mode_has_notes` | Notes | Cache `{rev}:{0|1}` of whether the user has notes; `rev` comes from the `desktop_mode_notes_rev` option. |
 | `_desktop_mode_agent` | Agents | `1` marks this `wp_users` row as an AI agent rather than a person. |

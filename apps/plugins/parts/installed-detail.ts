@@ -152,7 +152,7 @@ function buildHero( row: InstalledPlugin ): HTMLElement {
 	titleRow.setAttribute( 'align', 'center' );
 	const title = document.createElement( 'h3' );
 	title.className = 'os-plugins__detail-title';
-	title.textContent = row.name || row.plugin;
+	title.textContent = stripHtml( row.name ) || row.plugin;
 	titleRow.appendChild( title );
 	if ( row.version ) {
 		const ver = document.createElement( 'os-badge' );

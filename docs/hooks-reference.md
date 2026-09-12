@@ -3519,7 +3519,7 @@ Fires after the upload-AJAX handler installs a plugin from an uploaded .zip. `$p
 
 The Plugins window's third tab — "OpenStation plugins" — leads with a hand-curated list because wp.org's `plugins_api` does not yet expose a usable `requires_plugins` filter. The handler hydrates each curated slug through `plugins_api( 'plugin_information' )` so card metadata stays fresh; it then scans the wp.org popular feed for rows whose `requires_plugins` array contains `openstation` and appends them after the curated entries.
 
-Use this filter to append your own companion plugins (or remove the default seed). Order is preserved — the first slug renders first in the gallery. Output is run through `sanitize_key()` and deduplicated.
+The default seed is `odd-outlandish-desktop-decorator`, `allterrain-forms`, and `allterrain-photo-editor`. Use this filter to append your own companion plugins (or remove the default seed). Order is preserved — the first slug renders first in the gallery. Output is run through `sanitize_key()` and deduplicated.
 
 ```php
 apply_filters( 'openstation_plugins_featured_slugs', string[] $slugs ): string[]

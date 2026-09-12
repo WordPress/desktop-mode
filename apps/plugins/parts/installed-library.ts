@@ -5,6 +5,8 @@
 import { __, formatBytes, html, sprintf, type TemplateResult } from '@openstation/app';
 import '../../../src/ui/components/os-button/os-button';
 import '../../../src/ui/components/os-checkbox/os-checkbox';
+import { changeInstalledView } from './view-preference';
+import { syncInstalledTable, type InstalledTableState } from './installed-table';
 import { libraryStyles } from './library.styles';
 import { bulkButtons, pluginActionButtons, runToggleAutoUpdate } from './actions';
 import { stripHtml } from './html';
@@ -16,6 +18,9 @@ import { isActiveStatus, type Ctx, type InstalledPlugin, type PluginsHost } from
 /** Per-window library state; selection never includes a hidden plugin. */
 export interface InstalledUi {
 	selected: string[];
+	savingView: boolean;
+	table: InstalledTableState;
+	rows: InstalledPlugin[];
 	focused: string;
 	sort: string;
 	layoutKey: string;
@@ -28,6 +33,9 @@ export interface InstalledUi {
 
 export const freshInstalledUi = (): InstalledUi => ( {
 	selected: [],
+	savingView: false,
+	table: { element: null, key: '' },
+	rows: [],
 	focused: '',
 	sort: 'attention',
 	layoutKey: '',
@@ -126,7 +134,12 @@ function closeDetail( ctx: Ctx, ui: InstalledUi ): void {
 	const card = Array.from( ctx.root.querySelectorAll<HTMLElement>( '[data-plugin-card]' ) ).find(
 		( el ) => el.dataset.pluginCard === plugin,
 	);
-	queueMicrotask( () => card?.querySelector( '[data-plugin-details]' )?.shadowRoot?.querySelector( 'button' )?.focus() );
+	const tableControl = Array.from( ui.table.element?.shadowRoot?.querySelectorAll<HTMLElement>( '[data-plugin-actions]' ) ?? [] )
+		.find( ( el ) => el.getAttribute( 'data-plugin-actions' ) === plugin );
+	queueMicrotask( () => {
+		const control = tableControl?.shadowRoot?.querySelector( 'os-button' ) ?? card?.querySelector( '[data-plugin-details]' );
+		control?.shadowRoot?.querySelector( 'button' )?.focus();
+	} );
 }
 
 function pluginCard( ctx: Ctx, host: PluginsHost, ui: InstalledUi, row: InstalledPlugin ): TemplateResult {
@@ -229,7 +242,7 @@ function detailPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): TemplateRe
 	}
 	return html`<aside
 		class="os-plugins__inspector"
-		aria-label=${ row.name || row.plugin }
+		aria-label=${ stripHtml( row.name ) || row.plugin }
 		@keydown=${ ( ev: KeyboardEvent ) => {
 			if ( ev.key === 'Escape' ) {
 				ev.stopPropagation();
@@ -327,13 +340,18 @@ export function installedPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): 
 	// shelves lets the old slot dispose it after the new slot adopted it.
 	// Reuse controls only while the layout is stable (selection, detail and
 	// busy repaints); a new collection/order gets fresh nodes.
-	const layoutKey = JSON.stringify( [ state.status, state.search, ui.sort, rows.map( ( row ) => [ row.plugin, pluginLane( row ) ] ) ] );
+	const layoutKey = JSON.stringify( [ state.installedView, state.status, state.search, ui.sort, rows.map( ( row ) => [ row.plugin, pluginLane( row ) ] ) ] );
 	if ( ui.layoutKey !== layoutKey ) {
 		ui.layoutKey = layoutKey;
 		ui.controls.clear();
 		ui.icons.clear();
 	}
 
+	if ( ui.sort === 'attention' ) {
+		const lanes = [ 'update', 'active', 'inactive' ];
+		rows.sort( ( a, b ) => lanes.indexOf( pluginLane( a ) ) - lanes.indexOf( pluginLane( b ) ) );
+	}
+	ui.rows = rows;
 	const updates = countUpdates( data.installed );
 	const active = data.installed.filter( ( r ) => isActiveStatus( r.status ) ).length;
 	const filters = [
@@ -379,7 +397,7 @@ export function installedPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): 
 		state.search = '';
 		ctx.repaint();
 	};
-	return html`<div class="os-plugins__workspace" data-detail-open=${ ui.focused ? 'true' : 'false' }><style>${ libraryStyles.cssText }</style>
+	return html`<div class="os-plugins__workspace" data-view=${ state.installedView } data-detail-open=${ ui.focused ? 'true' : 'false' }><style>${ libraryStyles.cssText }</style>
 		<div class="os-plugins__library">
 			<header class="os-plugins__library-head">
 				<div class="os-plugins__library-intro">
@@ -439,6 +457,16 @@ export function installedPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): 
 					<os-option value="name">${ __( 'Name A–Z', 'desktop-mode' ) }</os-option>
 					<os-option value="size">${ __( 'Largest first', 'desktop-mode' ) }</os-option>
 				</os-select>
+				<div class="os-plugins__view-switch" role="group" aria-label=${ __( 'Plugin view', 'desktop-mode' ) } aria-busy=${ String( ui.savingView ) }>
+					${ ( [ 'cards', 'table' ] as const ).map( ( view ) => html`<os-button size="small"
+						variant=${ ! ctx.loading && state.installedView === view ? 'secondary' : 'ghost' }
+						data-plugin-view=${ view } aria-pressed=${ String( ! ctx.loading && state.installedView === view ) }
+						?disabled=${ ctx.loading || ui.savingView }
+						@click=${ () => void changeInstalledView( ctx, ui, view ) }>
+						<span class="dashicons dashicons-${ view === 'table' ? 'list-view' : 'grid-view' }" aria-hidden="true"></span>
+						${ view === 'table' ? __( 'Table', 'desktop-mode' ) : __( 'Cards', 'desktop-mode' ) }
+					</os-button>` ) }
+				</div>
 			</div>
 			<div class="os-plugins__library-scroll" aria-busy=${ ctx.loading ? 'true' : 'false' }>
 				${ data.error
@@ -470,7 +498,9 @@ export function installedPanel( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): 
 							>
 						</div>`
 					: '' }
-				${ groups.map( ( group ) => {
+				${ state.installedView === 'table' ? html`<os-table data-os-plugins-table os-preserve
+					aria-label=${ __( 'Installed plugins', 'desktop-mode' ) } selectable="multi" sticky-header sticky-columns="2" hover
+					?hidden=${ ctx.loading || ! rows.length }></os-table>` : groups.map( ( group ) => {
 					const members = group.id ? rows.filter( ( r ) => pluginLane( r ) === group.id ) : rows;
 					return members.length
 						? html`<section class="os-plugins__shelf" data-shelf=${ group.id } aria-label=${ group.title }>
@@ -604,4 +634,21 @@ function pluginIcon( ui: InstalledUi, row: InstalledPlugin ): HTMLElement {
 		ui.icons.set( row.plugin, cached );
 	}
 	return cached.node;
+}
+
+/** Keep the table's imperative body in step with the same rows and selection as Cards. */
+export function syncLibraryTable( ctx: Ctx, host: PluginsHost, ui: InstalledUi ): void {
+	syncInstalledTable( ui.table, {
+		root: ctx.root, host, rows: ui.rows, selected: ui.selected,
+		onSelection: ( ids ) => {
+			ui.selected = ids; ctx.repaint();
+		},
+		icon: ( row ) => pluginIcon( ui, row ),
+		actions: ( row ) => actionsFor( host, ui, row, 'table' ),
+		open: ( row ) => {
+			ui.focused = row.plugin;
+			ctx.repaint();
+			queueMicrotask( () => ctx.root.querySelector( '[data-plugin-back]' )?.shadowRoot?.querySelector( 'button' )?.focus() );
+		},
+	} );
 }
