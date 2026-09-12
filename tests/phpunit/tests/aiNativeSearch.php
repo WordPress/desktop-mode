@@ -246,6 +246,342 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The model can name any id; a Subscriber must not read a private post
+	 * through it. The entity builder re-checks authorization instead of
+	 * trusting the model-supplied id.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_private_post_from_subscriber() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $subscriber );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $post_id ),
+			'A Subscriber must not read a private post through the entity builder.'
+		);
+	}
+
+	/**
+	 * A draft/pending/future post is equally withheld — the guard keys off
+	 * read authorization, not the single `private` status.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_draft_post_from_subscriber() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'draft', 'post_title' => 'Unpublished' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull( openstation_ai_search_build_entity( 'post', $post_id ) );
+	}
+
+	/**
+	 * An administrator, who can read private content, still gets the record.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_returns_private_post_for_administrator() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'post', $post_id );
+		$this->assertIsArray( $entity );
+		$this->assertSame( 'private', $entity['status'] );
+		$this->assertSame( 'Secret plans', $entity['title'] );
+	}
+
+	/**
+	 * A model-named id resolving to a non-public CPT row is withheld even
+	 * though its status is `publish` — the branch pins the actual post type
+	 * to post/page, because `read_post` on a `publish` status maps to plain
+	 * `read`, which every logged-in user holds.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_non_public_cpt_row() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'os_secret_cpt',
+				'post_status'  => 'publish',
+				'post_title'   => 'Internal record',
+				'post_content' => 'Plugin-private data.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $post_id ),
+			'A non-public CPT row must not be readable through the entity builder.'
+		);
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
+	 * An unapproved comment (its content and moderation verdicts) is
+	 * withheld from a Subscriber.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_unapproved_comment_from_subscriber() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '0',
+				'comment_content'  => 'Pending moderation.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $comment_id ),
+			'A Subscriber must not read an unapproved comment through the entity builder.'
+		);
+	}
+
+	/**
+	 * A non-moderator viewing an approved comment gets the public record but
+	 * neither the moderation verdicts nor the wp-admin edit link.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_suppresses_moderation_fields_for_non_moderator() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Great write-up.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		$this->assertIsArray( $entity );
+		$this->assertArrayNotHasKey( 'harmful', $entity, 'Verdicts are moderator-only.' );
+		$this->assertArrayNotHasKey( 'spam', $entity, 'Verdicts are moderator-only.' );
+		$this->assertSame( '', $entity['edit_url'], 'The edit link needs edit_comment.' );
+	}
+
+	/**
+	 * A moderator viewing an approved comment still sees the verdicts and
+	 * the edit link — the gate withholds nothing they are entitled to.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_exposes_moderation_fields_to_moderator() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Great write-up.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		$this->assertIsArray( $entity );
+		$this->assertArrayHasKey( 'harmful', $entity );
+		$this->assertArrayHasKey( 'spam', $entity );
+		$this->assertNotSame( '', $entity['edit_url'] );
+	}
+
+	/**
+	 * A published post is publicly viewable even when it carries a password,
+	 * and every logged-in user passes `read_post` on it — so the password
+	 * gate has to be asked separately or the body leaks in the excerpt.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_password_protected_post_from_subscriber() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Members only',
+				'post_content'  => 'The members-only body.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $post_id ),
+			'A Subscriber without the password must not read a protected post.'
+		);
+	}
+
+	/**
+	 * Being able to edit the post is the other way past the password, which
+	 * is how core answers the same question.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_returns_password_protected_post_to_editor() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Members only',
+				'post_content'  => 'The members-only body.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'post', $post_id );
+		$this->assertIsArray( $entity );
+		$this->assertStringContainsString( 'members-only body', $entity['excerpt'] );
+	}
+
+	/**
+	 * Approval is not publication: an approved comment outlives its post
+	 * being switched to private, and the record carries the parent's title
+	 * and permalink. Naming a comment id must not walk around the post gate.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_comment_on_private_parent() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Looks good to me.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $comment_id ),
+			'A private parent must not leak its title through an approved comment.'
+		);
+	}
+
+	/**
+	 * The same comment on a draft parent, same answer — the gate keys off
+	 * read authorization on the parent, not one status.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_comment_on_draft_parent() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'draft', 'post_title' => 'Unpublished' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull( openstation_ai_search_build_entity( 'comment', $comment_id ) );
+	}
+
+	/**
+	 * An administrator reads private content, so the same comment still
+	 * resolves for them — the gate withholds nothing they are entitled to.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_returns_comment_on_private_parent_for_administrator() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		$this->assertIsArray( $entity );
+		$this->assertSame( 'Secret plans', $entity['post_title'] );
+	}
+
+	/**
+	 * A comment hanging off a non-public CPT row is internal plugin data —
+	 * WooCommerce order notes are comments on `shop_order`. The parent's
+	 * `publish` status resolves `read_post` to plain `read`, so the type has
+	 * to be gated separately or the note text and the row's title leak.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_comment_on_non_public_cpt_parent() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_type'   => 'os_secret_cpt',
+				'post_status' => 'publish',
+				'post_title'  => 'Internal record',
+			)
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Refunded via gateway, ref 8812.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $comment_id ),
+			'A non-public CPT parent must not leak through its comments.'
+		);
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
+	 * The `by post` tool refuses a non-public CPT parent for the same reason
+	 * the entity card does.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments_by_post
+	 */
+	public function test_search_comments_by_post_refuses_non_public_cpt_parent() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id = self::factory()->post->create(
+			array( 'post_type' => 'os_secret_cpt', 'post_status' => 'publish' )
+		);
+		self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments_by_post',
+			array( 'post_id' => $post_id, 'query' => '', 'offset' => 0 )
+		);
+
+		$this->assertSame( 0, $result['count'] );
+		$this->assertArrayHasKey( 'error', $result );
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
 	 * A Subscriber must not read a comment on a PRIVATE post through
 	 * `search_comments`. "Approved" is a moderation decision, not a grant of
 	 * visibility on the parent discussion.
