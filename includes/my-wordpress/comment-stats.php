@@ -22,11 +22,16 @@
  *   - Past those two gates, the comment itself must be visible —
  *     `openstation_my_wordpress_comment_is_visible()`: approved, OR the
  *     user can `moderate_comments`, OR they're the comment author.
- *   - The thread around it (parent, replies) is scoped to the post
- *     those two gates just authorized, and each member runs the same
- *     visibility test. `comment_post_ID` and `comment_parent` are
- *     independent columns, so "the parent of a readable comment" is not
- *     by itself a readable comment.
+ *   - The thread around it is scoped to the post those two gates just
+ *     authorized: `comment_post_ID` and `comment_parent` are independent
+ *     columns, so "the parent of a readable comment" is not by itself a
+ *     readable comment. Within that post the two thread members are
+ *     filtered differently:
+ *       - the parent runs the same visibility test as the requested
+ *         comment (approved, moderator, or own);
+ *       - replies are approved only — plus pending ones for a
+ *         moderator, as a moderation aid. Spam and trash never ship,
+ *         and there is no own-reply exception.
  *   - Author email / IP / user-agent only ship to viewers with
  *     `moderate_comments`.
  *
@@ -123,7 +128,9 @@ function openstation_my_wordpress_can_read_comment_post( $post ) {
  *
  * Applied to the requested comment and to the thread parent alike —
  * the parent is reached by id, not by a query that filters on status,
- * so without this its excerpt would ship whatever its status.
+ * so without this its excerpt would ship whatever its status. Replies
+ * are NOT run through it: their query filters on status in SQL, with
+ * narrower rules (see the replies section of the callback).
  *
  * @param WP_Comment $comment Comment to test.
  * @return bool
