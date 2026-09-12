@@ -8,10 +8,17 @@
  * the right preview pane in the My WordPress folder when a comment
  * is selected.
  *
- * Permissions:
- *   - The comment must be readable by the current user (approved,
- *     OR the user can `moderate_comments`, OR they're the comment
- *     author).
+ * Permissions, in gate order:
+ *   - The route wears the same (filterable) gate as the My
+ *     WordPress window: `openstation_my_wordpress_user_can_use()`,
+ *     `edit_posts` by default.
+ *   - The caller must be able to read the comment's parent post —
+ *     see `openstation_my_wordpress_can_read_comment_post()` — so a
+ *     low-capability author cannot read comments on private or
+ *     password-protected posts they can't otherwise see.
+ *   - Past those two gates, the comment itself must be visible:
+ *     approved, OR the user can `moderate_comments`, OR they're
+ *     the comment author.
  *   - Author email / IP / user-agent only ship to viewers with
  *     `moderate_comments`.
  *
@@ -31,7 +38,11 @@ function openstation_my_wordpress_register_comment_stats_route() {
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => 'openstation_my_wordpress_comment_stats_callback',
 			'permission_callback' => static function () {
-				return is_user_logged_in();
+				// The dossier is an author's tool: it wears the same
+				// filterable gate as the My WordPress window itself.
+				// Bare is_user_logged_in() let any subscriber read
+				// it (OPENSTA-155).
+				return openstation_my_wordpress_user_can_use();
 			},
 			'args'                => array(
 				'id' => array(
@@ -44,6 +55,28 @@ function openstation_my_wordpress_register_comment_stats_route() {
 	);
 }
 add_action( 'rest_api_init', 'openstation_my_wordpress_register_comment_stats_route' );
+
+/**
+ * Whether the current user may read the post a comment belongs to.
+ *
+ * Mirrors `WP_REST_Comments_Controller::check_read_post_permission()`:
+ * a password-protected parent needs `edit_post`; any other parent
+ * needs `read_post`. An orphaned comment (its post is gone) is
+ * moderators-only. Without this, an approved comment on a private or
+ * password-protected post read exactly like one on a public post.
+ *
+ * @param WP_Post|null $post Parent post, or null when it no longer exists.
+ * @return bool
+ */
+function openstation_my_wordpress_can_read_comment_post( $post ) {
+	if ( ! $post ) {
+		return current_user_can( 'moderate_comments' );
+	}
+	if ( post_password_required( $post ) ) {
+		return current_user_can( 'edit_post', $post->ID );
+	}
+	return current_user_can( 'read_post', $post->ID );
+}
 
 /**
  * Aggregator callback.
@@ -60,6 +93,24 @@ function openstation_my_wordpress_comment_stats_callback( $request ) {
 			'openstation_comment_not_found',
 			__( 'Comment not found.', 'desktop-mode' ),
 			array( 'status' => 404 )
+		);
+	}
+
+	// Object-level authorization: refuse when the caller can't read
+	// the comment's parent post (OPENSTA-155). Fetched once here and
+	// reused for the parent-post payload below. The explicit zero
+	// check matters: get_post( 0 ) falls back to the global post, so
+	// an orphaned comment would be authorized against whatever post
+	// happened to be global instead of hitting the moderators-only
+	// branch.
+	$post = $comment->comment_post_ID
+		? get_post( (int) $comment->comment_post_ID )
+		: null;
+	if ( ! openstation_my_wordpress_can_read_comment_post( $post ) ) {
+		return new WP_Error(
+			'openstation_comment_forbidden',
+			__( 'You do not have permission to view this comment.', 'desktop-mode' ),
+			array( 'status' => 403 )
 		);
 	}
 
@@ -128,7 +179,6 @@ function openstation_my_wordpress_comment_stats_callback( $request ) {
 	}
 
 	// ----- Parent post -------------------------------------------------
-	$post         = get_post( (int) $comment->comment_post_ID );
 	$post_payload = null;
 	if ( $post ) {
 		$post_author  = $post->post_author > 0
