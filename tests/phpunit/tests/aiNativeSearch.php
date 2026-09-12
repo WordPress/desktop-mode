@@ -260,8 +260,8 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 	/**
 	 * A model-named id resolving to a non-public CPT row is withheld even
 	 * though its status is `publish` — the branch pins the actual post type
-	 * to post/page, because a non-viewable type's public status would
-	 * otherwise satisfy both the viewability check and `read_post`.
+	 * to post/page, because `read_post` on a `publish` status maps to plain
+	 * `read`, which every logged-in user holds.
 	 *
 	 * @covers ::openstation_ai_search_build_entity
 	 */
@@ -358,5 +358,234 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'harmful', $entity );
 		$this->assertArrayHasKey( 'spam', $entity );
 		$this->assertNotSame( '', $entity['edit_url'] );
+	}
+
+	/**
+	 * A published post is publicly viewable even when it carries a password,
+	 * and every logged-in user passes `read_post` on it — so the password
+	 * gate has to be asked separately or the body leaks in the excerpt.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_password_protected_post_from_subscriber() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Members only',
+				'post_content'  => 'The members-only body.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'post', $post_id ),
+			'A Subscriber without the password must not read a protected post.'
+		);
+	}
+
+	/**
+	 * Being able to edit the post is the other way past the password, which
+	 * is how core answers the same question.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_returns_password_protected_post_to_editor() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Members only',
+				'post_content'  => 'The members-only body.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'post', $post_id );
+		$this->assertIsArray( $entity );
+		$this->assertStringContainsString( 'members-only body', $entity['excerpt'] );
+	}
+
+	/**
+	 * Approval is not publication: an approved comment outlives its post
+	 * being switched to private, and the record carries the parent's title
+	 * and permalink. Naming a comment id must not walk around the post gate.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_comment_on_private_parent() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Looks good to me.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $comment_id ),
+			'A private parent must not leak its title through an approved comment.'
+		);
+	}
+
+	/**
+	 * The same comment on a draft parent, same answer — the gate keys off
+	 * read authorization on the parent, not one status.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_comment_on_draft_parent() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'draft', 'post_title' => 'Unpublished' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull( openstation_ai_search_build_entity( 'comment', $comment_id ) );
+	}
+
+	/**
+	 * An administrator reads private content, so the same comment still
+	 * resolves for them — the gate withholds nothing they are entitled to.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_returns_comment_on_private_parent_for_administrator() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$entity = openstation_ai_search_build_entity( 'comment', $comment_id );
+		$this->assertIsArray( $entity );
+		$this->assertSame( 'Secret plans', $entity['post_title'] );
+	}
+
+	/**
+	 * The search corpus is gated the same way the entity card is. Otherwise
+	 * the model reads the protected body and repeats it in the answer prose,
+	 * which is the same disclosure by a longer route.
+	 *
+	 * @covers ::openstation_ai_search_fetch_posts
+	 */
+	public function test_search_posts_excludes_password_protected_post_for_subscriber() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Paella for members',
+				'post_content'  => 'A Valencian rice dish with saffron and rabbit.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_posts',
+			array( 'query' => 'paella', 'offset' => 0 )
+		);
+
+		$this->assertNotContains(
+			$post_id,
+			wp_list_pluck( $result['items'], 'id' ),
+			'A protected post must not reach the model as a searchable excerpt.'
+		);
+	}
+
+	/**
+	 * An editor searching the same corpus still gets the protected post.
+	 *
+	 * @covers ::openstation_ai_search_fetch_posts
+	 */
+	public function test_search_posts_includes_password_protected_post_for_editor() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Paella for members',
+				'post_content'  => 'A Valencian rice dish with saffron and rabbit.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_posts',
+			array( 'query' => 'paella', 'offset' => 0 )
+		);
+
+		$this->assertContains( $post_id, wp_list_pluck( $result['items'], 'id' ) );
+	}
+
+	/**
+	 * Comment search carries the parent's title and permalink on every item,
+	 * so it inherits the parent's read gate.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 */
+	public function test_search_comments_excludes_comment_on_private_parent() {
+		$post_id    = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Absolutely loved the saffron tip.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'saffron', 'offset' => 0 )
+		);
+
+		$this->assertNotContains(
+			$comment_id,
+			wp_list_pluck( $result['items'], 'id' ),
+			'A private parent must not leak its title through comment search.'
+		);
+	}
+
+	/**
+	 * `search_comments_by_post` takes its post id from the model, so it is
+	 * untrusted the same way an entity id is.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments_by_post
+	 */
+	public function test_search_comments_by_post_refuses_unreadable_parent() {
+		$post_id = self::factory()->post->create(
+			array( 'post_status' => 'private', 'post_title' => 'Secret plans' )
+		);
+		self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments_by_post',
+			array( 'post_id' => $post_id, 'query' => '', 'offset' => 0 )
+		);
+
+		$this->assertSame( 0, $result['count'] );
+		$this->assertSame( '', (string) ( $result['post_title'] ?? '' ), 'The parent title must not be echoed back.' );
+		$this->assertArrayHasKey( 'error', $result );
 	}
 }

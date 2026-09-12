@@ -378,6 +378,39 @@ function openstation_ai_search_dispatch_tool( $tool_name, array $args ) {
 }
 
 /**
+ * Whether the current user is allowed to read a post's content.
+ *
+ * Two gates, because WordPress hides content two different ways:
+ *
+ * - **Status.** A publicly viewable post is public. Anything else — private,
+ *   draft, pending, future — needs `read_post`, which resolves to the
+ *   author's own edit rights or to `read_private_posts`.
+ * - **Password.** A published password-protected post IS publicly viewable
+ *   and every logged-in user passes `read_post` on it, yet its body is
+ *   exactly what the password withholds. `post_password_required()` answers
+ *   for the visitor's password cookie; editing the post is the other way in,
+ *   which is how core decides the same question.
+ *
+ * @param WP_Post|null $post Resolved post object.
+ * @return bool
+ */
+function openstation_ai_search_can_read_post( $post ) {
+	if ( ! $post instanceof WP_Post ) {
+		return false;
+	}
+
+	if ( ! is_post_publicly_viewable( $post ) && ! current_user_can( 'read_post', $post->ID ) ) {
+		return false;
+	}
+
+	if ( post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID ) ) {
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * Keyword-searches published posts or pages with WordPress's native search
  * (`WP_Query` `s=`), returning data rich enough for the agent to compare
  * AND for the UI to render links.
@@ -405,6 +438,13 @@ function openstation_ai_search_fetch_posts( $post_type, $query, $offset ) {
 
 	$items = array();
 	foreach ( $wp_query->posts as $post ) {
+		// `publish` is not the whole story: a password-protected post is
+		// published, and handing its body to the model leaks it right back
+		// through the answer prose. The corpus is what this user may read.
+		if ( ! openstation_ai_search_can_read_post( $post ) ) {
+			continue;
+		}
+
 		$items[] = array(
 			// Identity — used to build the final entity detail.
 			'id'       => $post->ID,
@@ -492,8 +532,16 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 
 	$items = array();
 	foreach ( $comments as $comment ) {
-		$parent_post  = get_post( $comment->comment_post_ID );
-		$parent_title = $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '';
+		$parent_post = get_post( $comment->comment_post_ID );
+
+		// Approval is not publication. An approved comment outlives its post
+		// being switched to private or back to draft, and every item below
+		// carries the parent's title and permalink.
+		if ( ! openstation_ai_search_can_read_post( $parent_post ) ) {
+			continue;
+		}
+
+		$parent_title = wp_strip_all_tags( $parent_post->post_title );
 
 		$items[] = array(
 			'id'         => (int) $comment->comment_ID,
@@ -505,7 +553,7 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 			'url'        => (string) get_comment_link( $comment ),
 			'edit_url'   => admin_url( 'comment.php?action=editcomment&c=' . (int) $comment->comment_ID ),
 			'post_id'    => (int) $comment->comment_post_ID,
-			'post_url'   => $parent_post ? (string) get_permalink( $parent_post ) : '',
+			'post_url'   => (string) get_permalink( $parent_post ),
 		);
 	}
 
@@ -554,6 +602,23 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
 		);
 	}
 
+	// The model picks the post id, so it is untrusted the same way an entity
+	// id is. Comments inherit their parent's reach: a thread on a private,
+	// draft or password-protected post is not this user's to read.
+	$parent_post = get_post( $post_id );
+	if ( ! openstation_ai_search_can_read_post( $parent_post ) ) {
+		return array(
+			'tool'     => 'search_comments_by_post',
+			'post_id'  => $post_id,
+			'offset'   => $offset,
+			'items'    => array(),
+			'count'    => 0,
+			'total'    => 0,
+			'has_more' => false,
+			'error'    => 'No readable post matches that post_id.',
+		);
+	}
+
 	$base_args = array(
 		'post_id' => $post_id,
 		'status'  => 'approve',
@@ -574,8 +639,7 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
 
 	$total = (int) get_comments( array_merge( $base_args, array( 'count' => true ) ) );
 
-	$parent_post  = get_post( $post_id );
-	$parent_title = $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '';
+	$parent_title = wp_strip_all_tags( $parent_post->post_title );
 
 	$items = array();
 	foreach ( $comments as $comment ) {
@@ -622,11 +686,14 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
  * whether or not a search tool ever surfaced it. Every branch therefore
  * re-checks the current user's authorization against the resolved object
  * before emitting anything. The id must resolve to a real post or page (not
- * a CPT row of some other plugin); a private/draft/pending/future post is
- * withheld unless the user can `read_post` it; an unapproved comment (and its
- * moderation verdicts) is withheld unless the user can `moderate_comments`.
- * The edit link follows the matching edit capability. Model output is never
- * an authorization decision.
+ * a CPT row of some other plugin), and that post has to pass
+ * `openstation_ai_search_can_read_post()`. A comment adds two more gates: an
+ * unapproved comment (and the moderation verdicts on any comment) is withheld
+ * unless the user can `moderate_comments`, and the record carries its parent's
+ * title and permalink, so the parent has to pass the same read check — an
+ * approved comment outlives its post being switched to private or back to
+ * draft, and approval is not publication. The edit link follows the matching
+ * edit capability. Model output is never an authorization decision.
  *
  * @param string $entity_type 'post' | 'page' | 'comment'.
  * @param int    $entity_id
@@ -639,15 +706,16 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 		$post = get_post( $entity_id );
 
 		// The id must resolve to an actual post or page — the only types the
-		// search tools surface. Without this, a model-named id could resolve
-		// a plugin's non-public CPT row, whose `publish` status would satisfy
-		// the viewability check below even though the type is never queryable.
+		// search tools surface. Without this, a model-named id could resolve a
+		// plugin's non-public CPT row: its type fails `is_post_publicly_viewable()`,
+		// but `read_post` on a `publish` status maps to plain `read`, which every
+		// logged-in user holds, so the gate below would wave the row through.
 		if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
 			return null;
 		}
 
-		// A publicly viewable post is public; anything else needs read authorization.
-		if ( ! is_post_publicly_viewable( $post ) && ! current_user_can( 'read_post', $entity_id ) ) {
+		// Status and password both decide whether this user may see the body.
+		if ( ! openstation_ai_search_can_read_post( $post ) ) {
 			return null;
 		}
 
@@ -675,15 +743,23 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 			return null;
 		}
 
-		$meta        = $can_moderate ? openstation_ai_get_meta( 'comment', $entity_id ) : null;
+		// Approval is not publication. An approved comment survives its post
+		// being switched to private or back to draft, and this record carries
+		// the parent's title and permalink — so without this check, naming a
+		// comment id would walk straight around the post branch's gate above.
 		$parent_post = get_post( $comment->comment_post_ID );
-		$entity      = array(
+		if ( ! openstation_ai_search_can_read_post( $parent_post ) ) {
+			return null;
+		}
+
+		$meta   = $can_moderate ? openstation_ai_get_meta( 'comment', $entity_id ) : null;
+		$entity = array(
 			'id'         => $entity_id,
 			'type'       => 'comment',
 			'excerpt'    => openstation_ai_search_excerpt( $comment->comment_content ),
 			'post_id'    => (int) $comment->comment_post_ID,
-			'post_title' => $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '',
-			'post_url'   => $parent_post ? (string) get_permalink( $parent_post ) : '',
+			'post_title' => wp_strip_all_tags( $parent_post->post_title ),
+			'post_url'   => (string) get_permalink( $parent_post ),
 			'url'        => (string) get_comment_link( $comment ),
 			'edit_url'   => current_user_can( 'edit_comment', $entity_id )
 				? admin_url( 'comment.php?action=editcomment&c=' . $entity_id )
