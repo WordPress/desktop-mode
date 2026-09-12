@@ -17,10 +17,13 @@
  * @public
  */
 
+export const DEFAULT_UPDATE_TIMEOUT_MS = 60_000;
+
 interface Job< T > {
 	run: () => Promise< T >;
 	resolve: ( value: T ) => void;
 	reject: ( error: unknown ) => void;
+	timeoutMs: number;
 }
 
 const queue: Array< Job< unknown > > = [];
@@ -32,16 +35,29 @@ let inFlight = false;
  * has settled. Errors are isolated — one failed update does not
  * cancel queued jobs (matches Core's behavior; failed updates leave
  * a `notice-error` on the row and the queue drains the rest).
+ *
+ * Jobs that fail to settle within `timeoutMs` reject with a timeout error
+ * and release the queue lock so subsequent jobs can proceed.
  */
-export function enqueueUpdateJob< T >( run: () => Promise< T > ): Promise< T > {
+export function enqueueUpdateJob< T >(
+	run: () => Promise< T >,
+	timeoutMs = DEFAULT_UPDATE_TIMEOUT_MS,
+): Promise< T > {
 	return new Promise< T >( ( resolve, reject ) => {
 		queue.push( {
 			run: run as () => Promise< unknown >,
 			resolve: resolve as ( v: unknown ) => void,
 			reject,
+			timeoutMs,
 		} );
 		void drain();
 	} );
+}
+
+/** Reset queue state — for unit tests only. */
+export function resetUpdateQueueForTest(): void {
+	queue.length = 0;
+	inFlight = false;
 }
 
 async function drain(): Promise< void > {
@@ -53,12 +69,21 @@ async function drain(): Promise< void > {
 		return;
 	}
 	inFlight = true;
+	let timer: ReturnType< typeof setTimeout > | null = null;
 	try {
-		const value = await job.run();
+		const timeoutPromise = new Promise< never >( ( _, reject ) => {
+			timer = setTimeout( () => {
+				reject( new Error( 'Update request timed out' ) );
+			}, job.timeoutMs );
+		} );
+		const value = await Promise.race( [ job.run(), timeoutPromise ] );
 		job.resolve( value );
 	} catch ( err ) {
 		job.reject( err );
 	} finally {
+		if ( timer !== null ) {
+			clearTimeout( timer );
+		}
 		inFlight = false;
 		// Yield to the microtask queue so the resolver's `.then`
 		// handlers run before the next job begins — keeps the "row
