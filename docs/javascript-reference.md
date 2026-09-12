@@ -3886,6 +3886,7 @@ Register a tab in the OpenStation Preferences window. The tab is appended (or so
 | `label` | `string` | yes | Tab label. |
 | `capability` | `string` | no | Gates visibility. `'manage_options'` → admin-only; any other value (including omitting) → visible to everyone. |
 | `order` | `number` | no | Default `100`. Built-ins: appearance=10, themes=12, windows=18, navigation=22, features=30, help=40 (Components is admin-only; About is pinned last with a sentinel order). |
+| `icon` | `string` | no | Sidebar glyph, as a name from the OS icon set (`settings`, `bell`, `apps`, … — see `src/ui/icons/set.ts`). Unknown names render no glyph, same as omitting it. |
 | `owner` | `string` | no | When set, plugin deactivation live-unregisters every tab with this owner. Typically matches the WordPress script handle registered with `openstation_register_settings_tab_script()`. |
 | `render( body, ctx )` | `function` | yes | Receives the tabpanel body element and a ctx object (see below). Runs once per registration — the host survives the Preferences app's repaints — and again after a re-register; closing and reopening the window rebuilds the tree, so it must be idempotent. |
 

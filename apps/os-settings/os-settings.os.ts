@@ -57,9 +57,8 @@ const DEFAULT_TAB = 'appearance';
 /** A row's sidebar glyph — one node per row, made once. */
 function glyph( ui: UiState, row: PageRow ): SVGSVGElement | unknown {
 	if ( ! row.icon ) {
-		// Third-party tabs have no glyph to render: the registry has
-		// no icon field. The spacer keeps their label on the same
-		// line as every other label.
+		// A registry tab that named no icon (or an unknown one). The
+		// spacer keeps its label on the same line as every other label.
 		return html`<span class="os-settings__nav-glyph-blank" aria-hidden="true"></span>`;
 	}
 	let node = ui.glyphs.get( row.id );
