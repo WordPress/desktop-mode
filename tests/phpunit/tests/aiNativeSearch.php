@@ -580,4 +580,207 @@ class Tests_OpenStation_AiNativeSearch extends WP_UnitTestCase {
 		$this->assertSame( '', (string) ( $result['post_title'] ?? '' ), 'The parent title must not be echoed back.' );
 		$this->assertArrayHasKey( 'error', $result );
 	}
+
+	/**
+	 * A comment hanging off a non-public CPT row is internal plugin data —
+	 * WooCommerce order notes are comments on `shop_order`. The parent's
+	 * `publish` status resolves `read_post` to plain `read`, so the type has
+	 * to be gated separately or the note text and the row's title leak.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_comment_on_non_public_cpt_parent() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_type'   => 'os_secret_cpt',
+				'post_status' => 'publish',
+				'post_title'  => 'Internal record',
+			)
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Refunded via gateway, ref 8812.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull(
+			openstation_ai_search_build_entity( 'comment', $comment_id ),
+			'A non-public CPT parent must not leak through its comments.'
+		);
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
+	 * The same row is out of the comment-search corpus, and out of `total`
+	 * with it — a keyword that matches only there must report nothing.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 */
+	public function test_search_comments_excludes_non_public_cpt_parent() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id    = self::factory()->post->create(
+			array( 'post_type' => 'os_secret_cpt', 'post_status' => 'publish' )
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Refunded via gateway, saffron ref 8812.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'saffron', 'offset' => 0 )
+		);
+
+		$this->assertNotContains( $comment_id, wp_list_pluck( $result['items'], 'id' ) );
+		$this->assertSame( 0, $result['total'], 'The row must not be counted either.' );
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
+	 * A password-protected parent is `publish`, so only the clause filter
+	 * keeps it out. `total` has to drop with `items` or the counter answers
+	 * keyword questions about a body the caller cannot read.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 */
+	public function test_search_comments_excludes_comment_on_password_protected_parent() {
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_title'    => 'Members only',
+			)
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'The saffron tip was the best part.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'saffron', 'offset' => 0 )
+		);
+
+		$this->assertNotContains( $comment_id, wp_list_pluck( $result['items'], 'id' ) );
+		$this->assertSame(
+			0,
+			$result['total'],
+			'A sealed parent must not leave its comments countable.'
+		);
+	}
+
+	/**
+	 * The gates live in the query, so a batch is never thinned after the
+	 * fact: `count` agrees with `items`, and a readable comment is not
+	 * displaced from its page by a hidden neighbour.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments
+	 */
+	public function test_search_comments_batch_is_not_thinned_by_hidden_rows() {
+		$sealed_id = self::factory()->post->create(
+			array( 'post_status' => 'publish', 'post_password' => 'hunter2' )
+		);
+		foreach ( range( 1, 12 ) as $n ) {
+			self::factory()->comment->create(
+				array(
+					'comment_post_ID'  => $sealed_id,
+					'comment_approved' => '1',
+					'comment_content'  => "Hidden saffron note {$n}.",
+				)
+			);
+		}
+
+		$public_id  = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$visible_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $public_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'Public saffron note.',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments',
+			array( 'query' => 'saffron', 'offset' => 0 )
+		);
+
+		$this->assertSame(
+			array( $visible_id ),
+			wp_list_pluck( $result['items'], 'id' ),
+			'Twelve hidden rows must not push the one readable comment off the first page.'
+		);
+		$this->assertSame( 1, $result['count'] );
+		$this->assertSame( 1, $result['total'] );
+		$this->assertFalse( $result['has_more'] );
+	}
+
+	/**
+	 * The `by post` tool refuses a non-public CPT parent for the same reason
+	 * the entity card does.
+	 *
+	 * @covers ::openstation_ai_search_fetch_comments_by_post
+	 */
+	public function test_search_comments_by_post_refuses_non_public_cpt_parent() {
+		register_post_type( 'os_secret_cpt', array( 'public' => false ) );
+		$post_id = self::factory()->post->create(
+			array( 'post_type' => 'os_secret_cpt', 'post_status' => 'publish' )
+		);
+		self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$result = openstation_ai_search_dispatch_tool(
+			'search_comments_by_post',
+			array( 'post_id' => $post_id, 'query' => '', 'offset' => 0 )
+		);
+
+		$this->assertSame( 0, $result['count'] );
+		$this->assertArrayHasKey( 'error', $result );
+
+		_unregister_post_type( 'os_secret_cpt' );
+	}
+
+	/**
+	 * A comment whose parent post is gone resolves to nothing rather than to
+	 * whatever `get_post( 0 )` hands back from the global.
+	 *
+	 * @covers ::openstation_ai_search_build_entity
+	 */
+	public function test_build_entity_withholds_orphaned_comment() {
+		$post_id    = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_post_ID' => $post_id, 'comment_approved' => '1' )
+		);
+		wp_update_comment(
+			array( 'comment_ID' => $comment_id, 'comment_post_ID' => 0 )
+		);
+
+		$GLOBALS['post'] = get_post( $post_id );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertNull( openstation_ai_search_build_entity( 'comment', $comment_id ) );
+
+		unset( $GLOBALS['post'] );
+	}
 }

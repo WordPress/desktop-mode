@@ -380,16 +380,22 @@ function openstation_ai_search_dispatch_tool( $tool_name, array $args ) {
 /**
  * Whether the current user is allowed to read a post's content.
  *
- * Two gates, because WordPress hides content two different ways:
+ * Three gates, because WordPress hides content three different ways and only
+ * one of them is a capability `read_post` can answer:
  *
- * - **Status.** A publicly viewable post is public. Anything else — private,
- *   draft, pending, future — needs `read_post`, which resolves to the
- *   author's own edit rights or to `read_private_posts`.
  * - **Password.** A published password-protected post IS publicly viewable
  *   and every logged-in user passes `read_post` on it, yet its body is
  *   exactly what the password withholds. `post_password_required()` answers
  *   for the visitor's password cookie; editing the post is the other way in,
- *   which is how core decides the same question.
+ *   the escape hatch Core's
+ *   `WP_REST_Posts_Controller::check_password_required()` grants.
+ * - **Type.** `read_post` on a `publish` status maps to plain `read`, which
+ *   every logged-in user holds, whatever the post type's visibility — so a
+ *   plugin's internal CPT row would read as public. A type the front end
+ *   never renders needs `edit_post` instead.
+ * - **Status.** A publicly viewable post is public. Anything else — private,
+ *   draft, pending, future — needs `read_post`, which resolves to the
+ *   author's own edit rights or to `read_private_posts`.
  *
  * @param WP_Post|null $post Resolved post object.
  * @return bool
@@ -399,15 +405,33 @@ function openstation_ai_search_can_read_post( $post ) {
 		return false;
 	}
 
-	if ( ! is_post_publicly_viewable( $post ) && ! current_user_can( 'read_post', $post->ID ) ) {
-		return false;
-	}
-
 	if ( post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID ) ) {
 		return false;
 	}
 
-	return true;
+	if ( is_post_publicly_viewable( $post ) ) {
+		return true;
+	}
+
+	if ( ! is_post_type_viewable( $post->post_type ) ) {
+		return current_user_can( 'edit_post', $post->ID );
+	}
+
+	return current_user_can( 'read_post', $post->ID );
+}
+
+/**
+ * Post types whose comments the search tools may surface.
+ *
+ * The front end never renders a non-viewable type, so a discussion hanging
+ * off one is internal plugin data — WooCommerce order notes are comments on
+ * `shop_order`. Passing this to `WP_Comment_Query` as `post_type` filters
+ * those threads out of `total` as well as out of the batch.
+ *
+ * @return string[]
+ */
+function openstation_ai_search_commentable_post_types() {
+	return array_values( array_filter( get_post_types( array(), 'names' ), 'is_post_type_viewable' ) );
 }
 
 /**
@@ -497,17 +521,32 @@ function openstation_ai_search_excerpt( $content ) {
  * @return array
  */
 function openstation_ai_search_fetch_comments( $query, $offset ) {
+	// Every item below carries its parent's title and permalink, and approval
+	// is a moderation decision, not a visibility one — an approved comment
+	// outlives its post being switched to private or back to draft. The
+	// parent's reach therefore has to bound the corpus, and it has to do so IN
+	// THE QUERY: a skip in the loop below would leave `total` counting rows
+	// `items` withholds (a keyword oracle over content the caller cannot read)
+	// and let hidden rows eat the batch size.
 	$base_args = array(
 		'status'      => 'approve',
 		'type'        => 'comment',
 		'search'      => (string) $query,
-		// Every item below carries its parent's title and permalink, and
-		// approval is not publication — an approved comment outlives its post
-		// being switched to private or back to draft. Filtering the parent
-		// status in the query keeps those threads out of `total` as well as
-		// out of `items`, so the counter cannot report what the batch hides.
 		'post_status' => 'publish',
+		'post_type'   => openstation_ai_search_commentable_post_types(),
 	);
+
+	// The password is the one gate with no query var — `WP_Comment_Query` has
+	// no `has_password`. Both query vars above join the posts table, so the
+	// clause has somewhere to land, and this filter runs for the count query
+	// as well as the batch.
+	$exclude_sealed_parents = static function ( $clauses ) {
+		global $wpdb;
+		$clauses['where'] .= ( '' !== $clauses['where'] ? ' AND ' : '' ) . "{$wpdb->posts}.post_password = ''";
+		return $clauses;
+	};
+
+	add_filter( 'comments_clauses', $exclude_sealed_parents );
 
 	$comments = get_comments(
 		array_merge(
@@ -521,6 +560,8 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 	);
 
 	$total = (int) get_comments( array_merge( $base_args, array( 'count' => true ) ) );
+
+	remove_filter( 'comments_clauses', $exclude_sealed_parents );
 
 	// Prime the parent posts in a single query so the per-comment
 	// get_post() calls below are cache hits, not N+1 round-trips.
@@ -538,15 +579,9 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 
 	$items = array();
 	foreach ( $comments as $comment ) {
-		$parent_post = get_post( $comment->comment_post_ID );
-
-		// `publish` is also the status of a password-protected post, and the
-		// query above cannot express that — WP_Comment_Query has no
-		// `has_password`. The parent's own read gate answers it.
-		if ( ! openstation_ai_search_can_read_post( $parent_post ) ) {
-			continue;
-		}
-
+		// The query joined the posts table on every gate, so the parent exists
+		// and is one this caller may read.
+		$parent_post  = get_post( $comment->comment_post_ID );
 		$parent_title = wp_strip_all_tags( $parent_post->post_title );
 
 		$items[] = array(
@@ -711,11 +746,11 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 	if ( in_array( $entity_type, array( 'post', 'page' ), true ) ) {
 		$post = get_post( $entity_id );
 
-		// The id must resolve to an actual post or page — the only types the
-		// search tools surface. Without this, a model-named id could resolve a
-		// plugin's non-public CPT row: its type fails `is_post_publicly_viewable()`,
-		// but `read_post` on a `publish` status maps to plain `read`, which every
-		// logged-in user holds, so the gate below would wave the row through.
+		// The id must resolve to an actual post or page. The gate below answers
+		// type visibility on its own, so this is the contract rather than the
+		// lock: the record's `type` is what the client renders the card from,
+		// and post/page is what the search tools surface. A viewable CPT row
+		// would pass the gate and still have no card to land in.
 		if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
 			return null;
 		}
@@ -753,7 +788,11 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 		// being switched to private or back to draft, and this record carries
 		// the parent's title and permalink — so without this check, naming a
 		// comment id would walk straight around the post branch's gate above.
-		$parent_post = get_post( $comment->comment_post_ID );
+		// An orphaned comment is resolved explicitly rather than through
+		// get_post( 0 ), which falls back to the global $post and would judge
+		// the comment against whatever else the request happens to be showing.
+		$parent_id   = (int) $comment->comment_post_ID;
+		$parent_post = $parent_id > 0 ? get_post( $parent_id ) : null;
 		if ( ! openstation_ai_search_can_read_post( $parent_post ) ) {
 			return null;
 		}
