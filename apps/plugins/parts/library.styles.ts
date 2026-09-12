@@ -118,6 +118,13 @@ export const libraryStyles = css`
 	min-inline-size: 0;
 }
 
+.os-plugins__view-switch {
+	display: flex; flex: 0 0 auto; gap: 2px; padding: 3px;
+	border: 1px solid var(--os-ui-border, #dcdcde); border-radius: 8px;
+	background: var(--os-ui-surface, #fff);
+}
+.os-plugins__view-switch .dashicons { font-size: 16px; inline-size: 16px; block-size: 16px; }
+
 .os-plugins__library-scroll {
 	overflow: auto;
 	scrollbar-gutter: stable;
@@ -125,6 +132,27 @@ export const libraryStyles = css`
 	min-block-size: 0;
 	padding: 0 24px 28px;
 	overscroll-behavior: contain;
+}
+
+.os-plugins__workspace[data-view="table"] .os-plugins__library-scroll {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding-block-end: 16px;
+}
+
+.os-plugins__library-scroll > os-table {
+	flex: 1;
+	min-block-size: 0;
+	min-inline-size: 0;
+	--os-ui-table-font-size: 12px;
+}
+
+.os-plugins__inspector-bar > span {
+	min-inline-size: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 }
 
 .os-plugins__shelf + .os-plugins__shelf {
@@ -431,6 +459,10 @@ export const libraryStyles = css`
 
 
 @container plugin-library ( max-width: 660px ) {
+	.os-plugins__library-tools { flex-wrap: wrap; }
+	.os-plugins__library-tools .os-app-list__search { flex-basis: 100%; }
+	.os-plugins__library-tools os-select { flex: 1; }
+
 	.os-plugins__library-head {
 		padding: 16px 16px 0;
 	}

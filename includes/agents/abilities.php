@@ -291,6 +291,15 @@ function openstation_agents_ability_get_post( $args ) {
 /**
  * `desktop-mode/get-post` permission callback.
  *
+ * `read_post` decides visibility (published / private / draft) and
+ * never the post password — WordPress splits the two deliberately, so
+ * a plain `read_post` check would hand a Subscriber the raw body of a
+ * password-protected post. Mirror Core: a sealed post stays sealed
+ * unless the caller can edit it (the same escape hatch
+ * `WP_REST_Posts_Controller::check_password_required()` grants), and
+ * because this ability returns RAW `post_content` there is no empty
+ * rendered field to fall back to — the only safe answer is to refuse.
+ *
  * @param array $args Input args.
  * @return bool
  */
@@ -300,7 +309,14 @@ function openstation_agents_ability_get_post_can( $args ) {
 	if ( $post_id <= 0 ) {
 		return false;
 	}
-	return current_user_can( 'read_post', $post_id );
+	if ( ! current_user_can( 'read_post', $post_id ) ) {
+		return false;
+	}
+	$post = get_post( $post_id );
+	if ( $post instanceof WP_Post && post_password_required( $post ) && ! current_user_can( 'edit_post', $post_id ) ) {
+		return false;
+	}
+	return true;
 }
 
 /**

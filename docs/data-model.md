@@ -262,7 +262,7 @@ profile screen). AI agents are ordinary `wp_users` rows flagged with
 | `desktop_mode_game_playtime` | Games | Lifetime play time per game. |
 | `desktop_mode_game_playtime_days` | Games | Play time per day (rolling window). |
 | `openstation_station_home_card_preferences` | Station Home | Which home cards are shown or hidden. |
-| `openstation_app_store` | App Framework | The `Store` contract with `user` scope, a key → value map. The same name with `site` scope is an option. |
+| `openstation_app_store` | App Framework | The `Store` contract with `user` scope, a key → value map. Plugins stores `desktop-mode-plugins:installed-view` here (`cards` or `table`, default `cards`). The same name with `site` scope is an option. |
 | `_desktop_mode_last_login_at` | Users | Last login time. |
 | `_desktop_mode_has_notes` | Notes | Cache `{rev}:{0|1}` of whether the user has notes; `rev` comes from the `desktop_mode_notes_rev` option. |
 | `_desktop_mode_agent` | Agents | `1` marks this `wp_users` row as an AI agent rather than a person. |
@@ -286,7 +286,7 @@ profile screen). AI agents are ordinary `wp_users` rows flagged with
 | `desktop_mode_files_schema_version` | Files | Installed schema version; a mismatch triggers the lazy install. |
 | `desktop_mode_games_schema_version` | Games | Same, for the two Games tables. |
 | `desktop_mode_migration_version` | Migrations | Last data migration applied (`includes/migrations.php`). |
-| `desktop_mode_extended_options` | Preferences | Site-wide extended options (the toggles that gate server-side registrations: Games, AI agents, the OpenStation Network). |
+| `desktop_mode_extended_options` | Preferences | Site-wide extended options: Media Library enhancement, Games, AI agents, OpenStation Network, plus `window_prewarm` and `admin_asset_cache` (both default `true`; administrator opt-outs apply on shell reload). |
 | `desktop_mode_desktop_themes` | Desktop themes | Themes uploaded as ZIPs and the active selection; their files go to `uploads/desktop-mode-themes/`. |
 | `desktop_mode_comments_ai_moderation` | AI Copilot | Whether comment moderation by AI is on. |
 | `desktop_mode_agents_defaults_seeded` | Agents | Flag: default agents already created. |
@@ -339,3 +339,16 @@ in-request caching.
 - [Architecture](./architecture.md#preference-persistence) — preference
   and session persistence in detail.
 - [Multisite](./multisite.md) — session scoping across a network.
+
+## Agent job storage
+
+All names below are per-site. No transient or browser cache is the source of
+truth for job execution.
+
+| Name | Kind | Contents / lifetime |
+|---|---|---|
+| `openstation_agent_job_{uuid}` | Option, non-autoloaded | Owner, agent, bounded message/history, source, timestamps, status, result/error. Retained for one day. |
+| `openstation_agent_job_claim_{uuid}` | Option, non-autoloaded | Atomic execution claim, retained with the job; never recycled for retries. |
+| `openstation_agent_job_active_{owner}_{agent}` | Option, non-autoloaded | Admission slot (`uuid|deadline`), released on completion/failure, expiry or cleanup. |
+| `openstation_agent_job_run` | Single cron event, UUID argument | Executes a queued invocation once. |
+| `openstation_agent_job_cleanup` | Single cron event, UUID argument | Deletes job input/result and its claim after one day. |

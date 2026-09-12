@@ -64,6 +64,71 @@ class Tests_OpenStation_AgentsAbilities extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A Subscriber can read the body of a plain published post — the
+	 * baseline the password check must not break.
+	 *
+	 * @covers ::openstation_agents_ability_get_post
+	 * @covers ::openstation_agents_ability_get_post_can
+	 */
+	public function test_get_post_returns_body_for_subscriber_on_public_post() {
+		wp_set_current_user( self::$subscriber_id );
+
+		$out = wp_get_ability( 'desktop-mode/get-post' )->execute(
+			array( 'post_id' => self::$post_id )
+		);
+
+		$this->assertNotWPError( $out );
+		$this->assertSame( self::$post_id, $out['id'] );
+	}
+
+	/**
+	 * A password-protected post's body stays sealed from a Subscriber:
+	 * `read_post` covers visibility, never the password.
+	 *
+	 * @covers ::openstation_agents_ability_get_post_can
+	 */
+	public function test_get_post_denies_subscriber_on_password_protected_post() {
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_content'  => 'Secret body.',
+			)
+		);
+		wp_set_current_user( self::$subscriber_id );
+
+		$out = wp_get_ability( 'desktop-mode/get-post' )->execute(
+			array( 'post_id' => $protected_id )
+		);
+
+		$this->assertWPError( $out );
+	}
+
+	/**
+	 * A caller who can edit the post still reads its raw body even when
+	 * it carries a password — the same escape hatch Core grants.
+	 *
+	 * @covers ::openstation_agents_ability_get_post_can
+	 */
+	public function test_get_post_allows_editor_on_password_protected_post() {
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'hunter2',
+				'post_content'  => 'Secret body.',
+			)
+		);
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$out = wp_get_ability( 'desktop-mode/get-post' )->execute(
+			array( 'post_id' => $protected_id )
+		);
+
+		$this->assertNotWPError( $out );
+		$this->assertSame( 'Secret body.', $out['content'] );
+	}
+
+	/**
 	 * @covers ::openstation_agents_ability_get_media
 	 */
 	public function test_get_media_returns_details_for_author() {

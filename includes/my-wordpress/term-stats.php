@@ -14,6 +14,19 @@
  * stats. Author archives are also public so listing top authors is
  * not new disclosure.
  *
+ * That reasoning covers the term row and the aggregates over its
+ * *published* posts; it does not carry to the unpublished posts inside
+ * the term, nor to terms of a non-viewable taxonomy. So hidden
+ * taxonomies answer 400 unless the caller can manage their terms,
+ * every post-level query is scoped to the statuses the caller may
+ * read — resolved from each status's registered visibility flags and
+ * the post type's cap map, plus the caller's own posts — and the
+ * recent list is gated per row with `read_post`. Otherwise a
+ * subscriber could read an administrator's private and draft post
+ * titles, authors and dates, and the per-status counts would leak how
+ * many hidden posts a term holds. The readable-status clause is built
+ * in the callback, right above the queries that splice it in.
+ *
  * @package OpenStation
  */
 
@@ -61,7 +74,12 @@ function openstation_my_wordpress_term_stats_callback( $request ) {
 	$term_id  = (int) $request->get_param( 'id' );
 
 	$tax_obj = get_taxonomy( $taxonomy );
-	if ( ! $tax_obj ) {
+	// A registered-but-hidden taxonomy (nav_menu, link_category, a
+	// plugin's internal one) is not public-facing data the way
+	// categories and tags are, so the file docblock's `read` reasoning
+	// does not cover it: answer exactly as if it were unregistered
+	// unless the caller can manage its terms.
+	if ( ! $tax_obj || ( ! is_taxonomy_viewable( $tax_obj ) && ! current_user_can( $tax_obj->cap->manage_terms ) ) ) {
 		return new WP_Error(
 			'openstation_invalid_taxonomy',
 			__( 'Unknown taxonomy.', 'desktop-mode' ),
@@ -103,8 +121,68 @@ function openstation_my_wordpress_term_stats_callback( $request ) {
 
 	$tt_id = (int) $term->term_taxonomy_id;
 
+	// Every query below that can touch unpublished posts is scoped to
+	// the statuses the caller may read (the remaining aggregates are
+	// publish-only). The endpoint gates on the term (public), but the
+	// posts inside it are not: without this, a subscriber gets the
+	// titles, authors and dates of administrator-owned drafts/private
+	// posts, and the per-status counts become an oracle for content
+	// they cannot see.
+	//
+	// The sets come from the registered status objects, so a plugin's
+	// custom status follows its own visibility flags: public statuses
+	// for everyone; private-flagged ones with the post type's
+	// read_private_posts; the remaining non-internal statuses (draft,
+	// pending, future and any registered workflow status — trash and
+	// auto-draft are internal) with edit_others_posts, because core
+	// maps reading them to editing them, plus edit_published_posts for
+	// a scheduled post, mirroring map_meta_cap(); and the caller's own
+	// posts in any of those statuses, since core grants an author read
+	// on their own post whatever its status. The clause is a close
+	// approximation of read_post used where a per-row gate is
+	// impossible (the counts); the recent list re-checks read_post per
+	// row as the authoritative gate. It is built inline, from literal
+	// %s/%d placeholder lists only, so its values are visibly bound
+	// through prepare() at both use sites.
+	$type          = get_post_type_object( 'post' );
+	$statuses      = array_values( get_post_stati( array( 'public' => true ) ) );
+	$private_stati = array_values( get_post_stati( array( 'private' => true ) ) );
+	$hidden_stati  = array_values(
+		get_post_stati(
+			array(
+				'internal' => false,
+				'public'   => false,
+				'private'  => false,
+			)
+		)
+	);
+	if ( current_user_can( $type->cap->read_private_posts ) ) {
+		$statuses = array_merge( $statuses, $private_stati );
+	}
+	if ( current_user_can( $type->cap->edit_others_posts ) ) {
+		foreach ( $hidden_stati as $status ) {
+			if ( 'future' === $status && ! current_user_can( $type->cap->edit_published_posts ) ) {
+				continue;
+			}
+			$statuses[] = $status;
+		}
+	}
+
+	$placeholders  = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+	$status_clause = "p.post_status IN ( {$placeholders} )";
+	$status_args   = $statuses;
+
+	$user_id = get_current_user_id();
+	$own     = array_values( array_diff( array_merge( $private_stati, $hidden_stati ), $statuses ) );
+	if ( $user_id > 0 && $own ) {
+		$own_ph        = implode( ', ', array_fill( 0, count( $own ), '%s' ) );
+		$status_clause = "( {$status_clause} OR ( p.post_author = %d AND p.post_status IN ( {$own_ph} ) ) )";
+		$status_args   = array_merge( $status_args, array( $user_id ), $own );
+	}
+
 	// ----- Counts ------------------------------------------------------
-	// Post-status breakdown for posts in this term.
+	// Post-status breakdown, restricted to the readable set so the
+	// counts never reveal how many hidden posts a term holds.
 	$status_rows = $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT p.post_status, COUNT(DISTINCT p.ID) AS n
@@ -112,9 +190,9 @@ function openstation_my_wordpress_term_stats_callback( $request ) {
 			INNER JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
 			WHERE tr.term_taxonomy_id = %d
 				AND p.post_type = 'post'
-				AND p.post_status NOT IN ( 'auto-draft', 'inherit', 'trash' )
+				AND {$status_clause}
 			GROUP BY p.post_status",
-			$tt_id
+			array_merge( array( $tt_id ), $status_args )
 		),
 		ARRAY_A
 	);
@@ -167,24 +245,37 @@ function openstation_my_wordpress_term_stats_callback( $request ) {
 		'distinctAuthors'  => $distinct_authors,
 	);
 
-	// ----- Recent posts (5 most recent) --------------------------------
+	// ----- Recent posts (5 most recent the caller may read) ------------
+	// The clause narrows the pool to readable statuses; the per-row
+	// read_post gate below is authoritative (it resolves the exact meta
+	// cap per post, and it is the hook where membership plugins restrict
+	// even published posts). Fetch headroom past 5 because the gate may
+	// drop rows the coarse clause admitted.
 	$recent_rows = $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT DISTINCT p.ID, p.post_title, p.post_date_gmt, p.post_status, p.post_type, p.post_author
 			FROM {$wpdb->posts} p
 			INNER JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
 			WHERE tr.term_taxonomy_id = %d
-				AND p.post_status IN ( 'publish', 'private', 'future', 'draft', 'pending' )
+				AND {$status_clause}
 				AND p.post_type = 'post'
 			ORDER BY p.post_date_gmt DESC
-			LIMIT 5",
-			$tt_id
+			LIMIT 15",
+			array_merge( array( $tt_id ), $status_args )
 		),
 		ARRAY_A
 	);
 	$recent      = array();
+	if ( $recent_rows ) {
+		// Bulk-warm the post cache — the read_post checks,
+		// get_the_title() and get_permalink() below all read from it.
+		_prime_post_caches( array_map( 'intval', wp_list_pluck( $recent_rows, 'ID' ) ), false, false );
+	}
 	foreach ( (array) $recent_rows as $row ) {
-		$post_id    = (int) $row['ID'];
+		$post_id = (int) $row['ID'];
+		if ( ! current_user_can( 'read_post', $post_id ) ) {
+			continue;
+		}
 		$author_id  = (int) $row['post_author'];
 		$author     = $author_id > 0 ? get_userdata( $author_id ) : null;
 		$author_arr = $author
@@ -203,6 +294,9 @@ function openstation_my_wordpress_term_stats_callback( $request ) {
 			'link'   => (string) get_permalink( $post_id ),
 			'author' => $author_arr,
 		);
+		if ( count( $recent ) >= 5 ) {
+			break;
+		}
 	}
 
 	// ----- Top authors (most posts in this term) -----------------------

@@ -72,6 +72,8 @@ class Tests_OpenStation_PluginsWindowFeaturedAjax extends WP_Ajax_UnitTestCase {
 	 */
 	public function test_curated_slugs_contains_default_seed() {
 		$slugs = openstation_plugins_window_featured_slugs();
+		$this->assertContains( 'allterrain-forms', $slugs );
+		$this->assertContains( 'allterrain-photo-editor', $slugs );
 		$this->assertContains(
 			'odd-outlandish-desktop-decorator',
 			$slugs,
@@ -221,6 +223,8 @@ class Tests_OpenStation_PluginsWindowFeaturedAjax extends WP_Ajax_UnitTestCase {
 		// openstation dependency — it should land in the payload too,
 		// with featured: false. Unrelated rows must be filtered out.
 		$slugs = array_column( $plugins, 'slug' );
+		$this->assertContains( 'allterrain-forms', $slugs );
+		$this->assertContains( 'allterrain-photo-editor', $slugs );
 		$this->assertContains( 'fake-dependent-plugin', $slugs );
 		$this->assertNotContains( 'unrelated-plugin', $slugs );
 

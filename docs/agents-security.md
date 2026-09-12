@@ -199,6 +199,27 @@ Registering an ability agents can call:
 
 - [ ] Does its `permission_callback` check a capability for the
       **specific object**, not just a blanket `edit_posts`?
+- [ ] If it returns a post body, does it gate the **post password**
+      separately from `read_post`? WordPress splits the two on purpose:
+      `read_post` decides visibility (published / private / draft),
+      `post_password_required()` decides whether the body may be shown.
+      A read ability that returns raw `post_content` has no empty
+      rendered field to fall back to, so it must refuse a sealed post
+      unless the caller can `edit_post` it — the escape hatch Core's
+      `WP_REST_Posts_Controller::check_password_required()` grants.
+      `desktop-mode/get-post` is the worked example.
+- [ ] If it returns a **child** object, does it gate the **parent** too?
+      A comment record carries its post's title and permalink, so
+      approval alone does not make it public: an approved comment
+      outlives its post being switched to private or back to draft, and
+      returning it hands out exactly what the post's own gate withholds.
+      Gate the parent by the same rule as the post itself. Note the
+      trade: per-caller readability cannot be expressed as query vars —
+      an Administrator reads private posts, a reader who entered a post
+      password reads that post — so the filter runs per row and `total`
+      counts rows the batch withholds. Gate in the query only where the
+      rule is the same for every caller, as `search_posts` does with
+      `has_password => false`.
 - [ ] Would a contributor invoking it through an admin-role agent get
       more than they should? (If the ceiling is doing all the work,
       say so in the ability's description.)
@@ -240,3 +261,18 @@ document, that suite should change with it.
 - [Hooks reference — AI Agents](./hooks-reference.md#ai-agents)
 - [Architecture](./architecture.md)
 - [Event-driven framework](./event-driven-framework.md)
+
+## Async job ownership
+
+Async REST submissions store the authenticated human id, never an invoker
+supplied in JSON. The background worker rechecks the human's existence,
+feature flag, invocation gate and trigger gate, and passes that id explicitly
+to the runner's capability intersection. Cron does not turn a human request
+into a system invocation. Status reads require the original owner even when
+another caller is an administrator; inputs and history never appear in status
+responses. Completed results retain the same sensitivity as chat transcripts.
+
+An atomic claim prevents duplicate execution. A failed or interrupted worker
+is never automatically replayed: tools may already have applied changes. Jobs
+and claims expire through cron after one day; see
+[storage and scheduling](./architecture.md#async-agent-jobs).

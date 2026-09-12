@@ -382,7 +382,13 @@ function openstation_ai_search_dispatch_tool( $tool_name, array $args ) {
  * (`WP_Query` `s=`), returning data rich enough for the agent to compare
  * AND for the UI to render links.
  *
- * No AI analysis is required — every published post/page is searchable.
+ * No AI analysis is required — every published, non-password-protected post/page is searchable.
+ *
+ * Password-protected posts are excluded (`has_password => false`): `publish`
+ * is also the status of a password-protected post, and this tool emits the
+ * stored body as an excerpt without ever passing through `post_password_required()`.
+ * Filtering at the query level keeps them out of both `items` and `found_posts`,
+ * so the `total` counter cannot become an oracle for their contents either.
  *
  * @param string $post_type 'post' | 'page'.
  * @param string $query     Keyword search terms (may be empty to list newest).
@@ -394,6 +400,7 @@ function openstation_ai_search_fetch_posts( $post_type, $query, $offset ) {
 		array(
 			'post_type'              => $post_type,
 			'post_status'            => 'publish',
+			'has_password'           => false,
 			's'                      => (string) $query,
 			'posts_per_page'         => OPENSTATION_AI_SEARCH_BATCH_SIZE,
 			'offset'                 => $offset,
@@ -447,6 +454,80 @@ function openstation_ai_search_excerpt( $content ) {
 }
 
 /**
+ * Whether the current user may read a post the comment tools are about to
+ * surface.
+ *
+ * A comment being `approved` is a moderation decision — it says nothing about
+ * who may see the discussion. An approved comment can hang on a private,
+ * draft, or password-protected post the caller cannot reach, so the comment
+ * search tools must gate on the PARENT POST's visibility before returning the
+ * comment text or the parent title. Mirrors Core's
+ * `WP_REST_Comments_Controller::check_read_post_permission()`:
+ *
+ * - a password-protected parent needs the password satisfied or `edit_post`.
+ *   `post_password_required()` honours the `wp-postpass` cookie Core's
+ *   password form sets, and that is deliberate Core parity, not a gap: the
+ *   cookie only exists because the caller already entered the correct
+ *   password, and Core's comments controller reads the same cookie. The
+ *   ability itself has no password input, so a caller who never unlocked
+ *   the post front-end is refused;
+ * - a publicly viewable parent (public status AND viewable post type) is
+ *   readable by anyone the ability admits;
+ * - a parent whose post TYPE is not viewable (an internal/admin-only CPT)
+ *   needs `edit_post` — `read_post` cannot stand in, because a public status
+ *   resolves it to plain `read` whatever the type's visibility, which is how
+ *   Core's REST layer needs its own post-type gate too;
+ * - any other parent (private, draft, pending, …) needs `read_post`.
+ *
+ * @param int|WP_Post $post Post ID or object.
+ * @return bool
+ */
+function openstation_ai_can_read_post( $post ) {
+	// An id of 0 must stay unreadable: get_post( 0 ) falls back to the global
+	// $post, which would judge an orphaned comment against an unrelated post.
+	if ( is_numeric( $post ) && (int) $post <= 0 ) {
+		return false;
+	}
+
+	$post = get_post( $post );
+	if ( ! $post instanceof WP_Post ) {
+		return false;
+	}
+
+	if ( post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID ) ) {
+		return false;
+	}
+
+	if ( is_post_publicly_viewable( $post ) ) {
+		return true;
+	}
+
+	$post_type = get_post_type_object( $post->post_type );
+	if ( ! $post_type || ! is_post_type_viewable( $post_type ) ) {
+		return current_user_can( 'edit_post', $post->ID );
+	}
+
+	return current_user_can( 'read_post', $post->ID );
+}
+
+/**
+ * Whether the current user may read the post a comment is attached to.
+ *
+ * Used to drop comments on posts the caller cannot see from the comment
+ * search results. See {@see openstation_ai_can_read_post()}.
+ *
+ * @param int|WP_Comment $comment Comment ID or object.
+ * @return bool
+ */
+function openstation_ai_can_read_comment_parent( $comment ) {
+	$comment = get_comment( $comment );
+	if ( ! $comment instanceof WP_Comment ) {
+		return false;
+	}
+	return openstation_ai_can_read_post( (int) $comment->comment_post_ID );
+}
+
+/**
  * Keyword-searches approved comments across all posts with WordPress's
  * native comment search (`get_comments` `search=`).
  *
@@ -490,10 +571,26 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 		_prime_post_caches( $parent_ids, false, false );
 	}
 
+	// "Approved" is a moderation decision, not a visibility one: drop comments
+	// whose parent post the caller cannot read (private / draft / password /
+	// internal CPT), so the comment text and the parent title never leak. See
+	// openstation_ai_can_read_comment_parent().
+	//
+	// This runs per row, after the batch, and that is the price of gating on
+	// per-caller readability: an Administrator reads comments on private
+	// posts and a reader who entered a post password reads that post's
+	// discussion, neither of which a single `post_status` or `has_password`
+	// query var can express. `total` therefore counts rows this caller does
+	// not get, and a batch can come back short. The alternative — a blanket
+	// publish-only, no-password query — would be exact and would also hide
+	// those discussions from the people entitled to them.
+	$comments = array_values( array_filter( $comments, 'openstation_ai_can_read_comment_parent' ) );
+
 	$items = array();
 	foreach ( $comments as $comment ) {
+		// Readable, per the filter above.
 		$parent_post  = get_post( $comment->comment_post_ID );
-		$parent_title = $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '';
+		$parent_title = wp_strip_all_tags( $parent_post->post_title );
 
 		$items[] = array(
 			'id'         => (int) $comment->comment_ID,
@@ -505,7 +602,7 @@ function openstation_ai_search_fetch_comments( $query, $offset ) {
 			'url'        => (string) get_comment_link( $comment ),
 			'edit_url'   => admin_url( 'comment.php?action=editcomment&c=' . (int) $comment->comment_ID ),
 			'post_id'    => (int) $comment->comment_post_ID,
-			'post_url'   => $parent_post ? (string) get_permalink( $parent_post ) : '',
+			'post_url'   => (string) get_permalink( $parent_post ),
 		);
 	}
 
@@ -554,6 +651,23 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
 		);
 	}
 
+	// The model picks the post id, so it is untrusted the same way an entity
+	// id is. Comments inherit their parent's reach: a thread on a private,
+	// draft, password-protected or internal-CPT post is not this user's to
+	// read, and the envelope below would otherwise echo its title back.
+	if ( ! openstation_ai_can_read_post( $post_id ) ) {
+		return array(
+			'tool'     => 'search_comments_by_post',
+			'post_id'  => $post_id,
+			'offset'   => $offset,
+			'items'    => array(),
+			'count'    => 0,
+			'total'    => 0,
+			'has_more' => false,
+			'error'    => 'Post not found or not readable.',
+		);
+	}
+
 	$base_args = array(
 		'post_id' => $post_id,
 		'status'  => 'approve',
@@ -574,8 +688,9 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
 
 	$total = (int) get_comments( array_merge( $base_args, array( 'count' => true ) ) );
 
+	// Readable, per the gate above.
 	$parent_post  = get_post( $post_id );
-	$parent_title = $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '';
+	$parent_title = wp_strip_all_tags( $parent_post->post_title );
 
 	$items = array();
 	foreach ( $comments as $comment ) {
@@ -617,6 +732,20 @@ function openstation_ai_search_fetch_comments_by_post( $post_id, $query, $offset
  * verdict when the comment-moderation analysis happens to have run, but
  * its absence never blocks the entity from being returned.
  *
+ * The id arrives from the MODEL's final answer, and model output is
+ * untrusted — a search turn can be driven by attacker-controlled content, so
+ * an injected instruction could name an entity the search tools never
+ * surfaced. Hydration therefore re-checks readability itself instead of
+ * trusting that the id came out of a filtered tool result: posts/pages go
+ * through {@see openstation_ai_can_read_post()}, and so does a comment's
+ * PARENT, because the comment record carries that post's title and permalink
+ * — approval is a moderation decision, not a visibility one, and an approved
+ * comment outlives its post being switched to private or back to draft.
+ * Reading an unapproved comment needs `edit_comment`, mirroring Core's
+ * `WP_REST_Comments_Controller::check_read_permission()`; the AI moderation
+ * verdicts and the wp-admin edit link are narrower still. Unreadable ids
+ * resolve to null, indistinguishable from nonexistent ones.
+ *
  * @param string $entity_type 'post' | 'page' | 'comment'.
  * @param int    $entity_id
  * @return array|null
@@ -626,9 +755,20 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 
 	if ( in_array( $entity_type, array( 'post', 'page' ), true ) ) {
 		$post = get_post( $entity_id );
-		if ( ! $post instanceof WP_Post ) {
+
+		// The id must resolve to an actual post or page. The gate below answers
+		// type visibility on its own, so this is the contract rather than the
+		// lock: the record's `type` is what the client renders the card from,
+		// and post/page is what the search tools surface. A viewable CPT row
+		// would pass the gate and still have no card to land in.
+		if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
 			return null;
 		}
+
+		if ( ! openstation_ai_can_read_post( $post ) ) {
+			return null;
+		}
+
 		return array(
 			'id'       => $entity_id,
 			'type'     => $post->post_type,
@@ -643,23 +783,47 @@ function openstation_ai_search_build_entity( $entity_type, $entity_id ) {
 
 	if ( 'comment' === $entity_type ) {
 		$comment = get_comment( $entity_id );
-		if ( ! $comment instanceof WP_Comment ) {
+
+		// The parent's reach bounds the comment's: approval is a moderation
+		// decision, not a visibility one, and this record carries the parent's
+		// title and permalink — so without this check, naming a comment id
+		// would walk straight around the post branch's gate above.
+		if ( ! $comment instanceof WP_Comment || ! openstation_ai_can_read_comment_parent( $comment ) ) {
 			return null;
 		}
-		$meta        = openstation_ai_get_meta( 'comment', $entity_id );
-		$parent_post = get_post( $comment->comment_post_ID );
-		return array(
+
+		// Reading an unapproved comment is an editor's business, per Core's
+		// WP_REST_Comments_Controller::check_read_permission().
+		if ( '1' !== (string) $comment->comment_approved && ! current_user_can( 'edit_comment', $entity_id ) ) {
+			return null;
+		}
+
+		// The AI verdicts are the moderation queue's data, so they follow the
+		// moderation capability rather than the per-comment edit one.
+		$can_moderate = current_user_can( 'moderate_comments' );
+		$parent_post  = get_post( (int) $comment->comment_post_ID );
+
+		$meta   = $can_moderate ? openstation_ai_get_meta( 'comment', $entity_id ) : null;
+		$entity = array(
 			'id'         => $entity_id,
 			'type'       => 'comment',
 			'excerpt'    => openstation_ai_search_excerpt( $comment->comment_content ),
 			'post_id'    => (int) $comment->comment_post_ID,
-			'post_title' => $parent_post ? wp_strip_all_tags( $parent_post->post_title ) : '',
-			'post_url'   => $parent_post ? (string) get_permalink( $parent_post ) : '',
+			'post_title' => wp_strip_all_tags( $parent_post->post_title ),
+			'post_url'   => (string) get_permalink( $parent_post ),
 			'url'        => (string) get_comment_link( $comment ),
-			'edit_url'   => admin_url( 'comment.php?action=editcomment&c=' . $entity_id ),
-			'harmful'    => $meta ? (bool) ( $meta['harmful'] ?? false ) : false,
-			'spam'       => $meta ? (bool) ( $meta['spam'] ?? false ) : false,
+			'edit_url'   => current_user_can( 'edit_comment', $entity_id )
+				? admin_url( 'comment.php?action=editcomment&c=' . $entity_id )
+				: '',
 		);
+
+		// Moderation verdicts are for moderators only.
+		if ( $can_moderate ) {
+			$entity['harmful'] = $meta ? (bool) ( $meta['harmful'] ?? false ) : false;
+			$entity['spam']    = $meta ? (bool) ( $meta['spam'] ?? false ) : false;
+		}
+
+		return $entity;
 	}
 
 	return null;

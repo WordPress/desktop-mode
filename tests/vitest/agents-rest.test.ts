@@ -132,6 +132,10 @@ describe( 'agents REST client', () => {
 		);
 		expect( JSON.parse( String( init.body ) ) ).toEqual( {
 			message: 'do it',
+			source: 'chat',
+			history: [],
+			async: true,
+			requestId: expect.any( String ),
 		} );
 	} );
 

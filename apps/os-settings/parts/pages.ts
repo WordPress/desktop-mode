@@ -19,7 +19,7 @@ import { renderNavigation } from './navigation';
 import { renderMobile } from './mobile';
 import { renderComponents } from './components';
 import { renderAboutPage } from './about';
-import { NAV_ICONS } from './nav-icons';
+import { NAV_ICONS, registryNavIcon } from './nav-icons';
 import { settings, subscribe } from './store';
 import { uiOf, type Ctx } from './types';
 
@@ -153,7 +153,7 @@ export function pageRows( ctx: Ctx ): PageRow[] {
 			icon: NAV_ICONS.features,
 			panel: ( s, c ) => html`${ pageHeader(
 				__( 'Features' ),
-				__( 'The assistant, the developer tools, and the betas. Every switch here affects only your account and takes effect immediately.' ),
+				__( 'The assistant, developer tools, and beta features for your account, plus site-wide Extended options for administrators.' ),
 			) }${ renderFeatures( s, c ) }`,
 		},
 	];
@@ -189,9 +189,7 @@ export function pageRows( ctx: Ctx ): PageRow[] {
 			id: `ext-${ tab.id }`,
 			order: tab.order ?? 100,
 			label: tab.label,
-			// The registry has no icon field, but the shell may know its
-			// OWN registry-delivered tabs by raw id (File Associations).
-			icon: NAV_ICONS[ tab.id ],
+			icon: registryNavIcon( tab.id, tab.icon ),
 			tab,
 			panel: () => html`<div data-host=${ tabHostAttr( tab.id ) }></div>`,
 		} );

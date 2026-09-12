@@ -83,6 +83,13 @@ export interface DesktopSettingsTab {
 	 */
 	order?: number;
 	/**
+	 * Sidebar glyph — a name from the OS icon set (`settings`, `bell`,
+	 * `apps`, …; see `src/ui/icons/set.ts`). Optional; an unknown name
+	 * renders no glyph, the same as omitting it. Names, not URLs: the
+	 * column draws 17px monoline glyphs, and a bitmap would not match.
+	 */
+	icon?: string;
+	/**
 	 * Owner tag — WordPress script handle that registered the tab.
 	 * Set this when plugin deactivation should live-unregister the
 	 * tab; the server-sync module walks the registry on every payload

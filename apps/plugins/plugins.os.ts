@@ -26,7 +26,7 @@ import { isMobileStamped } from '../../src/mode/stamp';
 import { freshBusy } from './parts/actions';
 import { installPluginDropTargets } from './parts/card-drag';
 import { createBrowseGallery, createFeaturedGallery, type BrowseGallery, type FeaturedGallery } from './parts/gallery';
-import { installedPanel, freshInstalledUi, syncLibraryControls, type InstalledUi } from './parts/installed-library';
+import { installedPanel, freshInstalledUi, syncLibraryControls, syncLibraryTable, type InstalledUi } from './parts/installed-library';
 import { createPluginsRest } from './parts/rest';
 import {
 	PLUGINS_CHANGED_SOURCE,
@@ -174,6 +174,8 @@ function browsePanel( ctx: Ctx, ui: UiState, phone: boolean ): TemplateResult {
 				} ) }
 				<os-text-field
 					class="os-app-list__search"
+					label=${ __( 'Search WordPress.org', 'desktop-mode' ) }
+					hide-label
 					os-bind="query"
 					os-debounce="300"
 					placeholder=${ __( 'Search WordPress.org…', 'desktop-mode' ) }
@@ -361,6 +363,7 @@ export default defineApp< AppState, AppData >( APP_ID, {
 		syncLibraryControls( ctx.root );
 		const ui = uiOf( ctx );
 		const { host } = ui;
+		syncLibraryTable( ctx, host, ui.installed );
 
 		if ( host.extra.caps.install ) {
 			const galleryEl = ( kind: string ): HTMLElement | null =>

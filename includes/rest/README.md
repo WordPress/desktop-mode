@@ -43,7 +43,7 @@ All in-tree routes register under `desktop-mode/v1`. Extensions are expected to 
 | `/content-graph/nodes` | GET | `includes/content-graph/rest.php` | `edit_posts` (filterable via `openstation_content_graph_user_can_use`) |
 | `/content-graph/post/{id}` | GET | `includes/content-graph/rest.php` | `edit_posts` (filterable via `openstation_content_graph_user_can_use`) |
 | `/apps/(?P<app>[a-z0-9][a-z0-9_-]*)/dispatch` | POST | `includes/framework/wordpress.php` | Logged in + the app exists + `App::allows()` (its `capabilities()` and `can()` gate). Every `.os.php` window — Code Blue included, behind Developer mode + `manage_options` (`manage_network_options` on multisite), filterable via `openstation_code_blue_user_can_use` — is served by this one route; there are no per-app routes. |
-| `/comment-stats/{id}` | GET | `includes/my-wordpress/comment-stats.php` | logged-in |
+| `/comment-stats/{id}` | GET | `includes/my-wordpress/comment-stats.php` | `edit_posts` (filterable via `openstation_my_wordpress_user_can_use`) + parent post readable: `read_post`, but `edit_post` when the parent is still sealed by a password (a caller who already entered it reads on `read_post` like anyone else) or when its post type has no readable front end, and `moderate_comments` when the parent is gone |
 | `/term-stats/{taxonomy}/{id}` | GET | `includes/my-wordpress/term-stats.php` | logged-in + `read` |
 | `/user-stats/{id}` | GET | `includes/my-wordpress/user-stats.php` | logged-in |
 | `/user-footprint/{id}` | GET | `includes/my-wordpress/user-footprint.php` | logged-in |
@@ -63,6 +63,7 @@ All in-tree routes register under `desktop-mode/v1`. Extensions are expected to 
 | `/agents` | GET / POST | `includes/agents/rest.php` | GET `edit_posts`, POST `edit_users` (both filterable; whole module behind the `agents` extended option) |
 | `/agents/{id}` | GET / POST / DELETE | `includes/agents/rest.php` | GET `edit_posts`, POST/DELETE `edit_users` (filterable) |
 | `/agents/{id}/invoke` | POST | `includes/agents/rest.php` | `edit_posts` (filterable via `openstation_agents_user_can_invoke`), then the per-agent gate `openstation_agent_user_can_invoke_agent()` (honours the trigger's `capability`) + per-invoker and per-agent rate limits. The run itself is ceilinged at the caller's own capabilities — see [`docs/agents-security.md`](../../docs/agents-security.md) |
+| `/agents/{id}/jobs/{jobId}` | GET | `includes/agents/jobs.php` | Authenticated invoker + exact job owner and agent match. Constant-cost status read, no worker dispatch. |
 | `/agents/abilities` | GET | `includes/agents/rest.php` | `edit_posts` (filterable) |
 | `/agents/draft` | POST | `includes/agents/rest.php` | `edit_users` (filterable). One AI generate call with a strict answer schema; creates nothing. `503` without the AI Client, `502` when the provider fails or answers unreadably |
 | `/agents/trigger-kinds` | GET | `includes/agents/rest.php` | `edit_posts` (filterable) |
@@ -80,3 +81,5 @@ All in-tree routes register under `desktop-mode/v1`. Extensions are expected to 
 PHP `register_rest_route()` calls execute on `rest_api_init`. The callback closures in the existing files capture per-module state — the recycle-bin store, the desktop-files registry, the AI provider — that lives in the same module. Moving the registration calls out of those files would force every callback to re-look-up its dependencies, increasing surface area without reducing coupling. The route → handler-file map above is the discoverability win we wanted; the per-module registrations are the layout that minimises blast radius.
 
 If a future extension adds REST routes that don't fit any existing module, the `extensions/base/OpenStation_Extension_Rest` base class is the cheapest path. See `extensions/base/README.md`.
+
+Agent invocation supports `async: true` plus a UUID `requestId`, returning HTTP 202. See [async jobs](../../docs/architecture.md#async-agent-jobs) for the status contract and worker requirements.

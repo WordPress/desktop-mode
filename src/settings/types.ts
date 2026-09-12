@@ -311,16 +311,13 @@ export interface OsSettingsState {
 	 */
 	stationHomeEnabled: boolean;
 	/**
-	 * Per-user opt-in for the service worker's shared admin-asset
-	 * cache (Experimental). The value lives server-side and reaches
-	 * the SW inside the served script bytes, so a change applies via a
-	 * normal SW update on the next reload. Default off.
+	 * Site-wide shared admin-asset cache, enabled by default.
+	 * Read-only mirror of Extended options; changes apply on shell reload.
 	 */
 	adminAssetCacheEnabled: boolean;
 	/**
-	 * Per-user opt-in for hover-intent window prewarming
-	 * (Experimental). When true, a sustained mouse hover on a dock
-	 * tile speculatively builds that page's window hidden. Default off.
+	 * Site-wide hover-intent window preloading, enabled by default.
+	 * Read-only mirror of Extended options; changes apply on shell reload.
 	 */
 	windowPrewarmEnabled: boolean;
 	/**

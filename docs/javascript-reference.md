@@ -3067,6 +3067,8 @@ Programmatic access to the AI Copilot — same endpoint the built-in overlay tal
 
 The built-in content tools (`search_posts`, `search_pages`, `search_comments`, `search_comments_by_post`) run WordPress's native keyword search — the model derives a `query` from the user's request and the tools return matching titles + excerpts. (Posts, pages, and terms are no longer pre-analyzed; comment spam scoring is the only automatic AI analysis.) When you continue an exhausted search with `resumeTool` / `startOffset`, the original query is reused automatically.
 
+Results are scoped to what the requesting user may read. The comment tools drop every comment whose parent post the caller cannot access (private, draft, or password-protected parents, and non-viewable post types), and `search_comments_by_post` returns an empty batch — without the parent title — when the target post itself is unreadable. As in Core's comments REST controller, this filtering happens per row after the query, so a batch can carry fewer items than `total` implies; treat `total` / `has_more` as pagination hints, not as an exact count of readable matches. The final `entity` record applies the same readability check to the model-chosen id, resolving unreadable entities to `null` exactly like nonexistent ones.
+
 ```javascript
 const res = await wp.os.ai.ask( 'where do I manage categories?' );
 // res = { answer_type: 'navigation', message: '…', admin_links: [ … ], request_id: '…' }
@@ -3884,6 +3886,7 @@ Register a tab in the OpenStation Preferences window. The tab is appended (or so
 | `label` | `string` | yes | Tab label. |
 | `capability` | `string` | no | Gates visibility. `'manage_options'` → admin-only; any other value (including omitting) → visible to everyone. |
 | `order` | `number` | no | Default `100`. Built-ins: appearance=10, themes=12, windows=18, navigation=22, features=30, help=40 (Components is admin-only; About is pinned last with a sentinel order). |
+| `icon` | `string` | no | Sidebar glyph, as a name from the OS icon set (`settings`, `bell`, `apps`, … — see `src/ui/icons/set.ts`). Unknown names render no glyph, same as omitting it. |
 | `owner` | `string` | no | When set, plugin deactivation live-unregisters every tab with this owner. Typically matches the WordPress script handle registered with `openstation_register_settings_tab_script()`. |
 | `render( body, ctx )` | `function` | yes | Receives the tabpanel body element and a ctx object (see below). Runs once per registration — the host survives the Preferences app's repaints — and again after a re-register; closing and reopening the window rebuilds the tree, so it must be idempotent. |
 
@@ -3892,7 +3895,7 @@ Register a tab in the OpenStation Preferences window. The tab is appended (or so
 | Field | Type | Notes |
 |---|---|---|
 | `isAdmin` | `boolean` | `true` when current user has `manage_options`. |
-| `getOsSettings()` | `function` | Snapshot of the persisted OpenStation Preferences state — `{ wallpaper, accent, dockSize, windowRadius, unfocusEffect, ai: { enabled } }` plus `adminBarMode` (`'static'` \| `'dynamic'` \| `'hidden'` — how the WordPress admin bar presents above the shell; emitted as a `os-admin-bar-<mode>` body class), `desktopLayout`, `dockPlacement` (`'bottom'` \| `'left'` \| `'right'` — which edge the dock sits on; read by the one-rail layouts, ignored by `classic`), `dockBehavior` (`'static'` \| `'dynamic'` — the dock always on screen, or folded into a thin indicator line at its edge and morphed back when the pointer reaches that edge; stamped as `data-os-dock-behavior` on the rail; a dynamic rail reserves no [work area](#workarea--experimental)), `sideDockBehavior` (the same choice for the `classic` layout's sidebar, its own rail on its own edge; ignored by the one-rail layouts), `dockRailRenderer`, `desktopTheme`, `appliedThemeRecommendations`, the native-window opt-ins (`nativePostsEnabled`, `nativePostsHiddenColumns`, `nativePagesEnabled`, `nativeUsersEnabled`, `nativePluginsEnabled`, `nativeCommentsEnabled`, `stationHomeEnabled` — Station Home as the Dashboard, default off), `adminAssetCacheEnabled` (the service worker's shared admin-asset cache, Experimental, default off — informational: the cache is enforced inside the SW, and changes apply via a SW update on the next reload), `windowPrewarmEnabled` (hover-intent window prewarming, Experimental, default off — the dock reads it live at hover time and calls `windowManager.prewarm()` for an iframe tile, `wp.os.prewarmWindow()` for a native one), `developerModeEnabled`, `foldersSharingEnabled`, `navPlacement`, `navOrder`, and `dockPromotedPositions` — plus `customAccent`, `customGradient`, `customImage`, `wallpaperSettings`, `libraryHdOnly`, `heartbeatRate`, `showDesktopOnWallpaperClick`, `confirmCloseAllWindows`, `mioEnabled` and `mioStyle` — the snapshot IS the whole `OsSettingsState`; see `src/settings/types.ts` for the authoritative shape. `navPlacement` maps a nav-item id to `'rail' | 'desktop' | 'both' | 'hidden'` and `navOrder` is a flat ordering hint across every rail zone; both replaced the pre-navigation `itemVisibility` / `dockOrder` (see [migration-navigation.md](./migration-navigation.md)). `unfocusEffect` is the active unfocused-window effect id (`'darken'` default, `'none'` disables). `windowReveal` is the active window-reveal id — the clip-path transition that uncovers a window's content when it finishes loading (`'none'` by default; reveals are opt-in) — and `windowRevealDuration` is the global speed override in ms (`0`, the default, means each reveal keeps its own timing). `ai.enabled` is the per-user AI assistant toggle (opt-in, default off; enable-able only once a provider is configured in Settings → Connectors). `developerModeEnabled` (default `false`) gates developer-facing surfaces — the Starter Widget in the add-widget picker and the OpenStation Preferences → Components tab's missing-import-warner demo — set from OpenStation Preferences → Features. **Removed:** `ai.apiKey`, `ai.transport`, `ai.provider` and `ai.model` were removed — credentials live in WordPress Core's Settings → Connectors and provider + model selection is delegated to the Core AI Client. Read-only; returns a defensive copy. |
+| `getOsSettings()` | `function` | Snapshot of the persisted OpenStation Preferences state — `{ wallpaper, accent, dockSize, windowRadius, unfocusEffect, ai: { enabled } }` plus `adminBarMode` (`'static'` \| `'dynamic'` \| `'hidden'` — how the WordPress admin bar presents above the shell; emitted as a `os-admin-bar-<mode>` body class), `desktopLayout`, `dockPlacement` (`'bottom'` \| `'left'` \| `'right'` — which edge the dock sits on; read by the one-rail layouts, ignored by `classic`), `dockBehavior` (`'static'` \| `'dynamic'` — the dock always on screen, or folded into a thin indicator line at its edge and morphed back when the pointer reaches that edge; stamped as `data-os-dock-behavior` on the rail; a dynamic rail reserves no [work area](#workarea--experimental)), `sideDockBehavior` (the same choice for the `classic` layout's sidebar, its own rail on its own edge; ignored by the one-rail layouts), `dockRailRenderer`, `desktopTheme`, `appliedThemeRecommendations`, the native-window opt-ins (`nativePostsEnabled`, `nativePostsHiddenColumns`, `nativePagesEnabled`, `nativeUsersEnabled`, `nativePluginsEnabled`, `nativeCommentsEnabled`, `stationHomeEnabled` — Station Home as the Dashboard, default off), `adminAssetCacheEnabled` (the service worker's shared admin-asset cache) and `windowPrewarmEnabled` (hover-intent window preloading) — both default on and are read-only mirrors of site-wide Extended options, applied on shell reload, `developerModeEnabled`, `foldersSharingEnabled`, `navPlacement`, `navOrder`, and `dockPromotedPositions` — plus `customAccent`, `customGradient`, `customImage`, `wallpaperSettings`, `libraryHdOnly`, `heartbeatRate`, `showDesktopOnWallpaperClick`, `confirmCloseAllWindows`, `mioEnabled` and `mioStyle` — the snapshot IS the whole `OsSettingsState`; see `src/settings/types.ts` for the authoritative shape. `navPlacement` maps a nav-item id to `'rail' | 'desktop' | 'both' | 'hidden'` and `navOrder` is a flat ordering hint across every rail zone; both replaced the pre-navigation `itemVisibility` / `dockOrder` (see [migration-navigation.md](./migration-navigation.md)). `unfocusEffect` is the active unfocused-window effect id (`'darken'` default, `'none'` disables). `windowReveal` is the active window-reveal id — the clip-path transition that uncovers a window's content when it finishes loading (`'none'` by default; reveals are opt-in) — and `windowRevealDuration` is the global speed override in ms (`0`, the default, means each reveal keeps its own timing). `ai.enabled` is the per-user AI assistant toggle (opt-in, default off; enable-able only once a provider is configured in Settings → Connectors). `developerModeEnabled` (default `false`) gates developer-facing surfaces — the Starter Widget in the add-widget picker and the OpenStation Preferences → Components tab's missing-import-warner demo — set from OpenStation Preferences → Features. **Removed:** `ai.apiKey`, `ai.transport`, `ai.provider` and `ai.model` were removed — credentials live in WordPress Core's Settings → Connectors and provider + model selection is delegated to the Core AI Client. Read-only; returns a defensive copy. |
 | `subscribeOsSettings( cb )` | `function` | Subscribe to in-panel OpenStation Preferences changes (user toggles a feature in the Features tab, etc.). Returns an unsubscribe function. Fires on local edits only — cross-device changes arrive on the next page load. |
 
 ```javascript
@@ -4129,7 +4132,7 @@ wp.os.updateOsSettings(
 - **Activating a theme seeds its recommendations once.** A patch that changes `desktopTheme` applies that theme's `recommendedOsSettings` the first time this user wears it — exactly what the Themes tab does — and never again; `wp.os.desktopThemes.applyRecommendedOsSettings()` is the deliberate re-apply. This is the Preferences window's own write path: the app edits the store through this method.
 - **Persistence.** A `localStorage` cache write plus a debounced REST sync (250 ms window).
 - **Presentation keys apply live.** A patch touching `wallpaper`, `accent`, `customAccent`, `customGradient`, `customImage`, `dockSize`, `windowRadius`, `adminBarMode`, `desktopLayout`, `dockPlacement`, `dockBehavior`, `sideDockBehavior`, `dockRailRenderer` or `desktopTheme` also runs the shell's apply pass, so the change is visible immediately rather than on the next page load. `unfocusEffect` repaints too, through the subscriber above rather than the apply pass. `windowReveal` and `windowRevealDuration` reach the shell the same way, and take effect on the next window load. Every other key is state-only.
-- **The two PWA flags are settable too.** `windowPrewarmEnabled` and `adminAssetCacheEnabled` were previously reachable only from the Preferences UI. Patching `windowPrewarmEnabled` also tells the running service worker, exactly as the toggle does — the worker holds its own copy of the flag, baked in when it installed, so without that message turning it on leaves the worker refusing every speculation and turning it off leaves it speculating. `adminAssetCacheEnabled` needs no equivalent: it reaches the worker inside the served `sw.js` bytes, applying on the next SW update.
+- **The two performance flags are read-only.** `windowPrewarmEnabled` and `adminAssetCacheEnabled` mirror the site-wide `window_prewarm` and `admin_asset_cache` Extended options. `updateOsSettings()` ignores writes to these fields; `resetOsSettings()` preserves them. Administrators change them through Extended options, and each shell adopts the values on reload. See [Performance settings migration](./migration-performance-options.md).
 - **Subscribers fire.** Both the top-level `wp.os.subscribeOsSettings( cb )` and every settings tab's `ctx.subscribeOsSettings` see the new snapshot.
 - **Observable save lifecycle.** Each phase fires on `document` as [`os-settings-save-lifecycle`](#os-settings-save-lifecycle--stable) (`'pending'` → `'saving'` → `'saved'` / `'failed'`), same as a built-in tab's save. `<os-save-status auto>` renders it for free.
 - **`opts.windowId`** attributes the in-flight REST sync to a specific window's activity phase (defaults to the OpenStation Preferences window).
@@ -7698,17 +7701,39 @@ interface Agent {
 ```
 
 `POST /agents/{id}/invoke` with `{ message, source?, history? }`
-returns `{ text, toolCalls, turns }` where each tool call is
+returns `{ text, callToActions, toolCalls, turns }` where each tool call is
 `{ callId, name, args, output, error }`.
 
 `history` is the prior conversation (`[ { role: 'user'|'agent', text },
 … ]`, oldest first) and is **required for multi-turn work**: each
 invocation is otherwise stateless, so a follow-up ("yes, do it")
 arrives with no idea which entity was being discussed. The server caps
-it at the 20 most recent turns, 4000 characters each. Both in-tree
+it at the 50 most recent turns, 4000 characters each. Both in-tree
 intakes (typing in the chat window, and drops) go through
 `invokeAgentIntoTranscript()` in `src/agents-dispatch.ts`, which
 snapshots the transcript before appending the new message.
+
+### Async invocation (Experimental)
+
+Add `async: true, requestId: '<uuid>'` to the invocation body to receive HTTP
+202 with `{ jobId, status, createdAt, pollAfter, result, error }`. The in-tree
+chat, Send to, and drag intakes use this path. `requestId` is required in async
+mode; reusing it with identical input returns the same job, while different
+input returns 409. Async messages are limited to 20,000 bytes.
+
+Poll `GET /agents/{id}/jobs/{jobId}` with the same user's REST authentication.
+States are `queued`, `running`, `completed` and `failed`. `result` is null until
+completion, then contains the usual invocation result including confirmation
+buttons. `error` is null or `{ code, message }`. `createdAt` is Unix seconds;
+`pollAfter` is a suggested delay in seconds. Unknown, wrong-agent, and another
+user's job IDs return 404, even for administrators. Responses use
+`Cache-Control: no-store, private`.
+
+Only one outstanding job per human/agent pair is admitted (409 for a different
+request while busy). The client backs off its sequential polling and uses the
+same UUID when retrying a lost submission. It does not rerun accepted jobs on
+network failures. See [architecture](./architecture.md#async-agent-jobs) for
+retention, browser lifetime and scheduling requirements.
 
 ### WP Explorer integration
 

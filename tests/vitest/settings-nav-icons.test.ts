@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { NAV_ICONS } from '../../apps/os-settings/parts/nav-icons';
+import { NAV_ICONS, registryNavIcon } from '../../apps/os-settings/parts/nav-icons';
 
 /**
  * The built-in pages the Preferences app lists, by id.
@@ -84,9 +84,14 @@ describe( 'settings nav icons', () => {
 		);
 		expect(
 			pagesSource,
-			'External rows must carry `icon: NAV_ICONS[ tab.id ]` so a ' +
-				'shell-owned registry tab can resolve its glyph by raw id.'
-		).toMatch( /icon:\s*NAV_ICONS\[\s*tab\.id\s*\]/ );
+			'External rows must resolve through `registryNavIcon( tab.id, … )` ' +
+				'so a shell-owned registry tab can resolve its glyph by raw id.'
+		).toMatch( /icon:\s*registryNavIcon\(\s*tab\.id\b/ );
+		// And the resolver must still honour that raw-id table when the
+		// registration named no icon of its own.
+		const fallback = registryNavIcon( 'os-file-associations' );
+		expect( fallback ).toBe( NAV_ICONS[ 'os-file-associations' ] );
+		expect( fallback?.().tagName.toLowerCase() ).toBe( 'svg' );
 	} );
 
 	test.each( BUILT_IN_TAB_IDS )( '%s is drawn in currentColor', ( id ) => {

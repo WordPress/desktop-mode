@@ -167,6 +167,20 @@ async function runOptimistic(
 	}
 }
 
+/** Keep the upgrader and its fresh list read in the same queue slot. */
+async function updateAndRefresh( host: PluginsHost, row: InstalledPlugin ) {
+	return enqueueUpdateJob( async () => {
+		try {
+			return await host.rest.updateInstalledPlugin( row );
+		} finally {
+			// Read the actual installed version, including when the upgrader
+			// committed files but its response failed. Await reconciliation
+			// before another update can invalidate Core's plugin caches.
+			await host.refresh();
+		}
+	} );
+}
+
 /**
  * Update one plugin via Core's `wp_ajax_update_plugin`, serialised
  * through the single-flight queue (concurrent upgrader runs corrupt
@@ -182,7 +196,7 @@ async function runUpdate( host: PluginsHost, row: InstalledPlugin ): Promise< bo
 	host.repaint();
 	let ok = false;
 	try {
-		const result = await enqueueUpdateJob( () => host.rest.updateInstalledPlugin( row ) );
+		const result = await updateAndRefresh( host, row );
 		host.toast(
 			sprintf(
 				/* translators: 1: plugin name, 2: new version */
@@ -217,11 +231,8 @@ async function runUpdate( host: PluginsHost, row: InstalledPlugin ): Promise< bo
 		}
 	} finally {
 		host.busy.updating.delete( row.plugin );
-		// Reconcile from the server either way: the upgrader may have
-		// committed on disk even when the promise rejected, and Core's
-		// `wp_update_plugins()` may have moved the transient even on
-		// failure — so the row AND the dock badge re-read the truth.
-		void host.refresh();
+		// The list is fresh; clear the spinner even if reconciliation failed.
+		host.repaint();
 		host.refreshMenu();
 	}
 	return ok;
@@ -376,19 +387,18 @@ async function runBulkUpdate( host: PluginsHost, rows: InstalledPlugin[] ): Prom
 		host.busy.updating.add( row.plugin );
 		host.repaint();
 		try {
-			await enqueueUpdateJob( () => host.rest.updateInstalledPlugin( row ) );
+			await updateAndRefresh( host, row );
 			succeeded++;
 		} catch {
 			failed++;
 		} finally {
 			host.busy.updating.delete( row.plugin );
+			host.repaint();
 		}
 	}
-	host.repaint();
 	if ( succeeded > 0 ) {
 		host.broadcastChange( { action: 'bulk' }, rows.map( ( r ) => r.plugin ) );
 	}
-	void host.refresh();
 	host.refreshMenu();
 	const noun = __( 'updated', 'desktop-mode' );
 	host.toast(

@@ -15,6 +15,8 @@ import { isMobileStamped } from '../../../src/mode/stamp';
 import { applyAvatarSrc, pickAvatarUrl } from '../../../src/ui/util/avatar-resolve';
 import { makeRowActionButton } from '../../../src/ui/util/row-action-button';
 import { openUserEditWindow } from '../../../src/open-targets/user-edit-window';
+// os-preserve excludes the table from the runtime component loader.
+import '../../../src/ui/components/os-table/os-table';
 import '../../../src/ui/components/os-avatar/os-avatar';
 import '../../../src/ui/components/os-icon/os-icon';
 import '../../../src/ui/components/os-relative-time/os-relative-time';

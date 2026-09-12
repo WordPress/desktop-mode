@@ -45,6 +45,9 @@
             "%1$s did not beat your score: %2$s vs your %3$s.": [
                 ""
             ],
+            "%1$s just switched here from %2$s while you were logged in. Link that account to yours, and a switch from there logs you in as you. You can undo this in the Network window.": [
+                ""
+            ],
             "%1$s will open like this — %2$d windows, where they are.": [
                 ""
             ],
@@ -242,6 +245,9 @@
                 ""
             ],
             "Arrangement": [
+                ""
+            ],
+            "Arrive logged in next time?": [
                 ""
             ],
             "Ask AI": [
@@ -718,6 +724,12 @@
             "Explore details": [
                 ""
             ],
+            "External site": [
+                ""
+            ],
+            "External site:": [
+                ""
+            ],
             "Eye colour": [
                 ""
             ],
@@ -944,6 +956,9 @@
                 ""
             ],
             "Level %1$s · %2$s": [
+                ""
+            ],
+            "Link accounts": [
                 ""
             ],
             "Linked to “%s”": [
@@ -1405,7 +1420,13 @@
             "Question": [
                 ""
             ],
+            "Queued — waiting for a WordPress worker…": [
+                ""
+            ],
             "Radar": [
+                ""
+            ],
+            "Reconnecting to the background job…": [
                 ""
             ],
             "Related": [
@@ -1714,13 +1735,19 @@
             "The agent finished without a text answer.": [
                 ""
             ],
-            "The agent took too long to reply, so the answer never arrived. It may still be finishing the work: give it a moment before asking again.": [
+            "The agent job failed.": [
+                ""
+            ],
+            "The background job has not returned a result. Some work may already have been applied. Check the site before submitting again.": [
                 ""
             ],
             "The beginning of a new identity.": [
                 ""
             ],
             "The card could not be shared.": [
+                ""
+            ],
+            "The job status could not be read.": [
                 ""
             ],
             "The name goes on its overview tile. The glyph and colour are how you tell it apart from the others at a glance.": [
@@ -1742,6 +1769,12 @@
                 ""
             ],
             "The preview opens once the post has been saved.": [
+                ""
+            ],
+            "The server returned a different job.": [
+                ""
+            ],
+            "The server returned an invalid job state.": [
                 ""
             ],
             "The underlying entity is no longer available.": [
@@ -1976,6 +2009,9 @@
                 ""
             ],
             "Words": [
+                ""
+            ],
+            "Working in the background…": [
                 ""
             ],
             "Working…": [

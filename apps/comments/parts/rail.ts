@@ -243,6 +243,8 @@ export function rail( ctx: Ctx, ui: UiState, rows: CommentRow[], error: string )
 	return html`<aside class="${ NS }__rail" aria-label=${ __( 'Conversations' ) }>
 		<div class="${ NS }__search">
 			<os-text-field
+				label=${ __( 'Search comments' ) }
+				hide-label
 				placeholder=${ __( 'Search comments…' ) }
 				os-bind="search"
 				os-action="filter"

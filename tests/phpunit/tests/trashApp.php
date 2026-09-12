@@ -76,9 +76,9 @@ class Tests_OpenStation_TrashApp extends WP_UnitTestCase {
 		$this->assertTrue( $manifest['placeable'] );
 		// Any content change repaints the bin.
 		$this->assertSame( array( '*' ), $manifest['watch'] );
-		// The whole server surface: two mutations. Filter, search and
-		// the Refresh button ride the built-in `refresh`.
-		$this->assertSame( array( 'restore', 'purge' ), $manifest['actions'] );
+		// Returning to the bin refreshes its data, including when no
+		// change notification reached the mounted window.
+		$this->assertSame( array( 'show', 'reopen', 'restore', 'purge' ), $manifest['actions'] );
 		// Both bin drawings ride the config extra so the client's
 		// empty/full tile-art swap is local — and there is NO badge.
 		$this->assertStringStartsWith( 'data:image/svg+xml', (string) $manifest['config']['empty'] );
@@ -110,6 +110,26 @@ class Tests_OpenStation_TrashApp extends WP_UnitTestCase {
 		$this->assertContains( $post_id, $ids );
 		$this->assertGreaterThanOrEqual( 1, $response['data']['total'] );
 		$this->assertIsBool( $response['data']['mediaTrash'] );
+	}
+
+	/**
+	 * @covers \OpenStation\App\Runtime::dispatch
+	 */
+	public function test_returning_to_an_empty_bin_reads_newly_trashed_items() {
+		$initial = $this->dispatch( 'mount' );
+		$post_id = self::factory()->post->create();
+		$page_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
+		wp_trash_post( $post_id );
+		wp_trash_post( $page_id );
+
+		foreach ( array( 'show', 'reopen' ) as $action ) {
+			$response = $this->dispatch( $action, $initial['state'] );
+			$this->assertTrue( $response['ok'] );
+			$ids = wp_list_pluck( $response['data']['items'], 'id' );
+			$this->assertContains( $post_id, $ids );
+			$this->assertContains( $page_id, $ids );
+			$this->assertGreaterThanOrEqual( 2, $response['data']['total'] );
+		}
 	}
 
 	/**

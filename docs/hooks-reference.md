@@ -3519,7 +3519,7 @@ Fires after the upload-AJAX handler installs a plugin from an uploaded .zip. `$p
 
 The Plugins window's third tab — "OpenStation plugins" — leads with a hand-curated list because wp.org's `plugins_api` does not yet expose a usable `requires_plugins` filter. The handler hydrates each curated slug through `plugins_api( 'plugin_information' )` so card metadata stays fresh; it then scans the wp.org popular feed for rows whose `requires_plugins` array contains `openstation` and appends them after the curated entries.
 
-Use this filter to append your own companion plugins (or remove the default seed). Order is preserved — the first slug renders first in the gallery. Output is run through `sanitize_key()` and deduplicated.
+The default seed is `odd-outlandish-desktop-decorator`, `allterrain-forms`, and `allterrain-photo-editor`. Use this filter to append your own companion plugins (or remove the default seed). Order is preserved — the first slug renders first in the gallery. Output is run through `sanitize_key()` and deduplicated.
 
 ```php
 apply_filters( 'openstation_plugins_featured_slugs', string[] $slugs ): string[]
@@ -3722,7 +3722,19 @@ The window and its pinned icon are **titled "WP Explorer"**. Its *root folder* i
 apply_filters( 'openstation_my_wordpress_user_can_use', bool $can ): bool
 ```
 
-Gates icon registration and window registration in one shot. Default `current_user_can( 'edit_posts' )`. Return `false` to hide the entry point for a role; return `true` to opt a role back in.
+The module's one capability gate. Default `current_user_can( 'edit_posts' )`. Return `false` to close the module for a role; return `true` to opt a role back in.
+
+**This is a server-side authorization gate, not only a visibility one** — narrowing or widening it changes what a role can reach over REST. It decides:
+
+| Surface | Where |
+|---|---|
+| Whether the non-REST post-type bridge routes register at all — `desktop-mode/v1/post-type/<slug>` | `includes/my-wordpress/rest-post-type.php` |
+| The per-comment dossier route `desktop-mode/v1/comment-stats/<id>`, which then also checks that the caller can read the comment's parent post | `includes/my-wordpress/comment-stats.php` |
+| Whether the WooCommerce integration's boot config ships, so the client can reach the order / customer / product surfaces at all — those routes still enforce their own Woo capabilities on top | `includes/my-wordpress/integrations/woocommerce.php` |
+| Whether preview-action scripts registered by plugins are enqueued | `includes/my-wordpress/preview-actions.php` |
+| Whether Station Home offers the "WP Explorer" quick action | `apps/station-home/parts/snapshot.php` |
+
+It does **not** gate WP Explorer's own window or pinned launcher. The app declares `->capabilities( 'edit_posts' )` itself, so `true` here opens the surfaces above without opening the window — filter [`openstation_app_manifest`](#openstation_app_manifest--experimental-filter) with `$id === 'my-wordpress'` to move the window too.
 
 ### Removed — the legacy explorer window's filters
 
@@ -4096,6 +4108,8 @@ apply_filters( 'openstation_my_wordpress_term_stats', array $payload, string $ta
 ```
 
 The per-term stats payload returned by `GET /desktop-mode/v1/term-stats/<taxonomy>/<id>` — profile, counts, recent posts, top authors, co-terms, activity, and milestones. Filter it to splice in extra metrics before it reaches the WP Explorer window.
+
+The payload is **viewer-dependent**: `counts.posts` and `recent` only cover post statuses the current user may read (unpublished rows are additionally filtered per-row through `current_user_can( 'read_post', … )`), so a subscriber's `counts.posts.total` counts published posts only while an editor's includes drafts, pending and scheduled ones. Never cache the filtered payload under a term-only key — a copy built for a privileged viewer would hand another author's unpublished posts to everyone else.
 
 ### `openstation_my_wordpress_post_contributors` — Experimental (filter)
 
@@ -4707,7 +4721,7 @@ therefore won't fire `beforeinstallprompt`.
 
 ### `openstation_pwa_admin_asset_cache` — Experimental (filter)
 
-Opt in to the service worker's **shared admin-asset cache**. When
+Control the service worker's **shared admin-asset cache**. When
 enabled, versioned admin static assets — Core CSS/JS, the
 `load-scripts.php` / `load-styles.php` concat responses, and
 plugin/theme assets carrying a `?ver=` query — are served from one
@@ -4715,20 +4729,19 @@ origin-wide Cache Storage bucket shared by the shell and every window's
 chromeless iframe. An asset fetched by one window is answered locally
 for every later window, revalidation round-trips included.
 
-The filter's default is the requesting user's OpenStation preference
-(**OpenStation Preferences → Features → Beta features → "Shared asset
-cache (experimental)"**, `adminAssetCacheEnabled`, default `false`) —
-the toggle is the intended opt-in path. Hook the filter to force the
-cache site-wide or to veto every per-user opt-in:
+The filter's default is the site-wide `admin_asset_cache` Extended option
+(`true` by default). Administrators can opt out through **OpenStation
+Preferences → Features → Extended options → Shared asset cache**. Hook
+the filter to force or veto the option:
 
 ```php
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_true' );  // force on
 add_filter( 'openstation_pwa_admin_asset_cache', '__return_false' ); // kill switch
 ```
 
-The value reaches the SW inside the served script bytes, so flipping
-the filter triggers a normal SW update on the next page load — no
-re-registration needed. Core-path assets are cached exact-URL
+The shell posts the filtered value to the running worker in `os-sw-config`
+on boot. Changes apply on shell reload, without a worker update or
+re-registration. Core-path assets are cached exact-URL
 cache-first (their `ver` embeds the WordPress version); plugin/theme
 assets use stale-while-revalidate so an author editing files without a
 version bump self-heals on the next load. Uploads, unversioned URLs,
@@ -5384,7 +5397,7 @@ Features → Extended options, admin-only, default off). While the flag
 is off none of these hooks exist — `includes/agents/bootstrap.php`
 skips every module file.
 
-**Two exceptions** load unconditionally, ahead of the flag:
+**Three exceptions** load unconditionally, ahead of the flag:
 
 - `includes/agents/guard.php` owns `openstation_agent_is_agent()` and
   every login/session block. Disabling the feature does not delete
@@ -5400,6 +5413,10 @@ skips every module file.
   `openstation_agent_avatar_url()` live in `bootstrap.php` for the
   same reason: the section descriptor needs them while `rest.php` and
   `identity.php` are unloaded.
+
+- `includes/agents/jobs.php` retains the worker and cleanup callbacks. Disabling
+  Agents makes queued jobs fail permission checks, while retained data still
+  expires. Its REST status route is registered only while Agents is enabled.
 
 An agent is a synthetic `wp_users` row (login-blocked) whose entire
 definition lives as user meta on that row: description, instructions
@@ -5422,6 +5439,20 @@ Whether the agents framework is enabled site-wide. Runs on
 all, and again wherever the enabled state is consulted.
 
 - **Param** `bool $enabled` — default: the `agents` extended option.
+
+### `openstation_agent_job_finished` — Experimental *(action)*
+
+Fires after an async agent job stores a completed or failed result and releases
+its admission slot. Parameters: `string $id` (job UUID), `int $owner` (human
+invoker), `array $status` (the public job snapshot, including result/error).
+A hard-killed process cannot fire this action. Status reads may report an
+interrupted job from its deadline without dispatching actions or running work.
+
+`openstation_agent_job_run( $id )` and
+`openstation_agent_job_cleanup( $id )` are internal WordPress cron hooks, not
+extension callbacks. Integrations submit through the async REST contract and
+observe `openstation_agent_job_finished`; see the [example](./examples/agents.md#queue-work-from-a-chat-or-another-client).
+
 
 ### `openstation_agent_created` — Experimental *(action)*
 

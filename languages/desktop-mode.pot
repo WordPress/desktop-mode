@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: OpenStation 1.1.7\n"
+"Project-Id-Version: OpenStation 1.1.8\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/desktop-mode\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T17:22:01+00:00\n"
+"POT-Creation-Date: 2026-09-12T10:53:52+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: desktop-mode\n"
@@ -27,61 +27,61 @@ msgstr ""
 msgid "Open the %1$s \"%2$s\""
 msgstr ""
 
-#: src/agent-run-window.ts:304
+#: src/agent-run-window.ts:307
 msgid "Delete conversation?"
 msgstr ""
 
-#: src/agent-run-window.ts:305
+#: src/agent-run-window.ts:308
 msgid "Cannot be undone."
 msgstr ""
 
-#: src/agent-run-window.ts:306
+#: src/agent-run-window.ts:309
 msgid "Delete"
 msgstr ""
 
-#: src/agent-run-window.ts:338
+#: src/agent-run-window.ts:341
 msgid "+ New chat"
 msgstr ""
 
-#: src/agent-run-window.ts:367
+#: src/agent-run-window.ts:370
 msgid "No conversations yet."
 msgstr ""
 
-#: src/agent-run-window.ts:443
+#: src/agent-run-window.ts:446
 msgid "Delete conversation"
 msgstr ""
 
-#: src/agent-run-window.ts:474
+#: src/agent-run-window.ts:477
 msgid "No agent selected"
 msgstr ""
 
-#: src/agent-run-window.ts:478
+#: src/agent-run-window.ts:481
 msgid "Open an agent from the Agents section of WP Explorer, or pick a past conversation."
 msgstr ""
 
-#: src/agent-run-window.ts:529
+#: src/agent-run-window.ts:532
 msgid "Message the agent"
 msgstr ""
 
-#: src/agent-run-window.ts:533
+#: src/agent-run-window.ts:536
 msgid "Ask the agent to do something…"
 msgstr ""
 
-#: src/agent-run-window.ts:545
 #: src/agent-run-window.ts:548
+#: src/agent-run-window.ts:551
 #: src/ai-assistant/impl.ts:1889
 msgid "Send"
 msgstr ""
 
-#: src/agent-run-window.ts:639
+#: src/agent-run-window.ts:642
 msgid "Shared with the agent"
 msgstr ""
 
-#: src/agent-run-window.ts:668
+#: src/agent-run-window.ts:671
 msgid "Tool calls"
 msgstr ""
 
-#: src/agent-run-window.ts:731
+#: src/agent-run-window.ts:734
 msgid "Chat window config is missing."
 msgstr ""
 
@@ -91,24 +91,32 @@ msgid "Send to agent"
 msgstr ""
 
 #. 1: entity kind (post, media, …), 2: entity title, 3: numeric id.
-#: src/agents-dispatch.ts:172
+#: src/agents-dispatch.ts:170
 msgid "The user dropped the %1$s \"%2$s\" (id %3$s) onto you. Handle it according to your instructions, using your tools as needed."
 msgstr ""
 
 #. 1: entity kind (post, media, …), 2: entity title, 3: numeric id.
-#: src/agents-dispatch.ts:190
+#: src/agents-dispatch.ts:188
 msgid "The user sent you the %1$s \"%2$s\" (id %3$s) from the \"Send to\" menu. Handle it according to your instructions, using your tools as needed."
 msgstr ""
 
-#: src/agents-dispatch.ts:288
+#: src/agents-dispatch.ts:286
 msgid "Working…"
 msgstr ""
 
-#: src/agents-dispatch.ts:324
-msgid "The agent took too long to reply, so the answer never arrived. It may still be finishing the work: give it a moment before asking again."
+#: src/agents-dispatch.ts:301
+msgid "Queued — waiting for a WordPress worker…"
 msgstr ""
 
-#: src/agents-dispatch.ts:341
+#: src/agents-dispatch.ts:302
+msgid "Reconnecting to the background job…"
+msgstr ""
+
+#: src/agents-dispatch.ts:303
+msgid "Working in the background…"
+msgstr ""
+
+#: src/agents-dispatch.ts:311
 msgid "The agent finished without a text answer."
 msgstr ""
 
@@ -122,7 +130,7 @@ msgstr ""
 #: src/content-graph/panel.ts:881
 #: apps/my-wordpress/parts/sections.php:66
 #: includes/desktop-files/built-in-types.php:30
-#: includes/my-wordpress/window.php:156
+#: includes/my-wordpress/window.php:179
 #: includes/recycle-bin/store.php:597
 #: includes/window-links.php:749
 msgid "Media"
@@ -148,6 +156,26 @@ msgstr ""
 #: src/ai-assistant/impl.ts:1755
 #: includes/desktop-files/built-in-types.php:24
 msgid "Post"
+msgstr ""
+
+#: src/agents-jobs.ts:67
+msgid "The job status could not be read."
+msgstr ""
+
+#: src/agents-jobs.ts:106
+msgid "The server returned a different job."
+msgstr ""
+
+#: src/agents-jobs.ts:113
+msgid "The agent job failed."
+msgstr ""
+
+#: src/agents-jobs.ts:116
+msgid "The server returned an invalid job state."
+msgstr ""
+
+#: src/agents-jobs.ts:129
+msgid "The background job has not returned a result. Some work may already have been applied. Check the site before submitting again."
 msgstr ""
 
 #: src/ai-assistant/impl.ts:161
@@ -541,7 +569,7 @@ msgstr ""
 #: src/desktop-files/preview.ts:464
 #: apps/my-wordpress/parts/sections.php:42
 #: apps/posts/posts.os.php:39
-#: includes/my-wordpress/window.php:133
+#: includes/my-wordpress/window.php:156
 msgid "Posts"
 msgstr ""
 
@@ -549,7 +577,7 @@ msgstr ""
 #: src/desktop-files/preview.ts:395
 #: apps/my-wordpress/parts/sections.php:54
 #: apps/pages/pages.os.php:35
-#: includes/my-wordpress/window.php:141
+#: includes/my-wordpress/window.php:164
 msgid "Pages"
 msgstr ""
 
@@ -638,7 +666,7 @@ msgid "Revision"
 msgstr ""
 
 #: src/content-graph/panel.ts:936
-#: src/window/index.ts:3571
+#: src/window/index.ts:4000
 msgid "Saved"
 msgstr ""
 
@@ -762,6 +790,7 @@ msgid "No preview available for this file type."
 msgstr ""
 
 #: src/desktop-files/preview.ts:699
+#: includes/desktop-files/media-library.php:293
 msgid "Download"
 msgstr ""
 
@@ -820,7 +849,7 @@ msgstr ""
 msgid "Open in editor"
 msgstr ""
 
-#: src/desktop-files/recycle-bin-targets.ts:140
+#: src/desktop-files/recycle-bin-targets.ts:141
 #: src/notes/layer.ts:618
 #: src/notes/layer.ts:930
 #: src/plugins/drafts-widget/index.ts:627
@@ -835,8 +864,8 @@ msgstr ""
 #. %d is the number of pending items in a desktop-icon badge.
 #. %d is the number of pending items in a dock badge.
 #: src/desktop-icons.ts:539
-#: src/dock.ts:2882
 #: src/dock.ts:2895
+#: src/dock.ts:2908
 msgid "%d notification"
 msgid_plural "%d notifications"
 msgstr[0] ""
@@ -852,12 +881,12 @@ msgid "Retry"
 msgstr ""
 
 #. %1$s is the workspace name, %2$d the windows kept, %3$d the windows on the desk.
-#: src/desktop.ts:2787
+#: src/desktop.ts:2795
 msgid "%1$s will open like this — the top %2$d of %3$d windows, where they are."
 msgstr ""
 
 #. %1$s is the workspace name, %2$d a number of windows.
-#: src/desktop.ts:2795
+#: src/desktop.ts:2803
 msgid "%1$s will open like this — %2$d windows, where they are."
 msgstr ""
 
@@ -888,6 +917,7 @@ msgstr ""
 #: src/plugins/my-wordpress-woocommerce/index.ts:913
 #: src/plugins/my-wordpress-woocommerce/index.ts:1052
 #: src/window/tabs.ts:497
+#: apps/network/network.os.php:153
 #: apps/station-home/parts/view.php:373
 msgid "Open"
 msgstr ""
@@ -919,7 +949,7 @@ msgid "New %s"
 msgstr ""
 
 #. %d is the number of pending updates / items.
-#: src/dock.ts:1400
+#: src/dock.ts:1404
 msgid "%d update"
 msgid_plural "%d updates"
 msgstr[0] ""
@@ -1925,12 +1955,33 @@ msgid "Close app"
 msgstr ""
 
 #: src/multisite/dock-tiles.ts:29
-#: src/multisite/site-switcher.ts:66
+#: src/multisite/site-switcher.ts:98
 msgid "Network Admin"
 msgstr ""
 
-#: src/multisite/site-switcher.ts:102
+#: src/multisite/link-offer.ts:56
+msgid "Arrive logged in next time?"
+msgstr ""
+
+#. %1$s: who arrived (name and email); %2$s: the site they came from.
+#: src/multisite/link-offer.ts:58
+msgid "%1$s just switched here from %2$s while you were logged in. Link that account to yours, and a switch from there logs you in as you. You can undo this in the Network window."
+msgstr ""
+
+#: src/multisite/link-offer.ts:63
+msgid "Link accounts"
+msgstr ""
+
+#: src/multisite/site-switcher.ts:246
 msgid "Site"
+msgstr ""
+
+#: src/multisite/site-switcher.ts:264
+msgid "External site"
+msgstr ""
+
+#: src/multisite/site-switcher.ts:268
+msgid "External site:"
 msgstr ""
 
 #: src/notch.ts:58
@@ -1950,7 +2001,7 @@ msgid "Note converted to a draft post"
 msgstr ""
 
 #: src/notes/convert.ts:90
-#: src/notes/trash.ts:54
+#: src/notes/trash.ts:60
 msgid "Undo"
 msgstr ""
 
@@ -2065,11 +2116,11 @@ msgstr ""
 msgid "New note"
 msgstr ""
 
-#: src/notes/trash.ts:51
+#: src/notes/trash.ts:57
 msgid "Note moved to Trash"
 msgstr ""
 
-#: src/notes/trash.ts:76
+#: src/notes/trash.ts:86
 msgid "Could not move the note to the Trash."
 msgstr ""
 
@@ -3097,7 +3148,7 @@ msgid "Maximize"
 msgstr ""
 
 #: src/window-chrome/controls/built-ins.ts:63
-#: src/window/index.ts:2283
+#: src/window/index.ts:2712
 #: includes/admin-bar.php:69
 #: includes/admin-bar.php:723
 msgid "Enter fullscreen"
@@ -3159,18 +3210,18 @@ msgstr ""
 msgid "Request failed (HTTP %d)."
 msgstr ""
 
-#: src/window/index.ts:2283
+#: src/window/index.ts:2712
 #: includes/admin-bar.php:722
 #: includes/admin-bar.php:724
 msgid "Exit fullscreen"
 msgstr ""
 
-#: src/window/index.ts:3574
+#: src/window/index.ts:4003
 msgid "Not saved."
 msgstr ""
 
 #. %s: error message explaining why the change could not be saved.
-#: src/window/index.ts:3577
+#: src/window/index.ts:4006
 msgid "Not saved. %s"
 msgstr ""
 
@@ -3610,10 +3661,10 @@ msgstr ""
 #. Plugin Name of the plugin
 #: desktop-mode.php
 #: includes/ai-copilot/abilities.php:39
-#: includes/shell-screen.php:287
-#: includes/shell-screen.php:288
-#: includes/shell-screen.php:335
-#: includes/shell-screen.php:356
+#: includes/shell-screen.php:304
+#: includes/shell-screen.php:305
+#: includes/shell-screen.php:352
+#: includes/shell-screen.php:373
 #: includes/wp-icon-registry.php:90
 msgid "OpenStation"
 msgstr ""
@@ -3889,10 +3940,10 @@ msgid "Uploaded"
 msgstr ""
 
 #: apps/my-wordpress/parts/sections.php:75
-#: apps/users/users.os.php:98
+#: apps/users/users.os.php:108
 #: includes/ai-copilot/search.php:153
-#: includes/multisite.php:45
-#: includes/my-wordpress/window.php:149
+#: includes/multisite.php:114
+#: includes/my-wordpress/window.php:172
 msgid "Users"
 msgstr ""
 
@@ -4008,6 +4059,189 @@ msgstr ""
 #: apps/my-wordpress/parts/woocommerce.php:251
 #: includes/my-wordpress/integrations/woocommerce.php:1453
 msgid "Guest"
+msgstr ""
+
+#: apps/network/network.os.php:99
+msgid "Unreachable"
+msgstr ""
+
+#: apps/network/network.os.php:101
+msgid "Key changed"
+msgstr ""
+
+#: apps/network/network.os.php:103
+msgid "Paired"
+msgstr ""
+
+#: apps/network/network.os.php:141
+msgid "This network"
+msgstr ""
+
+#: apps/network/network.os.php:151
+msgid "Switch to this site"
+msgstr ""
+
+#. translators: %s: site name.
+#: apps/network/network.os.php:165
+#, php-format
+msgid "Remove %s from the network? Its switcher will stop listing this network the next time it syncs."
+msgstr ""
+
+#: apps/network/network.os.php:166
+#: apps/network/network.os.php:168
+msgid "Remove"
+msgstr ""
+
+#: apps/network/network.os.php:229
+msgid "Sites in this network"
+msgstr ""
+
+#: apps/network/network.os.php:235
+msgid "The sites of this WordPress network, and the OpenStation installs that joined it from elsewhere. Every one of them shows the same site switcher."
+msgstr ""
+
+#: apps/network/network.os.php:236
+msgid "This site is the hub of an OpenStation network: every install listed here shows the same site switcher."
+msgstr ""
+
+#: apps/network/network.os.php:241
+msgid "Check sites"
+msgstr ""
+
+#: apps/network/network.os.php:265
+msgid "Add an external site"
+msgstr ""
+
+#: apps/network/network.os.php:267
+msgid "An install anywhere, with OpenStation active and reachable over HTTPS. Its key is pinned when it is added; on that site, open Network and enter this address to finish pairing:"
+msgstr ""
+
+#: apps/network/network.os.php:270
+#: apps/network/network.os.php:367
+msgid "Site address"
+msgstr ""
+
+#: apps/network/network.os.php:270
+#: apps/network/network.os.php:367
+msgid "Add external site"
+msgstr ""
+
+#. translators: %s: network name.
+#: apps/network/network.os.php:290
+#, php-format
+msgid "This site belongs to %s"
+msgstr ""
+
+#. translators: %s: date and time.
+#: apps/network/network.os.php:299
+#, php-format
+msgid "Site list synced %s."
+msgstr ""
+
+#: apps/network/network.os.php:309
+msgid "Until the network has added this site, the switcher stays as it was."
+msgstr ""
+
+#: apps/network/network.os.php:314
+msgid "Sync now"
+msgstr ""
+
+#: apps/network/network.os.php:318
+msgid "Leave the network? The site switcher stops listing its sites here."
+msgstr ""
+
+#: apps/network/network.os.php:319
+msgid "Leave"
+msgstr ""
+
+#: apps/network/network.os.php:320
+msgid "Leave network"
+msgstr ""
+
+#: apps/network/network.os.php:357
+msgid "Join a network"
+msgstr ""
+
+#: apps/network/network.os.php:359
+msgid "Enter the address of the OpenStation network this site belongs to. Its administrator adds this site there by this address:"
+msgstr ""
+
+#: apps/network/network.os.php:362
+msgid "Network address"
+msgstr ""
+
+#: apps/network/network.os.php:362
+msgid "Join"
+msgstr ""
+
+#: apps/network/network.os.php:365
+msgid "Or start one here"
+msgstr ""
+
+#: apps/network/network.os.php:366
+msgid "Add the first external site and this site becomes the hub: every site added here shows the same site switcher."
+msgstr ""
+
+#: apps/network/network.os.php:385
+msgid "Linked accounts"
+msgstr ""
+
+#: apps/network/network.os.php:386
+msgid "A switch from any of these accounts logs you in here as you. Unlink one and that switch lands on the login screen again."
+msgstr ""
+
+#: apps/network/network.os.php:404
+msgid "Unlink"
+msgstr ""
+
+#: apps/network/network.os.php:437
+msgid "Network"
+msgstr ""
+
+#. translators: %s: site name.
+#: apps/network/network.os.php:469
+#, php-format
+msgid "%s is in the network. It is in the site switcher now, and on that site once it joins from its Network window."
+msgstr ""
+
+#: apps/network/network.os.php:487
+msgid "That site is not in the network."
+msgstr ""
+
+#: apps/network/network.os.php:488
+msgid "Removed from the network."
+msgstr ""
+
+#: apps/network/network.os.php:512
+msgid "That account is not linked."
+msgstr ""
+
+#: apps/network/network.os.php:513
+msgid "Unlinked. A switch from that account lands on the login screen now."
+msgstr ""
+
+#: apps/network/network.os.php:521
+msgid "Every site was checked."
+msgstr ""
+
+#. translators: %s: network name.
+#: apps/network/network.os.php:535
+#, php-format
+msgid "This site belongs to %s. The site switcher shows the network now."
+msgstr ""
+
+#. translators: %s: network name.
+#: apps/network/network.os.php:537
+#, php-format
+msgid "Pinned %s. It has not added this site yet; sync once it has."
+msgstr ""
+
+#: apps/network/network.os.php:549
+msgid "Left the network."
+msgstr ""
+
+#: apps/network/network.os.php:557
+msgid "Site list synced."
 msgstr ""
 
 #: apps/os-settings/os-settings.os.php:74
@@ -4171,12 +4405,12 @@ msgstr ""
 #: includes/ai-copilot/search.php:141
 #: includes/core-notices.php:177
 #: includes/core-notices.php:206
-#: includes/multisite.php:47
+#: includes/multisite.php:116
 msgid "Plugins"
 msgstr ""
 
 #. translators: %d: number of rows that could not be trashed.
-#: apps/posts/parts/query.php:296
+#: apps/posts/parts/query.php:338
 #, php-format
 msgid "%d item could not be moved to the trash."
 msgid_plural "%d items could not be moved to the trash."
@@ -4193,7 +4427,7 @@ msgstr ""
 
 #: apps/posts/parts/terms-rest.php:199
 #: apps/posts/parts/terms-rest.php:341
-#: includes/my-wordpress/term-stats.php:67
+#: includes/my-wordpress/term-stats.php:85
 msgid "Unknown taxonomy."
 msgstr ""
 
@@ -4396,6 +4630,15 @@ msgstr ""
 msgid "Edit user"
 msgstr ""
 
+#: apps/users/parts/activity-summary.php:14
+#: apps/users/parts/roles-summary.php:25
+msgid "You are not allowed to list users."
+msgstr ""
+
+#: apps/users/parts/activity-summary.php:31
+msgid "Activity could not be loaded."
+msgstr ""
+
 #: apps/users/parts/color-schemes.php:50
 msgid "Default"
 msgstr ""
@@ -4444,8 +4687,8 @@ msgid "A reset email was already sent recently. Try again in a minute."
 msgstr ""
 
 #: apps/users/parts/rest.php:184
-#: apps/users/users.os.php:209
 #: apps/users/users.os.php:224
+#: apps/users/users.os.php:239
 msgid "You are not allowed to email this user."
 msgstr ""
 
@@ -4477,48 +4720,56 @@ msgstr ""
 msgid "You are not allowed to assign that role."
 msgstr ""
 
-#: apps/users/users.os.php:157
+#: apps/users/parts/roles-summary.php:40
+msgid "No role"
+msgstr ""
+
+#: apps/users/parts/roles-summary.php:69
+msgid "Role groups could not be loaded. Please try again."
+msgstr ""
+
+#: apps/users/users.os.php:172
 msgid "You are not allowed to change roles."
 msgstr ""
 
-#: apps/users/users.os.php:168
+#: apps/users/users.os.php:183
 msgid "No users updated."
 msgstr ""
 
 #. translators: %1$d users updated, %2$d failed.
-#: apps/users/users.os.php:171
+#: apps/users/users.os.php:186
 #, php-format
 msgid "Role updated for %1$d user(s) (%2$d skipped)."
 msgstr ""
 
-#: apps/users/users.os.php:183
+#: apps/users/users.os.php:198
 msgid "You are not allowed to delete users."
 msgstr ""
 
 #. translators: %1$d users deleted, %2$d skipped.
-#: apps/users/users.os.php:194
+#: apps/users/users.os.php:209
 #, php-format
 msgid "%1$d user(s) deleted (%2$d skipped)."
 msgstr ""
 
 #. translators: %s is the user's email address.
-#: apps/users/users.os.php:212
+#: apps/users/users.os.php:227
 #, php-format
 msgid "Reset email sent to %s."
 msgstr ""
 
 #. translators: %s is the user's email address.
-#: apps/users/users.os.php:227
+#: apps/users/users.os.php:242
 #, php-format
 msgid "Welcome email resent to %s."
 msgstr ""
 
-#: apps/users/users.os.php:238
+#: apps/users/users.os.php:253
 msgid "You are not allowed to create users."
 msgstr ""
 
 #. translators: %s is the user's email address.
-#: apps/users/users.os.php:259
+#: apps/users/users.os.php:274
 #, php-format
 msgid "User created — welcome email sent to %s."
 msgstr ""
@@ -4743,20 +4994,21 @@ msgid "Update post"
 msgstr ""
 
 #: includes/agents/abilities.php:275
-#: includes/agents/abilities.php:478
+#: includes/agents/abilities.php:494
 #: includes/content-graph/rest.php:213
+#: includes/desktop-files/media-library.php:420
 #: includes/widgets/widget-drafts.php:312
 #: includes/widgets/widget-drafts.php:474
 msgid "Post not found."
 msgstr ""
 
-#: includes/agents/abilities.php:317
-#: includes/agents/abilities.php:372
+#: includes/agents/abilities.php:333
+#: includes/agents/abilities.php:388
 #: includes/my-wordpress/media-usage.php:140
 msgid "Attachment not found."
 msgstr ""
 
-#: includes/agents/abilities.php:494
+#: includes/agents/abilities.php:510
 msgid "Invalid post status."
 msgstr ""
 
@@ -4834,6 +5086,58 @@ msgstr ""
 msgid "Person"
 msgstr ""
 
+#: includes/agents/jobs.php:83
+msgid "The background worker did not finish. Some work may already have been applied. Check the site before submitting the task again."
+msgstr ""
+
+#: includes/agents/jobs.php:106
+msgid "Agent job not found."
+msgstr ""
+
+#: includes/agents/jobs.php:137
+msgid "An async invocation requires a request UUID."
+msgstr ""
+
+#: includes/agents/jobs.php:141
+msgid "Send a message between 1 and 20,000 bytes."
+msgstr ""
+
+#: includes/agents/jobs.php:158
+msgid "That request ID is already in use."
+msgstr ""
+
+#: includes/agents/jobs.php:164
+msgid "Configure an AI connector to run agents."
+msgstr ""
+
+#: includes/agents/jobs.php:186
+msgid "This agent is still handling your previous request. Wait for its answer before sending another."
+msgstr ""
+
+#: includes/agents/jobs.php:190
+msgid "The request could not be saved. Retry with the same request ID."
+msgstr ""
+
+#: includes/agents/jobs.php:200
+msgid "WordPress could not schedule the background job."
+msgstr ""
+
+#: includes/agents/jobs.php:270
+msgid "The queued job expired before a worker could start it."
+msgstr ""
+
+#: includes/agents/jobs.php:279
+msgid "The background worker stopped unexpectedly. Some work may already have been applied. Check the site before submitting again."
+msgstr ""
+
+#: includes/agents/jobs.php:291
+msgid "You no longer have permission to run this agent."
+msgstr ""
+
+#: includes/agents/jobs.php:304
+msgid "The background agent encountered an unexpected error. Check the site before submitting again."
+msgstr ""
+
 #: includes/agents/privacy.php:28
 #: includes/agents/privacy.php:130
 #: includes/agents/privacy.php:148
@@ -4876,28 +5180,28 @@ msgstr ""
 msgid "Face (JSON)"
 msgstr ""
 
-#: includes/agents/rest.php:250
+#: includes/agents/rest.php:258
 msgid "You do not have permission to read OpenStation agents."
 msgstr ""
 
-#: includes/agents/rest.php:266
+#: includes/agents/rest.php:274
 msgid "You do not have permission to manage OpenStation agents."
 msgstr ""
 
-#: includes/agents/rest.php:282
+#: includes/agents/rest.php:290
 msgid "You do not have permission to invoke OpenStation agents."
 msgstr ""
 
-#: includes/agents/rest.php:325
-#: includes/agents/rest.php:381
-#: includes/agents/rest.php:437
-#: includes/agents/rest.php:467
+#: includes/agents/rest.php:333
+#: includes/agents/rest.php:389
+#: includes/agents/rest.php:445
+#: includes/agents/rest.php:475
 #: includes/agents/runner.php:147
 #: includes/agents/store.php:1084
 msgid "Agent not found."
 msgstr ""
 
-#: includes/agents/rest.php:480
+#: includes/agents/rest.php:488
 msgid "You do not have permission to invoke this agent."
 msgstr ""
 
@@ -5129,7 +5433,7 @@ msgid "Analyze comment for spam"
 msgstr ""
 
 #: includes/ai-copilot/abilities.php:460
-#: includes/my-wordpress/comment-stats.php:61
+#: includes/my-wordpress/comment-stats.php:167
 #: includes/recycle-bin/store.php:752
 #: includes/recycle-bin/store.php:861
 msgid "Comment not found."
@@ -5140,7 +5444,7 @@ msgid "The AI provider returned no answer text."
 msgstr ""
 
 #: includes/ai-copilot/search.php:63
-#: includes/multisite.php:39
+#: includes/multisite.php:108
 msgid "Dashboard"
 msgstr ""
 
@@ -5202,7 +5506,7 @@ msgstr ""
 
 #: includes/ai-copilot/search.php:117
 #: includes/core-notices.php:231
-#: includes/multisite.php:46
+#: includes/multisite.php:115
 msgid "Themes"
 msgstr ""
 
@@ -5351,40 +5655,40 @@ msgid "WordPress, theme, and plugin updates."
 msgstr ""
 
 #. translators: %d: 1-based index of the next page to search.
-#: includes/ai-copilot/search.php:686
+#: includes/ai-copilot/search.php:850
 #, php-format
 msgid "Continue searching in pages (from item %d)"
 msgstr ""
 
 #. translators: %d: 1-based index of the next comment to search.
-#: includes/ai-copilot/search.php:689
+#: includes/ai-copilot/search.php:853
 #, php-format
 msgid "Continue searching in comments (from item %d)"
 msgstr ""
 
 #. translators: %d: 1-based index of the next post to search.
-#: includes/ai-copilot/search.php:692
+#: includes/ai-copilot/search.php:856
 #, php-format
 msgid "Continue searching in posts (from item %d)"
 msgstr ""
 
-#: includes/ai-copilot/search.php:1205
+#: includes/ai-copilot/search.php:1369
 msgid "Could not parse structured search answer."
 msgstr ""
 
-#: includes/ai-copilot/search.php:1473
+#: includes/ai-copilot/search.php:1637
 msgid "I searched 100 items without finding a clear match. Want me to keep looking further?"
 msgstr ""
 
-#: includes/ai-copilot/search.php:1921
+#: includes/ai-copilot/search.php:2085
 msgid "You must be logged in to use the AI assistant."
 msgstr ""
 
-#: includes/ai-copilot/search.php:1928
+#: includes/ai-copilot/search.php:2092
 msgid "The AI assistant is unavailable on this site."
 msgstr ""
 
-#: includes/ai-copilot/search.php:1938
+#: includes/ai-copilot/search.php:2102
 msgid "The AI assistant is turned off. Enable it in OpenStation Preferences → Features."
 msgstr ""
 
@@ -5484,7 +5788,7 @@ msgid "Go to Themes"
 msgstr ""
 
 #. translators: 1: kind ("Command"/"Settings-tab"/"Title-bar button"), 2: handle.
-#: includes/core/payload.php:2306
+#: includes/core/payload.php:2313
 #, php-format
 msgid "%1$s script handle \"%2$s\" could not be resolved: no `wp_register_script( '%2$s', … )` call had run by the time the shell harvested its payload. Register the handle on `admin_enqueue_scripts` at priority 5 or earlier — the harvest itself runs at priority 10, and a handle registered alongside it may or may not exist yet depending on plugin load order. Until then the script will not load."
 msgstr ""
@@ -5570,7 +5874,7 @@ msgid "Embedded web window"
 msgstr ""
 
 #: includes/desktop-files/downloads.php:70
-#: includes/desktop-files/file-shares.php:303
+#: includes/desktop-files/file-shares.php:312
 msgid "File not found."
 msgstr ""
 
@@ -5596,14 +5900,15 @@ msgid "This folder is too large to download as one archive."
 msgstr ""
 
 #: includes/desktop-files/file-shares.php:112
-#: includes/desktop-files/stored-files-store.php:278
-#: includes/desktop-files/stored-files-store.php:359
-#: includes/desktop-files/stored-files-store.php:392
+#: includes/desktop-files/reconcile.php:63
+#: includes/desktop-files/stored-files-store.php:297
+#: includes/desktop-files/stored-files-store.php:378
+#: includes/desktop-files/stored-files-store.php:411
 msgid "Stored file not found."
 msgstr ""
 
 #: includes/desktop-files/file-shares.php:115
-#: includes/desktop-files/file-shares.php:362
+#: includes/desktop-files/file-shares.php:371
 msgid "You cannot manage shares for this file."
 msgstr ""
 
@@ -5632,9 +5937,9 @@ msgid "Failed to record share."
 msgstr ""
 
 #: includes/desktop-files/file-shares.php:205
-#: includes/desktop-files/file-shares.php:257
-#: includes/desktop-files/file-shares.php:359
-#: includes/desktop-files/file-shares.php:583
+#: includes/desktop-files/file-shares.php:266
+#: includes/desktop-files/file-shares.php:368
+#: includes/desktop-files/file-shares.php:592
 #: includes/desktop-files/rest.php:981
 #: includes/desktop-files/shares-store.php:474
 #: includes/desktop-files/shares-store.php:541
@@ -5644,33 +5949,34 @@ msgid "Share not found."
 msgstr ""
 
 #: includes/desktop-files/file-shares.php:208
-#: includes/desktop-files/file-shares.php:260
+#: includes/desktop-files/file-shares.php:269
 #: includes/desktop-files/shares-store.php:668
 #: includes/desktop-files/shares-store.php:732
 msgid "This invite is not for you."
 msgstr ""
 
-#: includes/desktop-files/file-shares.php:214
+#: includes/desktop-files/file-shares.php:220
 #: includes/desktop-files/shares-store.php:675
 msgid "This invite was denied."
 msgstr ""
 
-#: includes/desktop-files/file-shares.php:306
+#: includes/desktop-files/file-shares.php:315
 msgid "Owners cannot leave their own file."
 msgstr ""
 
-#: includes/desktop-files/file-shares.php:326
+#: includes/desktop-files/file-shares.php:335
 msgid "You do not have access to this file."
 msgstr ""
 
-#: includes/desktop-files/file-shares.php:613
+#: includes/desktop-files/file-shares.php:622
 msgid "Uploaded files can only be shared read-only."
 msgstr ""
 
 #: includes/desktop-files/folders-store.php:45
 #: includes/desktop-files/store.php:47
 #: includes/desktop-files/stored-files-store.php:76
-#: includes/desktop-files/stored-files-store.php:170
+#: includes/desktop-files/stored-files-store.php:198
+#: includes/presence.php:109
 msgid "A user id is required."
 msgstr ""
 
@@ -5721,6 +6027,41 @@ msgstr ""
 msgid "Failed to delete folder."
 msgstr ""
 
+#: includes/desktop-files/media-library.php:160
+msgid "This file type cannot be added to the Media Library."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:192
+msgid "The file could not be copied."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:317
+msgid "That post type cannot be started from a file."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:324
+msgid "You are not allowed to create this kind of content."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:427
+#: includes/widgets/widget-drafts.php:150
+#: includes/widgets/widget-drafts.php:455
+#: includes/window-links.php:902
+msgid "You are not allowed to edit this post."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:434
+msgid "That post is in the Trash."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:441
+msgid "No files to add."
+msgstr ""
+
+#: includes/desktop-files/media-library.php:539
+msgid "You are not allowed to add files to the Media Library."
+msgstr ""
+
 #: includes/desktop-files/openers.php:90
 msgid "Opener id is required."
 msgstr ""
@@ -5737,6 +6078,18 @@ msgstr ""
 
 #: includes/desktop-files/openers.php:133
 msgid "Opener registration requires at least one file `type`."
+msgstr ""
+
+#: includes/desktop-files/reconcile.php:35
+msgid "File storage is busy. Please try again."
+msgstr ""
+
+#: includes/desktop-files/reconcile.php:60
+msgid "File storage is unavailable. Please try again."
+msgstr ""
+
+#: includes/desktop-files/reconcile.php:85
+msgid "A file cleanup operation could not be completed."
 msgstr ""
 
 #: includes/desktop-files/registry.php:64
@@ -5821,8 +6174,8 @@ msgid "You do not have permission to perform this action."
 msgstr ""
 
 #: includes/desktop-files/rest.php:523
-#: includes/desktop-files/store.php:229
-#: includes/desktop-files/store.php:382
+#: includes/desktop-files/store.php:236
+#: includes/desktop-files/store.php:389
 #: includes/desktop-files/trash.php:363
 #: includes/desktop-files/trash.php:451
 msgid "Placement not found."
@@ -5872,7 +6225,7 @@ msgid "This role is not eligible."
 msgstr ""
 
 #: includes/desktop-files/shares-store.php:797
-#: includes/desktop-files/store.php:224
+#: includes/desktop-files/store.php:231
 msgid "Invalid arguments."
 msgstr ""
 
@@ -5893,40 +6246,40 @@ msgid "You are not allowed to place this file."
 msgstr ""
 
 #: includes/desktop-files/store.php:83
-#: includes/desktop-files/store.php:285
+#: includes/desktop-files/store.php:292
 msgid "You only have read access to that folder."
 msgstr ""
 
-#: includes/desktop-files/store.php:154
+#: includes/desktop-files/store.php:163
 msgid "Failed to write placement."
 msgstr ""
 
-#: includes/desktop-files/store.php:257
-#: includes/desktop-files/store.php:265
+#: includes/desktop-files/store.php:264
+#: includes/desktop-files/store.php:272
 msgid "You only have read access to this folder."
 msgstr ""
 
-#: includes/desktop-files/store.php:272
+#: includes/desktop-files/store.php:279
 msgid "You cannot edit this placement."
 msgstr ""
 
-#: includes/desktop-files/store.php:311
+#: includes/desktop-files/store.php:318
 msgid "A folder cannot be placed inside itself or one of its descendants."
 msgstr ""
 
-#: includes/desktop-files/store.php:351
+#: includes/desktop-files/store.php:358
 msgid "Failed to update placement."
 msgstr ""
 
-#: includes/desktop-files/store.php:401
+#: includes/desktop-files/store.php:408
 msgid "You cannot remove this placement."
 msgstr ""
 
-#: includes/desktop-files/store.php:407
+#: includes/desktop-files/store.php:414
 msgid "Failed to remove placement."
 msgstr ""
 
-#: includes/desktop-files/store.php:453
+#: includes/desktop-files/store.php:460
 msgid "Only the file’s owner can move or delete an uploaded file."
 msgstr ""
 
@@ -5934,20 +6287,20 @@ msgstr ""
 msgid "Could not create the storage directory."
 msgstr ""
 
-#: includes/desktop-files/stored-files-store.php:182
+#: includes/desktop-files/stored-files-store.php:210
 msgid "Invalid storage name."
 msgstr ""
 
-#: includes/desktop-files/stored-files-store.php:186
+#: includes/desktop-files/stored-files-store.php:214
 #: includes/desktop-files/types/class-openstation-upload-file.php:48
 msgid "file"
 msgstr ""
 
-#: includes/desktop-files/stored-files-store.php:205
+#: includes/desktop-files/stored-files-store.php:233
 msgid "Failed to record the uploaded file."
 msgstr ""
 
-#: includes/desktop-files/stored-files-store.php:282
+#: includes/desktop-files/stored-files-store.php:301
 msgid "A file name is required."
 msgstr ""
 
@@ -6245,25 +6598,25 @@ msgstr ""
 msgid "Dock rail renderer script registration requires a non-empty script handle."
 msgstr ""
 
-#: includes/framework/wordpress.php:700
+#: includes/framework/wordpress.php:701
 msgid "You must be logged in to use this window."
 msgstr ""
 
-#: includes/framework/wordpress.php:706
-#: includes/framework/wordpress.php:722
+#: includes/framework/wordpress.php:707
+#: includes/framework/wordpress.php:723
 msgid "Unknown app."
 msgstr ""
 
-#: includes/framework/wordpress.php:709
-#: includes/framework/wordpress.php:723
+#: includes/framework/wordpress.php:710
+#: includes/framework/wordpress.php:724
 msgid "You are not allowed to use this window."
 msgstr ""
 
-#: includes/framework/wordpress.php:724
+#: includes/framework/wordpress.php:725
 msgid "This window does not know that action."
 msgstr ""
 
-#: includes/framework/wordpress.php:725
+#: includes/framework/wordpress.php:726
 msgid "This window does not have that tab."
 msgstr ""
 
@@ -6405,11 +6758,11 @@ msgstr ""
 msgid "Only return images at least this many pixels tall."
 msgstr ""
 
-#: includes/multisite.php:44
+#: includes/multisite.php:113
 msgid "Sites"
 msgstr ""
 
-#: includes/multisite.php:48
+#: includes/multisite.php:117
 msgid "Settings"
 msgstr ""
 
@@ -6437,7 +6790,8 @@ msgstr ""
 msgid "Sorry, you are not allowed to browse this content type."
 msgstr ""
 
-#: includes/my-wordpress/comment-stats.php:75
+#: includes/my-wordpress/comment-stats.php:185
+#: includes/my-wordpress/comment-stats.php:196
 msgid "You do not have permission to view this comment."
 msgstr ""
 
@@ -6611,7 +6965,7 @@ msgstr ""
 msgid "Additional contributor users beyond the primary author. Sourced from Co-Authors Plus when present, revision authors, the `_edit_last` meta, plus anything plugins return via `openstation_my_wordpress_post_contributors`. Empty for requesters who cannot edit the post."
 msgstr ""
 
-#: includes/my-wordpress/term-stats.php:76
+#: includes/my-wordpress/term-stats.php:94
 msgid "Term not found."
 msgstr ""
 
@@ -6637,6 +6991,109 @@ msgstr ""
 
 #: includes/my-wordpress/users-list-footprint.php:80
 msgid "View activity footprint"
+msgstr ""
+
+#: includes/network/hop.php:151
+msgid "That is not another install of this network."
+msgstr ""
+
+#: includes/network/hop.php:154
+msgid "A login token only travels over HTTPS."
+msgstr ""
+
+#: includes/network/hop.php:158
+msgid "A token needs a logged-in user."
+msgstr ""
+
+#: includes/network/hop.php:236
+#: includes/network/hop.php:240
+msgid "That is not a hop token."
+msgstr ""
+
+#: includes/network/hop.php:247
+msgid "That hop token has expired."
+msgstr ""
+
+#: includes/network/hop.php:250
+msgid "That hop token was minted for another install."
+msgstr ""
+
+#: includes/network/hop.php:254
+msgid "That hop token comes from a site this one does not trust."
+msgstr ""
+
+#: includes/network/hop.php:257
+msgid "That hop token is not signed by the site it names."
+msgstr ""
+
+#: includes/network/hop.php:260
+msgid "That hop token was already spent."
+msgstr ""
+
+#: includes/network/hop.php:504
+msgid "There is nothing to link right now."
+msgstr ""
+
+#: includes/network/hub.php:143
+msgid "This site is not a member of the network. Add it on the network first."
+msgstr ""
+
+#: includes/network/identity.php:70
+msgid "Sites in a network talk over HTTPS."
+msgstr ""
+
+#. translators: %d: HTTP status code.
+#: includes/network/identity.php:110
+#, php-format
+msgid "The site answered with HTTP %d."
+msgstr ""
+
+#: includes/network/identity.php:129
+msgid "That site does not run OpenStation, or its network identity is unreachable."
+msgstr ""
+
+#: includes/network/identity.php:133
+msgid "That site published a public key OpenStation cannot use."
+msgstr ""
+
+#: includes/network/member.php:76
+msgid "A network cannot join another network yet."
+msgstr ""
+
+#: includes/network/member.php:80
+msgid "Enter the network's address, starting with https://."
+msgstr ""
+
+#: includes/network/member.php:83
+msgid "That is this site itself."
+msgstr ""
+
+#: includes/network/member.php:126
+msgid "This site does not belong to a network."
+msgstr ""
+
+#: includes/network/member.php:131
+msgid "The network answered without a site list."
+msgstr ""
+
+#: includes/network/registry.php:98
+msgid "Enter the site's address, starting with https://."
+msgstr ""
+
+#: includes/network/registry.php:101
+msgid "That is this network itself."
+msgstr ""
+
+#: includes/network/registry.php:108
+msgid "That site is a network of its own; a network cannot join another yet."
+msgstr ""
+
+#: includes/network/registry.php:113
+msgid "That site is already in the network."
+msgstr ""
+
+#: includes/network/registry.php:166
+msgid "The site now publishes a different key. Remove it and add it again if that is expected."
 msgstr ""
 
 #: includes/notes/cpt.php:63
@@ -6745,8 +7202,18 @@ msgstr ""
 msgid "Sorry, you are not allowed to access the WordPress desktop."
 msgstr ""
 
+#: includes/presence-store.php:59
+#: includes/presence-store.php:270
+msgid "Could not read presence."
+msgstr ""
+
+#: includes/presence.php:148
+#: includes/presence.php:535
+msgid "Could not save presence."
+msgstr ""
+
 #. translators: %s: site name
-#: includes/pwa.php:520
+#: includes/pwa.php:513
 #, php-format
 msgid "%s — installed as a desktop app."
 msgstr ""
@@ -6842,21 +7309,21 @@ msgstr ""
 msgid "Desktop icon `url` must be a valid http(s) URL."
 msgstr ""
 
-#: includes/registries/native-windows.php:227
+#: includes/registries/native-windows.php:234
 msgid "Native window id is required and must be a valid slug."
 msgstr ""
 
 #. translators: %s: capability slug.
-#: includes/registries/native-windows.php:269
+#: includes/registries/native-windows.php:280
 #, php-format
 msgid "Current user lacks the %s capability required to register this native window."
 msgstr ""
 
-#: includes/registries/native-windows.php:284
+#: includes/registries/native-windows.php:295
 msgid "Native window registration requires a non-empty `title`."
 msgstr ""
 
-#: includes/registries/native-windows.php:291
+#: includes/registries/native-windows.php:302
 msgid "Native window registration requires a callable `template` that echoes the template body."
 msgstr ""
 
@@ -6927,7 +7394,7 @@ msgid "Window tab registration requires a callable `template` that echoes the pa
 msgstr ""
 
 #. translators: 1: parent menu label, 2: submenu label
-#: includes/render/assets.php:1288
+#: includes/render/assets.php:1290
 #, php-format
 msgid "%1$s > %2$s"
 msgstr ""
@@ -6956,16 +7423,16 @@ msgstr ""
 msgid "Settings tab registration requires a non-empty `label`."
 msgstr ""
 
-#: includes/shell-screen.php:358
+#: includes/shell-screen.php:375
 msgid "OpenStation is not active for your account on this request."
 msgstr ""
 
-#: includes/shell-screen.php:359
+#: includes/shell-screen.php:376
 msgid "Open the desktop"
 msgstr ""
 
 #. translators: 1: script or style handle, 2: script or style
-#: includes/shell-screen.php:581
+#: includes/shell-screen.php:598
 #, php-format
 msgid "The %2$s handle \"%1$s\" cannot leave the shell screen: something still enqueued depends on it."
 msgstr ""
@@ -7198,12 +7665,6 @@ msgstr ""
 
 #: includes/widgets/widget-drafts.php:78
 msgid "Your unfinished posts — click to reopen in the editor."
-msgstr ""
-
-#: includes/widgets/widget-drafts.php:150
-#: includes/widgets/widget-drafts.php:455
-#: includes/window-links.php:902
-msgid "You are not allowed to edit this post."
 msgstr ""
 
 #: includes/widgets/widget-drafts.php:157

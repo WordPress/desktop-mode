@@ -23,8 +23,8 @@ class Tests_OpenStation_PwaAdminAssetCache extends WP_UnitTestCase {
 	/**
 	 * @covers ::openstation_pwa_admin_asset_cache_enabled
 	 */
-	public function test_defaults_to_false() {
-		$this->assertFalse( openstation_pwa_admin_asset_cache_enabled() );
+	public function test_defaults_to_true() {
+		$this->assertTrue( openstation_pwa_admin_asset_cache_enabled() );
 	}
 
 	/**
@@ -36,21 +36,13 @@ class Tests_OpenStation_PwaAdminAssetCache extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The per-user OpenStation preference (OpenStation Preferences →
-	 * Features → Beta features) is the filter's default — the toggle
-	 * is the intended opt-in path, no code required.
-	 *
 	 * @covers ::openstation_pwa_admin_asset_cache_enabled
 	 */
-	public function test_user_setting_drives_the_default() {
-		$user_id = self::factory()->user->create();
-		wp_set_current_user( $user_id );
+	public function test_extended_option_drives_the_default() {
+		$this->assertTrue( openstation_pwa_admin_asset_cache_enabled() );
+		openstation_save_extended_options( array( 'admin_asset_cache' => false ) );
 		$this->assertFalse( openstation_pwa_admin_asset_cache_enabled() );
-
-		openstation_save_os_settings(
-			$user_id,
-			array( 'adminAssetCacheEnabled' => true )
-		);
+		openstation_save_extended_options( array( 'admin_asset_cache' => true ) );
 		$this->assertTrue( openstation_pwa_admin_asset_cache_enabled() );
 	}
 
@@ -191,7 +183,7 @@ class Tests_OpenStation_PwaAdminAssetCache extends WP_UnitTestCase {
 	 * @covers ::openstation_pwa_admin_asset_cache_enabled
 	 */
 	public function test_the_filter_still_decides_the_forwarded_value() {
-		$this->assertFalse( openstation_pwa_admin_asset_cache_enabled() );
+		$this->assertTrue( openstation_pwa_admin_asset_cache_enabled() );
 
 		add_filter( 'openstation_pwa_admin_asset_cache', '__return_true' );
 		$this->assertTrue( openstation_pwa_admin_asset_cache_enabled() );

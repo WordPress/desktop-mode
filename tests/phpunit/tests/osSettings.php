@@ -296,57 +296,45 @@ class Tests_OpenStation_OsSettings extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The shared admin-asset cache defaults OFF — cache-first has a
-	 * silent staleness failure mode, so users opt in deliberately.
+	 * The shared admin-asset cache is enabled by default.
 	 *
 	 * @covers ::openstation_default_os_settings
 	 */
-	public function test_default_admin_asset_cache_is_opt_in() {
+	public function test_default_admin_asset_cache_is_opt_out() {
 		$defaults = openstation_default_os_settings();
-		$this->assertFalse( $defaults['adminAssetCacheEnabled'] );
+		$this->assertTrue( $defaults['adminAssetCacheEnabled'] );
 	}
 
 	/**
 	 * @covers ::openstation_sanitize_os_settings
 	 */
-	public function test_sanitize_keeps_admin_asset_cache_opt_in() {
-		$clean = openstation_sanitize_os_settings(
-			array( 'adminAssetCacheEnabled' => true )
-		);
+	public function test_sanitize_uses_site_wide_admin_asset_cache() {
+		$clean = openstation_sanitize_os_settings( array( 'adminAssetCacheEnabled' => false ) );
 		$this->assertTrue( $clean['adminAssetCacheEnabled'] );
-
-		$clean = openstation_sanitize_os_settings(
-			array( 'adminAssetCacheEnabled' => '' )
-		);
+		openstation_save_extended_options( array( 'admin_asset_cache' => false ) );
+		$clean = openstation_sanitize_os_settings( array( 'adminAssetCacheEnabled' => true ) );
 		$this->assertFalse( $clean['adminAssetCacheEnabled'] );
 	}
-
 	/**
-	 * Hover-intent window prewarming defaults OFF — a speculative
-	 * hidden window costs real memory, so users opt in deliberately.
+	 * Hover-intent window prewarming is enabled by default.
 	 *
 	 * @covers ::openstation_default_os_settings
 	 */
-	public function test_default_window_prewarm_is_opt_in() {
+	public function test_default_window_prewarm_is_opt_out() {
 		$defaults = openstation_default_os_settings();
-		$this->assertFalse( $defaults['windowPrewarmEnabled'] );
+		$this->assertTrue( $defaults['windowPrewarmEnabled'] );
 	}
 
 	/**
 	 * @covers ::openstation_sanitize_os_settings
 	 */
-	public function test_sanitize_keeps_window_prewarm_opt_in() {
-		$clean = openstation_sanitize_os_settings(
-			array( 'windowPrewarmEnabled' => true )
-		);
+	public function test_sanitize_uses_site_wide_window_prewarm() {
+		$clean = openstation_sanitize_os_settings( array( 'windowPrewarmEnabled' => false ) );
 		$this->assertTrue( $clean['windowPrewarmEnabled'] );
-
-		$clean = openstation_sanitize_os_settings(
-			array( 'windowPrewarmEnabled' => '' )
-		);
+		openstation_save_extended_options( array( 'window_prewarm' => false ) );
+		$clean = openstation_sanitize_os_settings( array( 'windowPrewarmEnabled' => true ) );
 		$this->assertFalse( $clean['windowPrewarmEnabled'] );
 	}
-
 	/**
 	 * @covers ::openstation_sanitize_os_settings
 	 */

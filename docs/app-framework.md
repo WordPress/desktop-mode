@@ -199,6 +199,8 @@ use function OpenStation\App\Html\{ esc, attr, json, tag, classes };
 
 ---
 
+The Trash app re-queries its items when a mounted window is shown or reopened, even if a change notification was missed. Its client also refreshes on mount because a hover-prewarmed response can predate a deletion. Filters and search remain in place when returning to the window. Its table component is registered by a side-effect import before the first render: assigning imperative properties such as `data` and `columns` to an unupgraded custom element creates own properties that shadow the component's setters when it loads later. Client views that own an `os-preserve` component must load it before assigning these properties.
+
 ## `$os` — the host, as a value
 
 Every callback receives an `OpenStation\App\Os`. It is the app's entire view of the host:
@@ -360,6 +362,12 @@ The one decision every interaction needs, and the one a wrong default makes slow
 | Reads one REST resource on demand (a heavy payload only one pane needs) | `ctx.fetch()` cached in `ctx.ui()` |
 
 When in doubt: put it in `data()` and slice locally. The framework guards the two wrong turns that used to fail silently — a rendered `os-action` that nothing implements warns in the console at paint time (not at click time), and a write to a state key `App::state()` does not declare warns once with the fix in the message.
+
+### Preserved components need runtime imports
+
+The component loader skips `os-preserve` elements and their descendants. Import every component used there for its runtime side effect before rendering it, for example `import '../../src/ui/components/os-table/os-table';` from an app entry. An `import type { OsTable }` only describes the TypeScript type; it does not register `<os-table>`. Neither does `createListTableSync()`. Without registration, the browser displays the table's light-DOM empty slot even when the app has assigned rows to `.data`. Opening another window that imports the table can mask the problem.
+
+Test these views using their production imports and the real components. Registering a fake `<os-table>` in the test hides missing imports; assert that its shadow DOM actually renders a supplied row as well as checking its data properties. Third-party bundles can instead await `wp.os.loadComponents( [ 'os-table' ] )` before constructing and assigning properties to a preserved table.
 
 ### Debugging a dispatch
 

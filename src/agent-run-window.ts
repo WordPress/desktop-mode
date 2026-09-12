@@ -9,8 +9,8 @@
  * WordPress Agents section today; send-to and drag intakes in later
  * phases).
  *
- * Each send is one `POST /desktop-mode/v1/agents/:id/invoke`
- * round-trip — no streaming yet. Transcripts live in the shared
+ * Each send queues an async job through `/agents/:id/invoke`; short status
+ * polls deliver the answer without keeping a generation request open. Transcripts live in the shared
  * store for the session only.
  *
  * @public
@@ -252,7 +252,10 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 			'[data-os-agent-run-root]',
 		) ?? body;
 
-	let busy = false;
+	const isBusy = (): boolean => {
+		const agent = agentsChatStore.state.activeAgent;
+		return !! agent && transcriptFor( agent ).some( ( row ) => row.pending );
+	};
 	// Sidebar list state. Refetched when the store's conversationsRev
 	// moves (a save/delete happened) — never polled.
 	let conversations: AgentConversationSummary[] = [];
@@ -336,11 +339,11 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 		const newChat = document.createElement( 'os-button' );
 		newChat.className = 'dm-agent-chat__new';
 		newChat.textContent = __( '+ New chat', 'desktop-mode' );
-		if ( ! agent || busy ) {
+		if ( ! agent || isBusy() ) {
 			newChat.setAttribute( 'disabled', '' );
 		}
 		newChat.addEventListener( 'click', () => {
-			if ( agent && ! busy ) {
+			if ( agent && ! isBusy() ) {
 				startNewChat( agent );
 			}
 		} );
@@ -410,7 +413,7 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 			label.append( top, preview );
 
 			const open = (): void => {
-				if ( busy || ! cfg ) {
+				if ( isBusy() || ! cfg ) {
 					return;
 				}
 				void openConversation(
@@ -536,7 +539,7 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 		input.setAttribute( 'auto-grow', '' );
 		input.setAttribute( 'max-rows', '6' );
 		input.setAttribute( 'submit-on-enter', '' );
-		if ( busy ) {
+		if ( isBusy() ) {
 			input.setAttribute( 'disabled', '' );
 		}
 		const send = document.createElement( 'os-button' );
@@ -554,7 +557,7 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 		// text, and the run in flight, without a repaint.
 		const syncSend = (): void => {
 			const empty = ( input.value ?? '' ).trim() === '';
-			if ( busy || empty ) {
+			if ( isBusy() || empty ) {
 				send.setAttribute( 'disabled', '' );
 			} else {
 				send.removeAttribute( 'disabled' );
@@ -564,7 +567,7 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 
 		const submit = (): void => {
 			const text = ( input.value ?? '' ).trim();
-			if ( text === '' || busy ) {
+			if ( text === '' || isBusy() ) {
 				return;
 			}
 			void sendMessage( agent, text );
@@ -691,7 +694,7 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 		) {
 			const ctas = document.createElement( 'div' );
 			ctas.className = 'dm-agent-chat__ctas';
-			const live = isLast && ! message.ctaUsed && ! busy;
+			const live = isLast && ! message.ctaUsed && ! isBusy();
 			for ( const cta of message.callToActions ) {
 				const btn = document.createElement( 'os-button' );
 				btn.setAttribute( 'variant', cta.style ?? 'secondary' );
@@ -734,16 +737,13 @@ function renderChat( body: HTMLElement ): ( () => void ) | void {
 			agentsChatStore.notify();
 			return;
 		}
-		busy = true;
-		agentsChatStore.notify();
+
 		await invokeAgentIntoTranscript(
 			agent,
 			text,
 			{ restRoot: cfg.restRoot, restNonce: cfg.restNonce },
 			'chat',
 		);
-		busy = false;
-		agentsChatStore.notify();
 	};
 
 	// The open conversation accepts entity drops for the active agent.

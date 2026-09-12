@@ -745,3 +745,69 @@ writes and pruning invalidate it. Snapshots still scale with tracked users. Dail
 older than 14 days using the indexed heartbeat timestamp.
 
 See [presence migration and rollback](./migration-presence-storage.md).
+
+## Async agent jobs
+
+Chat, Send to and drag invocations use `POST /agents/{id}/invoke` with
+`async: true` and a client-generated UUID `requestId`. The route validates the
+agent and caller, stores a non-autoloaded job option, schedules WordPress work,
+and returns HTTP 202. The synchronous PHP helper and the REST default remain
+compatible for integrations that explicitly need them.
+
+`includes/agents/jobs.php` owns storage and execution. A WordPress single event
+(`openstation_agent_job_run`) starts the worker outside the browser request.
+On FPM, an additional shutdown callback may claim the job **only after**
+`fastcgi_finish_request()` has successfully delivered the response. This covers
+local installations with blocked loopbacks without making Apache requests run
+inline. Non-FPM hosts need working WP-Cron loopbacks or a system cron. Automatic
+spawning respects `DISABLE_WP_CRON` and avoids `ALTERNATE_WP_CRON`'s inline path.
+
+Admission permits one outstanding job per human/agent pair. Atomic inserts and
+compare-and-delete operations use the options table's unique key; `add_option()`
+uses an upsert and cannot provide this concurrency guarantee. A permanent claim
+prevents duplicate workers or retries from repeating abilities. The worker
+rechecks the enabled flag and the human's permissions, then calls the existing
+runner with an explicit `invoker`. Existing execution quotas and tool permission
+checks remain in force. Provider calls retain their own bounded timeout.
+
+`GET /agents/{id}/jobs/{jobId}` is an owner-only, no-store snapshot. It reads
+stored state and never performs AI work or dispatches a worker. In-tree clients
+poll sequentially from roughly 3 seconds up to 10 seconds, at least 15 seconds
+in hidden tabs, and back off to 30 seconds after transport errors. Each HTTP
+request has a 15-second client timeout. A lost submission is retried with its
+original UUID; an accepted job is only polled. Authentication failures stop
+polling. Transcripts remain in browser memory until the existing conversation
+save after completion; reloading the page does not automatically restore an
+outstanding job, though its ID can still retrieve the result.
+
+The worker ignores browser disconnects and removes PHP's ordinary execution
+limit where allowed. Host-enforced process limits can still terminate it;
+exceptions and shutdown failures become stored errors. Jobs without a terminal
+result after two hours are reported as interrupted. They are never automatically
+rerun because an ability might already have changed content. Input, result and
+claim are removed by `openstation_agent_job_cleanup` after one day. The job
+module remains loaded while Agents is disabled so queued work fails safely and
+cleanup still runs. Cron retention depends on the site's scheduler running.
+
+## Performance options
+
+Window preloading and shared admin-asset caching are site-wide Extended
+options, enabled by default. `desktop_mode_extended_options` stores
+`window_prewarm` and `admin_asset_cache`; missing keys resolve to `true`,
+and an explicit `false` survives partial saves. Only administrators can
+change them through Preferences or `/desktop-mode/v1/extended-options`.
+
+The settings snapshot retains `windowPrewarmEnabled` and
+`adminAssetCacheEnabled` as read-only mirrors. Server reads override old
+per-user values, and the client preserves the mirrors during preference
+updates and resets. Each shell adopts changes on reload and configures
+the worker by message; the shared-cache PHP filter still has the final
+say. See [Performance settings migration](./migration-performance-options.md).
+
+### Plugins library views
+
+The Installed Plugins window offers Cards and Table over the same filtered rows, sort order, selection, bulk actions, and details inspector. The table imports its component explicitly, keeps columns fixed and text truncated, and scrolls within its own viewport with a sticky header and plugin identity. Titles render as plain text with full-name tooltips. Clicking a row opens the inspector; the row actions menu also exposes Plugin details for keyboard access. The view switch saves through the capability-gated app action `save_view` with `{ view: 'cards' | 'table' }`; it paints immediately, disables duplicate saves while pending, and returns to the previous view on failure. `mount` restores the choice through the app's user-scoped `installed-view` store key. The loading frame contains no card rows, so a saved Table choice does not flash Cards while waiting for the server. No browser-only persistence is used.
+
+Plugin titles from both installed metadata and WordPress.org are decoded as inert HTML text before being displayed. The curated directory seed includes ODD, AllTerrain Forms, and AllTerrain Photo Editor; metadata and installation continue to use WordPress.org.
+
+Plugin updates keep each Core upgrader call and the following installed-list refresh in the same serial queue slot. Cards, table rows, the update count, and inspector actions repaint from the server result before the next update starts. Failures also reconcile the installed list and clear the busy state, leaving failed updates available to retry.
