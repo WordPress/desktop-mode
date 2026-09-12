@@ -20,6 +20,7 @@ export function appExtra( overrides: Partial< AppExtra > = {} ): AppExtra {
 	return {
 		mediaUrl: 'https://example.test/wp-json/wp/v2/media',
 		desktopThemesUrl: 'https://example.test/wp-json/desktop-mode/v1/desktop-themes',
+		brandProposalUrl: 'https://example.test/wp-json/desktop-mode/v1/brand-studio/propose',
 		aboutFeedUrl: 'https://example.test/wp-admin/admin-ajax.php?action=openstation_about_feed',
 		pluginUrl: 'https://example.test/plugin',
 		pluginVersion: '1.0.0',

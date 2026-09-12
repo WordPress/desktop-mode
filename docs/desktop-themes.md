@@ -1903,3 +1903,174 @@ for a complete plugin.
 - **Uninstall cleanup.** The plugin has no `uninstall.php`; the
   `desktop_mode_desktop_themes` option and the uploads directory
   survive plugin deletion today.
+
+
+## Brand Studio — Experimental
+
+Brand Studio is **site-wide agency branding**, managed by site administrators
+(`manage_options`). Selecting it in Preferences → Themes activates the same
+colours and font for every OpenStation user on that site.
+The editor appears directly below the theme library for administrators only.
+Other users see a managed-branding notice; they cannot change the brand or select
+another theme while it is enforced. Personal preferences unrelated to branding
+remain editable. **Allow users to choose their own wallpaper** defaults to on,
+including for existing branding configurations. Each user then chooses in
+Preferences → Appearance. Turning it off enforces the matching brand backdrop;
+turning it back on restores each user’s saved choice. Only administrators can
+change this permission, and it applies to this site only.
+
+| Group | Roles | Derived treatments |
+|---|---|---|
+| Brand | Canvas, Surfaces, Text | Desktop, window and dock chrome, cards, fields, borders, readable ink |
+| Accents | Primary, Secondary, Highlight | Actions, focus, selection, gradient stops, glints, hero washes |
+| Status colours | Success, Warning, Danger, Information | Notices, badges, ribbons, save/failure indicators |
+
+The alpha-aware `<os-color-picker>` shows a checkerboard swatch, hex input,
+opacity slider and editable percentage. Open the swatch for an inline HSV editor;
+all controls work with touch and keyboard. Enter `#RRGGBB` or `#RRGGBBAA`.
+Incomplete hex input remains a local draft. Alpha blends a role with its foundation:
+canvas over the default canvas, surface over that canvas, other roles over the
+resolved surface. Windows use the resolved opaque colours so overlapping windows
+do not accumulate transparency or lose their calculated contrast.
+
+**Glass & depth** separately controls actual widget and dock background alpha
+(`brandOpacity: { widgets: 82, dock: 94 }`, integer percentages 0–100). Text and
+icons stay opaque; widget ink is calculated against its glass over both canvas gradient endpoints.
+Widget titles, drag grips, borders and frame controls consume the existing
+`--os-ui-color-text`, `--os-ui-color-text-subtle`, `--os-ui-color-border` and
+`--os-ui-color-surface` contract, so they follow every preset and glass edit.
+The dock uses a contrasting canvas tint and an edge that remains visible even
+with transparent glass. These controls never apply CSS opacity to whole elements. Five local fonts are available: Geist,
+System, Arial, Georgia, and Geist Mono. WordPress, Paper & red, Evergreen, and
+Midnight are starting palettes. Presets apply the matching brand backdrop to the editing administrator and default glass strengths site-wide, and
+retain the chosen font. **Undo last change** restores the previous colour/font/glass
+edit; **Reset colours** resets only the ten colours. **Reset to defaults** remains
+a personal-preferences reset and never disables or resets site branding.
+
+An administrator selects another theme to release the site override. Every user
+then returns to their own theme and wallpaper. The site palette/font stay saved
+for reuse. Personal user meta is neither rewritten for other users nor used as
+the source of branding. Workspace appearance cannot override an active site brand.
+
+### Storage, scope, and live delivery
+
+The current site's `openstation_site_branding` option holds `enabled`,
+`brandPalette`, `brandFont`, `brandOpacity`, `brandAllowWallpaper` (boolean, default true), and `revision`. The implementation uses `get_option()`
+and `update_option()`, never network options or user-meta gates. On multisite,
+each blog owns its own option: activating branding on one site changes no other
+site, even when the same administrator visits both. Existing per-user Brand Studio
+values are ignored; an administrator must explicitly activate the site policy.
+
+The existing `/desktop-mode/v1/os-settings` route accepts branding edits from
+site administrators and routes them to the site option. It checks permissions
+before writing either store. Attempts to activate, edit or disable branding without
+authorization return 403. Personal wallpaper writes are allowed while
+`brandAllowWallpaper` is true; otherwise the shared backdrop is enforced without
+overwriting saved personal wallpapers. Unchanged fields may
+be echoed in a full settings snapshot. Low-level personal-setting saves cannot
+modify site policy. The normal debounced queue handles retries and rollback.
+
+The editing administrator previews changes immediately. Other open shells receive
+saved branding on their next WordPress Heartbeat; new page loads use it on first
+paint. The interval follows the existing Heartbeat preference. Generation echo
+prevents a response sent before/during an edit from undoing the local preview.
+No additional polling loop or page reload is required. The
+`openstation_site_branding_updated` action fires after a successful site write.
+
+### Rendering and contrast
+
+The compiler explicitly assigns 333 colour tokens and three font tokens.
+`assets/desktop-themes/brand-studio/palette.json` owns the defaults, local font
+stacks, and reviewed token recipes. PHP and TypeScript share the recipe and
+integer colour mixing. PHP registers `openstation/brand-studio` through the normal
+theme API; live edits replace a single scoped style layer. Switching themes
+removes that layer. Legacy's frozen manifest is unchanged.
+
+Opaque Primary stays exact. Text shades are adjusted toward black or white to reach
+4.5:1 against generated opaque surfaces. Wallpaper shortcut labels and glyphs
+use Canvas-derived ink, independently of window text. The assistant notch uses
+an opaque raised surface with corresponding readable text. Toasts (including the
+update/reload banner) pair the existing modal background and text tokens; actions
+use the matching field and hover surfaces. Text selection uses Primary with
+calculated contrasting ink through `--os-ui-selection-bg` / `--os-ui-selection-fg`.
+The Highlight role supplies decorative gradient stops and rating highlights. Mesh stops are
+lightened and use dark ink. Third-party artwork and iframe WordPress pages retain
+their own colours. This is contrast assistance for generated pairs, not an
+accessibility guarantee for arbitrary images or third-party content.
+
+The WordPress preset uses Blueberry blue (`#3858E9`) from the official
+[Automattic brand materials](https://automattic.com/press/brand-materials/), paired
+with light surfaces and a deep blue canvas. No third-party artwork is included.
+The editor reflows on phones and narrow windows; wrapped status badges keep a
+separate gap above the preset controls.
+
+| Token | Purpose |
+|---|---|
+| `--os-brand-primary-ink` | Readable ink for exact Primary fills |
+| `--os-brand-danger-ink` | Readable ink for destructive buttons |
+| `--os-brand-desktop-ink` | Canvas-derived text for wallpaper shortcuts |
+
+See [the branding recipe](./examples/brand-studio.md) and
+[JavaScript settings contract](./javascript-reference.md#brandpalette--os-settings-key-experimental).
+
+### AI brand proposals
+
+**Make it with AI** opens an administrator-only brief and proposal panel below the
+starting palettes. Describe a brand or a visual direction. The request uses the
+site's WordPress AI Client / Connectors credentials and model preferences;
+OpenStation never reads, stores, or forwards a key through the browser.
+The button and panel appear only while Core reports an available, configured
+text-generation provider. Preferences refreshes that status when it regains
+focus after editing Connectors. This is independent of the personal assistant toggle.
+
+When the configured model supports the AI Client's native `WebSearch`, a separate
+research pass asks for official brand colours and references. The structured
+proposal pass then fills all ten roles, the local font choice and widget/dock
+opacity percentages. Research notes are treated as untrusted evidence. Providers
+without native web search, or failed research passes, produce a clearly labelled
+knowledge-based proposal. “Web search enabled” describes the tool configuration;
+it does not certify the accuracy of the brand colours. Suggested references are
+limited to URLs appearing in the research notes.
+
+The provider schema enforces shape; server validation additionally enforces exact
+hex grammar, allowed fonts, numeric bounds, text lengths and a five-source limit.
+This split accommodates Anthropic's structured-output constraint limitations.
+No CSS, remote fonts or arbitrary settings can enter the result.
+
+The preview applies compiled tokens only to its own sample. Generating, retrying
+and cancelling never save branding. **Apply branding to this site** sends the
+reviewed palette/font/glass values through the existing site-branding save path
+and activates the matching backdrop. Undo restores the prior settings. Cancelling
+an in-flight request aborts the browser request and discards late responses; it
+cannot recall provider work that has already begun.
+
+`POST /desktop-mode/v1/brand-studio/propose` accepts `{ brief: string }` (3–2000
+characters), requires `manage_options` and Core's cookie-auth REST nonce, and
+returns `{ name, rationale, brandPalette, brandFont, brandOpacity, sources,
+webSearch, warning }`. It never saves site branding or user preferences. Errors
+leave the brief available for retry. The `openstation_brand_studio_generate`
+filter can supply a result through another AI runtime; its output is still
+validated before reaching the preview. See the [AI branding example](examples/brand-studio-ai.md).
+
+The studio submits `{ brief, async: true, requestId: UUID }` to that same route.
+It returns HTTP 202 with `{ jobId, status, createdAt, pollAfter, result, error }`.
+Short, sequential `GET /desktop-mode/v1/brand-studio/jobs/{jobId}` requests wait for
+`queued` → `running` → `completed` or `failed`; `result` contains the validated
+proposal on completion. Both routes require site administration, and only the
+requesting administrator can read that job. Responses are private and uncached.
+Repeating a submission with the same UUID and brief retrieves the same job,
+including after a lost HTTP response. One outstanding job per administrator
+prevents duplicate research. Cancel stops waiting and discards the preview; it
+does not recall provider work already running.
+
+WP-Cron and an FPM post-response fallback share an atomic execution claim. AI
+calls run after the submission response, so slow web research does not hold the
+browser request open through a hosting gateway timeout. Per-site, non-autoloaded
+job options retain the brief/result and claim for one day; an abandoned job is
+reported failed after ten minutes. The administrator's permissions are checked
+again when the worker starts. A polling request never executes AI work.
+
+AI proposals request every colour role explicitly and retry malformed structured
+output once with validation feedback. The preview shows colours, font and glass
+settings without a generated summary. The response retains `rationale` as an
+empty string for consumers; explanation length cannot invalidate a palette.

@@ -348,3 +348,17 @@ The remaining classes are internal-only for now — any other subpath / source-p
 ## Per-component help
 
 Every class has a `static help = { … }` block with full props / slots / events / examples / status. The OpenStation Preferences → Components tab iterates `OS_COMPONENT_TAGS` and renders these descriptors live; that's the authoritative per-component reference. The table above is a directory; the `static help` block is the manual.
+
+### `<os-color-picker>` — Stable
+
+An alpha-aware counterpart to `<os-color-field>`. Accepts `label` and `value`
+(`#RRGGBB` or `#RRGGBBAA`); emits `os-color-change` with `{ value: string }` on
+every valid edit. Shows opacity at all times and expands inline for HSV editing.
+See the [colour picker example](examples/os-color-picker.md).
+
+### `<os-toast>` surface colours
+
+Toasts pair `--os-ui-modal-bg` with `--os-ui-modal-text` and
+`--os-ui-modal-text-muted`, including action and dismiss labels. Their action
+surfaces use `--os-ui-modal-field-bg` / `--os-ui-modal-button-bg-hover`. A custom
+`--os-ui-toast-bg` override should be accompanied by suitable modal text colours.

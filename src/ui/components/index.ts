@@ -17,6 +17,7 @@ export { OsSwatchGrid } from './os-swatch-grid/os-swatch-grid';
 export { OsSegmented, OsSegment } from './os-segmented/os-segmented';
 export { OsSelect, OsOption } from './os-select/os-select';
 export { OsMultiselect } from './os-multiselect/os-multiselect';
+export { OsColorPicker } from './os-color-picker/os-color-picker';
 export { OsColorField } from './os-color-field/os-color-field';
 export { OsRangeField } from './os-range-field/os-range-field';
 export { OsTextField } from './os-text-field/os-text-field';

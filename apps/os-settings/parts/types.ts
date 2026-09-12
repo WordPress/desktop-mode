@@ -1,3 +1,5 @@
+import type { BrandAiState } from './brand-ai';
+import type { BrandRole } from '../../../src/desktop-themes/brand-palette';
 /**
  * OpenStation Preferences — the app's own types.
  *
@@ -57,6 +59,7 @@ export interface AppExtra extends Record< string, unknown > {
 	mediaUrl: string;
 	/** `desktop-mode/v1/desktop-themes`. */
 	desktopThemesUrl: string;
+	brandProposalUrl: string;
 	/** The authenticated admin-AJAX URL of the cached journal feed. */
 	aboutFeedUrl: string;
 	pluginUrl: string;
@@ -94,7 +97,7 @@ export interface UiState {
 	/** Which drawer source is showing; '' until the user picks (see `imageSource()`). */
 	imageSource: '' | 'upload' | 'library';
 	library: LibraryState;
-	themes: { error: string; busy: boolean };
+	themes: { brandAi?: BrandAiState; error: string; busy: boolean; brandUndo?: Pick< OsSettingsState, 'brandPalette' | 'wallpaper' | 'brandFont' | 'brandOpacity' >; brandDrafts?: Partial< Record< BrandRole, string > > };
 	features: {
 		purging: boolean;
 		resetting: boolean;

@@ -172,6 +172,7 @@ export class OsRangeField extends Component {
 			<label class="os-range-field__label">${ label }</label>
 			<input
 				type="range"
+				aria-label=${ label }
 				min=${ min }
 				max=${ max }
 				step=${ step }

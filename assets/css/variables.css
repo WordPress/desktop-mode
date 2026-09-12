@@ -1804,3 +1804,21 @@ body.os-active {
  * The `data-os-scheme` attribute is still stamped on the
  * shell root for plugins and themes that key off it.
  */
+
+/* Brand Studio: filled controls need their own ink; overlay text stays independent. */
+body.os-active.os-desktop-theme-openstation-brand-studio os-button[variant="primary"] {
+	--os-ui-button-fg: var(--os-brand-primary-ink, #fff);
+}
+
+body.os-active.os-desktop-theme-openstation-brand-studio os-button[variant="danger"] {
+	--os-ui-fg-on-accent: var(--os-brand-danger-ink, #fff);
+}
+
+/* Wallpaper shortcuts have their own context; window ink cannot describe artwork. */
+body.os-active.os-desktop-theme-openstation-brand-studio .os-icons,
+body.os-active.os-desktop-theme-openstation-brand-studio #os-area > .os-files-layer {
+	--os-fg: var(--os-brand-desktop-ink, #fff);
+	--os-tile-fg: var(--os-brand-desktop-ink, #fff);
+	--os-tile-fg-muted: var(--os-brand-desktop-ink, #fff);
+	--os-tile-label-color: var(--os-brand-desktop-ink, #fff);
+}

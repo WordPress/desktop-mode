@@ -1,3 +1,4 @@
+import { compileBrandPalette } from '../desktop-themes/brand-palette';
 /**
  * The two built-in dynamic wallpapers — `custom-gradient` and
  * `custom-image` — whose CSS values are computed from the user's own
@@ -81,5 +82,16 @@ export function registerCustomImageIfPresent( state: OsSettingsState ): void {
 		description: __(
 			'Any image from your media library or an upload, sized to cover the whole desk.',
 		),
+	} );
+}
+
+/** Register the optional backdrop that follows Brand Studio's saved palette. */
+export function registerBrandBackdrop( read: () => OsSettingsState ): void {
+	registry.register( {
+		id: 'brand-studio',
+		label: __( 'Brand backdrop' ),
+		type: 'css',
+		preview: compileBrandPalette( read().brandPalette )[ '--os-bg' ],
+		resolveValue: () => compileBrandPalette( read().brandPalette )[ '--os-bg' ],
 	} );
 }

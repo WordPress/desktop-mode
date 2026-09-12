@@ -1,3 +1,4 @@
+import { sanitizeBrandPalette, sanitizeBrandFont, sanitizeBrandOpacity } from '../desktop-themes/brand-palette';
 /**
  * Persistence + sanitization for `OsSettingsState`.
  *
@@ -198,6 +199,10 @@ const SANITIZERS: Sanitizers = {
 	// or the empty string for the system default. Note the `*`
 	// quantifier: unlike every other id here, EMPTY IS A REAL VALUE.
 	desktopTheme: matching( /^[a-z0-9_-]*$/ ),
+	brandPalette: sanitizeBrandPalette,
+	brandFont: sanitizeBrandFont,
+	brandOpacity: sanitizeBrandOpacity,
+	brandAllowWallpaper: bool,
 	// The seeded-theme ledger — `sanitize_key()`-clean slugs, capped at
 	// the most recent 64 (the same end PHP trims from; the writer
 	// appends, so keeping the head would discard the entry just written
@@ -339,6 +344,10 @@ export const PRESENTATION_KEYS: ReadonlySet< keyof OsSettingsState > = new Set<
 	'sideDockBehavior',
 	'dockRailRenderer',
 	'desktopTheme',
+	'brandPalette',
+	'brandFont',
+	'brandOpacity',
+	'brandAllowWallpaper',
 ] );
 
 /**
@@ -513,6 +522,13 @@ let _lastConfirmedState: OsSettingsState | null = null;
  */
 export function setLastConfirmedState( state: OsSettingsState ): void {
 	_lastConfirmedState = cloneState( state );
+}
+
+/** Accept only server-owned branding fields without confirming unrelated local edits. */
+export function acceptSiteBrandingState( patch: Partial< OsSettingsState > ): void {
+	if ( _lastConfirmedState ) {
+		_lastConfirmedState = cloneState( { ..._lastConfirmedState, ...patch } );
+	}
 }
 
 /**

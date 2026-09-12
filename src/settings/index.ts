@@ -1,3 +1,6 @@
+import { brandingSnapshotPatch, guardBrandingPatch, guardBrandingWorkspace, preserveBrandingOnReset, reflectBrandingState, watchSiteBranding } from './site-branding';
+import { applyBrandPalette } from '../desktop-themes/brand-apply';
+import { getStore as getThemeStore } from '../desktop-themes/registry';
 /**
  * OpenStation — the Preferences store.
  *
@@ -48,6 +51,7 @@ import {
 } from '../dock-behavior';
 import {
 	cloneState,
+	acceptSiteBrandingState,
 	loadState,
 	OS_SETTINGS_KEYS,
 	PRESENTATION_KEYS,
@@ -64,6 +68,7 @@ import type { OsSettingsState } from './types';
 import type { OsSettingsSnapshot } from './registry';
 import {
 	registerCustomGradient,
+	registerBrandBackdrop,
 	registerCustomImageIfPresent,
 } from './wallpaper-defs';
 
@@ -152,6 +157,7 @@ export class OsSettings {
 					return;
 				}
 				this.state = detail.rolledBackTo;
+				reflectBrandingState( this.state );
 				this.apply();
 				this.notify();
 			},
@@ -160,6 +166,17 @@ export class OsSettings {
 		// The state-derived built-in wallpapers, registered here
 		// because their values close over this instance's state.
 		registerCustomGradient( () => this.state );
+		registerBrandBackdrop( () => this.state );
+		watchSiteBranding( ( snapshot ) => {
+			const patch = brandingSnapshotPatch( snapshot, this.state );
+			Object.assign( this.state, patch );
+			if ( this.baseState ) {
+				Object.assign( this.baseState, patch );
+			}
+			acceptSiteBrandingState( patch );
+			this.apply();
+			this.notify();
+		} );
 	}
 
 	/** A defensive copy of the state — the public snapshot. */
@@ -401,6 +418,7 @@ export class OsSettings {
 		// through `apply()`. `applyDesktopTheme` dedupes on the active
 		// id, so the repeated calls this makes cost two comparisons.
 		applyDesktopTheme( this.state.desktopTheme );
+		applyBrandPalette( getThemeStore().state.activeId, this.state.brandPalette, this.state.wallpaper, this.state.brandFont, this.state.brandOpacity );
 	}
 
 	/**
@@ -435,9 +453,9 @@ export class OsSettings {
 	public setWorkspaceAppearance(
 		patch: Partial< OsSettingsState > | null,
 	): void {
+		patch = guardBrandingWorkspace( patch, this.state );
 		const base = this.baseState ?? this.state;
-		const empty = ! patch || Object.keys( patch ).length === 0;
-		if ( empty ) {
+		if ( ! patch || Object.keys( patch ).length === 0 ) {
 			// Nothing to restore and nothing to apply — a plain Space
 			// following a plain Space, which is most switches.
 			if ( ! this.baseState ) {
@@ -539,7 +557,7 @@ export class OsSettings {
 		patch: Partial< OsSettingsState >,
 		opts: OsSettingsUpdateOptions = {},
 	): void {
-		const incoming: Record< string, unknown > = { ...patch };
+		const incoming: Record< string, unknown > = guardBrandingPatch( patch, this.state );
 		delete incoming.appliedThemeRecommendations;
 		// These snapshot fields are controlled by site-wide Extended options.
 		delete incoming.adminAssetCacheEnabled;
@@ -549,6 +567,7 @@ export class OsSettings {
 		const touched = OS_SETTINGS_KEYS.filter( ( key ) => key in incoming );
 
 		Object.assign( this.state, next );
+		reflectBrandingState( this.state );
 
 		this.save( opts );
 		if ( touched.some( ( key ) => PRESENTATION_KEYS.has( key ) ) ) {
@@ -592,6 +611,7 @@ export class OsSettings {
 		next.customImage = this.state.customImage;
 		next.adminAssetCacheEnabled = this.state.adminAssetCacheEnabled;
 		next.windowPrewarmEnabled = this.state.windowPrewarmEnabled;
+		preserveBrandingOnReset( next, this.state );
 		Object.assign( this.state, next );
 		this.save( opts );
 		this.apply();

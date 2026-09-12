@@ -252,7 +252,7 @@ profile screen). AI agents are ordinary `wp_users` rows flagged with
 | `meta_key` | Module | Content |
 |---|---|---|
 | `desktop_mode_mode` | Core | The user's opt-in: `1` turns the shell on. |
-| `desktop_mode_os_settings` | Preferences | Every OpenStation Preferences value (appearance, windows, navigation, features). REST-synced through `/wp-json/desktop-mode/v1/os-settings`. |
+| `desktop_mode_os_settings` | Preferences | Every OpenStation Preferences value (appearance, windows, navigation, features); site branding is a separate option. REST-synced through `/wp-json/desktop-mode/v1/os-settings`. |
 | `desktop_mode_session` | Session | Open windows and their geometry for restore. On multisite the key is suffixed: `_{blog_id}` on a secondary site, `_network` in the network admin. |
 | `desktop_mode_default_window` | Core | The window that opens on arrival. |
 | `desktop_mode_file_associations` | Files | Which app opens each file type. |
@@ -352,3 +352,24 @@ truth for job execution.
 | `openstation_agent_job_active_{owner}_{agent}` | Option, non-autoloaded | Admission slot (`uuid|deadline`), released on completion/failure, expiry or cleanup. |
 | `openstation_agent_job_run` | Single cron event, UUID argument | Executes a queued invocation once. |
 | `openstation_agent_job_cleanup` | Single cron event, UUID argument | Deletes job input/result and its claim after one day. |
+
+### Site branding
+
+`openstation_site_branding` lives in the current blog’s options table. It stores
+`enabled`, `brandPalette` (ten hex roles), `brandFont` (local stack identifier), `brandOpacity` (widget/dock percentages),
+`brandAllowWallpaper` (boolean, default true), and `revision`. Only site administrators write it. It is never user meta or a
+network option. Effective OS settings overlay it without rewriting personal
+preferences. Wallpapers stay personal unless `brandAllowWallpaper` is false;
+unlocking restores saved choices. Disabling branding restores each user’s theme.
+
+### Brand Studio proposal jobs
+
+These options and cron events are per-site. They never replace `openstation_site_branding`.
+
+| Name | Kind | Contents / lifetime |
+|---|---|---|
+| `openstation_brand_ai_job_{uuid}` | Option, non-autoloaded | Requesting admin, brief, timestamps, status and validated proposal/error; retained for one day. Abandoned work fails after ten minutes. |
+| `openstation_brand_ai_job_claim_{uuid}` | Option, non-autoloaded | Atomic execution claim; retained with the job to prevent repeating paid requests. |
+| `openstation_brand_ai_job_active_{owner}` | Option, non-autoloaded | One outstanding job per admin (`uuid|deadline`); released on completion, failure, expiry or cleanup. |
+| `openstation_brand_ai_job_run` | Single cron event, UUID argument | Runs a queued proposal once, with renewed admin permission checks. |
+| `openstation_brand_ai_job_cleanup` | Single cron event, UUID argument | Removes job, claim and outstanding slot after one day. |

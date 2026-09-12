@@ -219,6 +219,7 @@ return App::define( ID )
 		array(
 			'mediaUrl'         => esc_url_raw( rest_url( 'wp/v2/media' ) ),
 			'desktopThemesUrl' => esc_url_raw( rest_url( 'desktop-mode/v1/desktop-themes' ) ),
+			'brandProposalUrl' => esc_url_raw( rest_url( 'desktop-mode/v1/brand-studio/propose' ) ),
 			'aboutFeedUrl'     => esc_url_raw(
 				add_query_arg(
 					array(

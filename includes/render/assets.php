@@ -697,6 +697,7 @@ function openstation_enqueue_assets() {
 			// Non-empty when the shell was asked to paint exactly one
 			// window and nothing else. See `OPENSTATION_SOLO_FLAG`.
 			'soloWindow'                    => openstation_solo_window_id(),
+			'siteBranding'                  => openstation_site_branding_snapshot(),
 			'osSettings'                    => openstation_get_os_settings( get_current_user_id() ),
 			'osSettingsUrl'                 => esc_url_raw( rest_url( 'desktop-mode/v1/os-settings' ) ),
 			'seenIntros'                    => openstation_get_seen_intros( get_current_user_id() ),

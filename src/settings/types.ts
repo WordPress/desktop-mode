@@ -1,3 +1,4 @@
+import type { BrandPalette, BrandFont, BrandOpacity } from '../desktop-themes/brand-palette';
 /**
  * Shared types for the Preferences store.
  *
@@ -159,6 +160,14 @@ export interface OsSettingsState {
 	 * enqueue path does on the same input.
 	 */
 	desktopTheme: string;
+	/** Ten colour roles used by the built-in Brand Studio theme. */
+	brandPalette: BrandPalette;
+	/** Brand Studio typography, chosen from local font stacks. */
+	brandFont: BrandFont;
+	/** Site-owned glass opacity percentages. */
+	brandOpacity: BrandOpacity;
+	/** Site policy: users may choose a personal wallpaper while branding stays enforced. */
+	brandAllowWallpaper: boolean;
 	/**
 	 * Slugs of the desktop themes whose `recommendedOsSettings` have
 	 * already been seeded into this user's settings.

@@ -1,3 +1,4 @@
+import { BRAND_DEFAULTS, BRAND_OPACITY_DEFAULTS } from '../desktop-themes/brand-palette';
 /**
  * Constants for the OS Settings module.
  *
@@ -261,6 +262,10 @@ export const DEFAULTS: OsSettingsState = {
 	// slug; the registry resolves it at apply time and falls back
 	// to the system default when it isn't installed.
 	desktopTheme: '',
+	brandPalette: { ...BRAND_DEFAULTS },
+	brandFont: 'geist',
+	brandOpacity: { ...BRAND_OPACITY_DEFAULTS },
+	brandAllowWallpaper: true,
 	// Themes whose recommended OS settings this user has already been
 	// seeded with. Empty means "no theme has ever recommended anything
 	// to this user yet" — the first activation of a theme that does
@@ -341,4 +346,3 @@ export const DEFAULTS: OsSettingsState = {
 	mobileTabs: [],
 	dockPromotedPositions: {},
 };
-

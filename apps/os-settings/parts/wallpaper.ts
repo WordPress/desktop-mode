@@ -1,3 +1,4 @@
+import { BRAND_THEME_SLUG } from '../../../src/desktop-themes/brand-palette';
 /**
  * Wallpaper — the registry-driven swatch grid, the selected
  * wallpaper's inline editor, its settings dialog, and the drawer that
@@ -279,6 +280,9 @@ export function openWallpaperConfigDialog( def: WallpaperDef ): void {
  * `data-expanded` the stylesheet animates from 0fr to 1fr.
  */
 export const wallpaperSection: Section = ( s, ctx ) => {
+	if ( s.desktopTheme === BRAND_THEME_SLUG && ! s.brandAllowWallpaper ) {
+		return html`<os-section heading=${ __( 'Wallpaper' ) }><os-notice tone="info">${ __( 'This site uses a shared brand backdrop. A site administrator can enable “Allow users to choose their own wallpaper” in Themes → Brand Studio.' ) }</os-notice></os-section>`;
+	}
 	const ui = uiOf( ctx );
 	const active = registry.get( s.wallpaper );
 	const hasConfig = typeof active?.renderConfig === 'function';

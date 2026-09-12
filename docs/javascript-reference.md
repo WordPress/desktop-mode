@@ -4130,7 +4130,7 @@ wp.os.updateOsSettings(
 - **Every key of `OsSettingsState` is accepted** (`src/settings/types.ts` documents each one). A value goes through the same sanitizer that reads user meta — the id lists, the hex check, the enums, the collection caps (`nativePostsHiddenColumns` / `navOrder` entries must be non-empty strings, `navPlacement` values one of `'rail' | 'desktop' | 'both' | 'hidden'`, `dockPromotedPositions` values finite `{ x, y }`) — with the CURRENT value as the fallback: an invalid value is ignored rather than reset, and an unknown key never lands, so a typo'd field can't bloat the persisted state. The one shell-owned exception is `appliedThemeRecommendations`, the seeded-theme ledger, which the write path ignores.
 - **Activating a theme seeds its recommendations once.** A patch that changes `desktopTheme` applies that theme's `recommendedOsSettings` the first time this user wears it — exactly what the Themes tab does — and never again; `wp.os.desktopThemes.applyRecommendedOsSettings()` is the deliberate re-apply. This is the Preferences window's own write path: the app edits the store through this method.
 - **Persistence.** A `localStorage` cache write plus a debounced REST sync (250 ms window).
-- **Presentation keys apply live.** A patch touching `wallpaper`, `accent`, `customAccent`, `customGradient`, `customImage`, `dockSize`, `windowRadius`, `adminBarMode`, `desktopLayout`, `dockPlacement`, `dockBehavior`, `sideDockBehavior`, `dockRailRenderer` or `desktopTheme` also runs the shell's apply pass, so the change is visible immediately rather than on the next page load. `unfocusEffect` repaints too, through the subscriber above rather than the apply pass. `windowReveal` and `windowRevealDuration` reach the shell the same way, and take effect on the next window load. Every other key is state-only.
+- **Presentation keys apply live.** A patch touching `wallpaper`, `accent`, `customAccent`, `customGradient`, `customImage`, `dockSize`, `windowRadius`, `adminBarMode`, `desktopLayout`, `dockPlacement`, `dockBehavior`, `sideDockBehavior`, `dockRailRenderer` or `desktopTheme` or `brandPalette` or `brandFont` or `brandOpacity` also runs the shell's apply pass, so the change is visible immediately rather than on the next page load. `unfocusEffect` repaints too, through the subscriber above rather than the apply pass. `windowReveal` and `windowRevealDuration` reach the shell the same way, and take effect on the next window load. Every other key is state-only.
 - **The two performance flags are read-only.** `windowPrewarmEnabled` and `adminAssetCacheEnabled` mirror the site-wide `window_prewarm` and `admin_asset_cache` Extended options. `updateOsSettings()` ignores writes to these fields; `resetOsSettings()` preserves them. Administrators change them through Extended options, and each shell adopts the values on reload. See [Performance settings migration](./migration-performance-options.md).
 - **Subscribers fire.** Both the top-level `wp.os.subscribeOsSettings( cb )` and every settings tab's `ctx.subscribeOsSettings` see the new snapshot.
 - **Observable save lifecycle.** Each phase fires on `document` as [`os-settings-save-lifecycle`](#os-settings-save-lifecycle--stable) (`'pending'` → `'saving'` → `'saved'` / `'failed'`), same as a built-in tab's save. `<os-save-status auto>` renders it for free.
@@ -7597,6 +7597,53 @@ Available on the snapshot from `wp.os.getOsSettings()` and
 `desktop_mode_os_settings` user meta; sanitized server-side as a
 `sanitize_key()`-clean string (empty is a legitimate value).
 
+### `brandPalette` — OS settings key (Experimental)
+
+Brand Studio is a site-wide policy. `getOsSettings()` returns effective
+`brandPalette`, `brandFont`, `brandOpacity`, `brandAllowWallpaper`, `desktopTheme`, and `wallpaper` values after applying
+that policy. `updateOsSettings()` remains the editing entry point, but branding
+writes require `manage_options` and persist in the current site's
+`openstation_site_branding` option. Ordinary settings retain their per-user scope.
+
+```js
+// Site administrators only. Activates branding for every user on this site.
+wp.os.updateOsSettings({
+    desktopTheme: 'openstation-brand-studio',
+    brandPalette: { ...wp.os.getOsSettings().brandPalette, primary: '#3858e9' },
+    brandFont: 'system',
+});
+```
+
+`brandOpacity` accepts `{ widgets: number, dock: number }` in integer percentages
+from 0 to 100; zero is valid. It follows the same administrator-only site policy
+and Heartbeat delivery as the palette. Defaults are 82% and 94%.
+
+`brandFont` accepts `geist` (default), `system`, `classic`, `editorial`, or `mono`.
+Only known six- or eight-digit hex roles and local font identifiers are accepted, never
+arbitrary CSS. Activation selects the matching `brand-studio` wallpaper for the
+editing administrator. Non-admins cannot change the theme, colours or font.
+`brandAllowWallpaper` is an administrator-only boolean, default true (also when
+absent in older options). With true, `wallpaper` remains a personal preference.
+With false, the shared backdrop is enforced without deleting anyone’s choice.
+Unlocking restores personal wallpapers; colour-only Heartbeats leave them alone.
+Personal reset and workspace overrides preserve site branding. An administrator
+selecting another theme releases the override for everyone on this site.
+
+`openStationConfig.siteBranding` is a read-only policy snapshot with `enabled`,
+`canManage`, `siteId`, `revision`, `brandPalette`, `brandFont`, `brandOpacity`, `brandAllowWallpaper`, `personalTheme`, and
+`personalWallpaper`. The last two restore this user's personal choices when the
+site releases branding. `openstation_site_branding` is the Heartbeat field: the
+request contributes `{generation}`, and the response includes the policy plus
+the same generation. The shell rejects replies from another site, replies sent
+before/during a local save, and malformed snapshots. Received changes repaint
+and notify existing settings subscribers without writing them back to user meta.
+Other sessions receive saved changes at the existing Heartbeat interval; the
+editing administrator gets immediate local preview.
+
+See [Brand Studio](./desktop-themes.md#brand-studio--experimental) for scope,
+contrast handling, and [the administrator example](./examples/brand-studio.md).
+
+
 ### `appliedThemeRecommendations` — OS settings key
 
 `string[]`. Slugs of the desktop themes whose
@@ -8021,3 +8068,27 @@ first in-page navigation. See
 - [Examples — Window controls](./examples/window-controls.md)
 - [Examples — Window slots](./examples/window-slot.md)
 - [Examples — Custom window chrome (Experimental)](./examples/custom-chrome.md)
+
+### Brand Studio AI proposal route — Experimental
+
+`POST /desktop-mode/v1/brand-studio/propose` accepts `{ brief: string }` with
+3–2000 characters. It requires site administration (`manage_options`) and standard
+Core REST authentication/nonce handling. The response is `{ name, rationale,
+brandPalette, brandFont, brandOpacity, sources: [{title,url}], webSearch, warning }`.
+It never changes branding. The Preferences editor keeps the result in local window
+state and only calls `updateOsSettings()` after explicit acceptance. All branding
+writes still use the existing site policy and rollback queue. Cancel ignores late
+responses. [Flow and model integration](desktop-themes.md#ai-brand-proposals).
+
+The studio uses `{ brief, async: true, requestId: UUID }` to receive HTTP 202 with
+`{ jobId, status, createdAt, pollAfter, result, error }`. Poll
+`GET /desktop-mode/v1/brand-studio/jobs/{jobId}` until `completed` or `failed`;
+`result` is the proposal above. Status is owner-only and requires `manage_options`.
+The UUID makes submission retries idempotent. Cancel stops client polling without
+applying any settings. The worker never applies a brand. See the
+[background proposal contract](desktop-themes.md#ai-brand-proposals).
+
+AI proposals request every colour role explicitly and retry malformed structured
+output once with validation feedback. The preview shows colours, font and glass
+settings without a generated summary. The response retains `rationale` as an
+empty string for consumers; explanation length cannot invalidate a palette.

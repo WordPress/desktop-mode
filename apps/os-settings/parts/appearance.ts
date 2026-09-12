@@ -1,3 +1,4 @@
+import { BRAND_THEME_SLUG } from '../../../src/desktop-themes/brand-palette';
 /**
  * Appearance — accent, desktop layout, dock style, admin bar.
  *
@@ -82,6 +83,9 @@ function openWheel( grid: Element ): void {
  * wallpaper to write.
  */
 export const accentSection: Section = ( s ) => {
+	if ( s.desktopTheme === BRAND_THEME_SLUG ) {
+		return html`<os-section heading=${ __( 'Accent color' ) }><os-notice>${ __( 'Brand Studio controls your accent. Edit Primary in the Themes tab to change it across the station.' ) }</os-notice></os-section>`;
+	}
 	const isCustom = s.accent === CUSTOM_ACCENT_ID;
 	const onPick = ( e: Event ): void => {
 		const id = pickedValue( e );

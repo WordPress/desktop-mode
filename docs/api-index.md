@@ -347,3 +347,15 @@ Typed messages between the parent shell and iframe windows. Full shapes in [`bri
 - Web Components — `static help` block on each `<os-*>` class, plus `components-reference.md`.
 
 When a status changes (Experimental → Stable, or anything → removed), update **all three** of: the JSDoc, this table, and the relevant per-doc reference. The doc lint guidance in `AGENTS.md` enforces this rule of thumb: a hook change without a doc update ships a lie.
+
+Brand Studio's site-owned `brandPalette`, `brandFont`, `brandOpacity` and `brandAllowWallpaper` are exposed through the existing settings
+API — see [the shape and update example](./javascript-reference.md#brandpalette--os-settings-key-experimental).
+
+- `POST /desktop-mode/v1/brand-studio/propose` — admin-only, read-only structured
+  branding proposal; [contract](javascript-reference.md#brand-studio-ai-proposal-route--experimental).
+- `openstation_brand_studio_generate` — alternate AI proposal runtime;
+  [hook](hooks-reference.md#openstation_brand_studio_generate--experimental).
+- `GET /desktop-mode/v1/brand-studio/jobs/{jobId}` — owner-only background proposal
+  status; [contract](desktop-themes.md#ai-brand-proposals).
+- `openstation_brand_ai_job_finished` — completed/failed proposal notification;
+  [hook](hooks-reference.md#openstation_brand_ai_job_finished--experimental).
