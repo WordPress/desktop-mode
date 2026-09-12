@@ -11,7 +11,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RuntimeHost } from '@openstation/app';
-import { mockViewContext } from '../../src/app-runtime/testing';
+import { mockViewContext, renderedText } from '../../src/app-runtime/testing';
 import { bulkButtons, freshBusy, isUpToDateError } from './parts/actions';
 import { installPluginDropTargets } from './parts/card-drag';
 import { createBrowseGallery } from './parts/gallery';
@@ -144,6 +144,18 @@ afterEach( () => {
 } );
 
 describe( 'the plugins app view', () => {
+	it( 'renders installed plugins without a table registered by another window', async () => {
+		// A type-only import used to leave the preserved table inert,
+		// exposing its empty slot even when installed rows existed.
+		expect( customElements.get( 'os-table' ) ).toBeUndefined();
+		const { root } = mount();
+		await Promise.resolve();
+		const card = root.querySelector( '[data-plugin-card]' )!;
+		expect( card.shadowRoot ).not.toBeNull();
+		expect( renderedText( card ) ).toContain( 'Akismet' );
+		expect( root.querySelector( '.os-plugins__library-empty' ) ).toBeNull();
+	} );
+
 	it( 'declares a placeholder: the frame paints before mount with a library loading state', () => {
 		expect( app.placeholder!( {} ) ).toEqual( { installed: [], error: '' } );
 
