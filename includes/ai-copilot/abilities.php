@@ -241,7 +241,7 @@ function openstation_ai_register_abilities() {
 		'desktop-mode/search-comments',
 		array(
 			'label'               => __( 'Search comments', 'desktop-mode' ),
-			'description'         => 'Keyword-searches approved WordPress comments across ALL posts by their text (WordPress native search). Use this when the user remembers something a reader said but does not know which post it was on. Pass the distinctive words from the comment as `query`. Returns up to 10 matching comments with an excerpt, parent post title, and URLs. If has_more is true, call again with the next offset.',
+			'description'         => 'Keyword-searches approved WordPress comments by their text (WordPress native search), across all posts the requesting user is allowed to read — comments on private, draft, or password-protected posts the user cannot access are excluded. Use this when the user remembers something a reader said but does not know which post it was on. Pass the distinctive words from the comment as `query`. Returns up to 10 matching comments with an excerpt, parent post title, and URLs. If has_more is true, call again with the next offset.',
 			'category'            => OPENSTATION_AI_ABILITY_CATEGORY,
 			'input_schema'        => $query_offset_input,
 			'output_schema'       => $search_output,
@@ -257,7 +257,7 @@ function openstation_ai_register_abilities() {
 		'desktop-mode/search-comments-by-post',
 		array(
 			'label'               => __( 'Search comments on a post', 'desktop-mode' ),
-			'description'         => 'Keyword-searches approved comments on a SPECIFIC post by its WordPress ID. Use this when you have already identified a post (via search-posts) and the user\'s query also mentions something a reader said on that post — e.g. "I remember a comment on my Málaga post asking about the Alcazaba at night." Call search-posts first to find the post ID, then call this tool with that ID and the distinctive words as `query`. Much more precise than search-comments when the parent post is known. If has_more is true, call again with the next offset.',
+			'description'         => 'Keyword-searches approved comments on a SPECIFIC post by its WordPress ID (the post must be readable by the requesting user; an unreadable or nonexistent post returns an empty result). Use this when you have already identified a post (via search-posts) and the user\'s query also mentions something a reader said on that post — e.g. "I remember a comment on my Málaga post asking about the Alcazaba at night." Call search-posts first to find the post ID, then call this tool with that ID and the distinctive words as `query`. Much more precise than search-comments when the parent post is known. If has_more is true, call again with the next offset.',
 			'category'            => OPENSTATION_AI_ABILITY_CATEGORY,
 			'input_schema'        => array(
 				'type'                 => 'object',
