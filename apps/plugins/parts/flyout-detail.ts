@@ -151,7 +151,7 @@ function buildHeroSkeleton( hint?: WpOrgBrowsePlugin ): HeroParts {
 }
 
 function paintIdentity( parts: HeroParts, plugin: WpOrgBrowsePlugin ): void {
-	parts.title.textContent = plugin.name;
+	parts.title.textContent = stripHtml( plugin.name );
 	parts.byline.textContent = sprintf(
 		/* translators: %s: plugin author */
 		__( 'by %s', 'desktop-mode' ),

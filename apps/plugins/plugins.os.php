@@ -33,6 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	defined( 'OPENSTATION_STANDALONE' ) || exit;
 }
 
+require_once __DIR__ . '/parts/view-preference.php';
 require_once __DIR__ . '/parts/permissions.php';
 require_once __DIR__ . '/parts/rest-fields.php';
 require_once __DIR__ . '/parts/updates.php';
@@ -297,16 +298,18 @@ return App::define( 'desktop-mode-plugins' )
 	)
 	->state(
 		array(
-			'tab'    => 'installed',
+			'tab'           => 'installed',
+			'installedView' => 'cards',
 			// Installed tab: status segment (`''` = all) and search.
-			'status' => '',
-			'search' => '',
+			'status'        => '',
+			'search'        => '',
 			// Browse tab: wp.org browse segment and search query.
-			'browse' => 'featured',
-			'query'  => '',
+			'browse'        => 'featured',
+			'query'         => '',
 		)
 	)
-	->mount( __NAMESPACE__ . '\apply_tab' )
+	->mount( __NAMESPACE__ . '\mount_plugins' )
+	->action( 'save_view', __NAMESPACE__ . '\save_installed_view' )
 	->action( 'reopen', __NAMESPACE__ . '\apply_tab' )
 	// The Refresh button: a fresh wp.org check (bypassing Core's 12h
 	// throttle) before `data()` re-reads the list, and the dock badge

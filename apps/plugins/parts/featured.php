@@ -40,6 +40,8 @@ function openstation_plugins_window_featured_slugs() {
 		// discover it anyway. Once the `requires_plugins` query lands on
 		// wp.org we can remove the manual seed.
 		'odd-outlandish-desktop-decorator',
+		'allterrain-forms',
+		'allterrain-photo-editor',
 	);
 
 	/**

@@ -803,3 +803,9 @@ per-user values, and the client preserves the mirrors during preference
 updates and resets. Each shell adopts changes on reload and configures
 the worker by message; the shared-cache PHP filter still has the final
 say. See [Performance settings migration](./migration-performance-options.md).
+
+### Plugins library views
+
+The Installed Plugins window offers Cards and Table over the same filtered rows, sort order, selection, bulk actions, and details inspector. The table imports its component explicitly, keeps columns fixed and text truncated, and scrolls within its own viewport with a sticky header and plugin identity. Titles render as plain text with full-name tooltips. Clicking a row opens the inspector; the row actions menu also exposes Plugin details for keyboard access. The view switch saves through the capability-gated app action `save_view` with `{ view: 'cards' | 'table' }`; it paints immediately, disables duplicate saves while pending, and returns to the previous view on failure. `mount` restores the choice through the app's user-scoped `installed-view` store key. The loading frame contains no card rows, so a saved Table choice does not flash Cards while waiting for the server. No browser-only persistence is used.
+
+Plugin titles from both installed metadata and WordPress.org are decoded as inert HTML text before being displayed. The curated directory seed includes ODD, AllTerrain Forms, and AllTerrain Photo Editor; metadata and installation continue to use WordPress.org.

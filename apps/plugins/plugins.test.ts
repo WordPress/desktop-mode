@@ -31,6 +31,8 @@ import {
 	type PluginsExtra,
 	type PluginsHost,
 } from './parts/types';
+import type { OsTable } from '../../src/ui/components/os-table/os-table';
+import { openDetailFlyout } from './parts/flyout-detail';
 import { openUploadDialog } from './parts/upload-dialog';
 import { parseChangelogEntries, parseFaqPairs } from './parts/wporg-sections';
 import app from './plugins.os';
@@ -112,7 +114,7 @@ function mount(
 	const root = document.createElement( 'div' );
 	document.body.appendChild( root );
 	const ctx = mockViewContext< AppState, AppData >( {
-		state: { tab: 'installed', status: '', search: '', browse: 'featured', query: '', ...state },
+		state: { tab: 'installed', installedView: 'cards', status: '', search: '', browse: 'featured', query: '', ...state },
 		data: { installed: [ row() ], error: '', ...data },
 		loading,
 		root,
@@ -144,10 +146,10 @@ afterEach( () => {
 } );
 
 describe( 'the plugins app view', () => {
-	it( 'renders installed plugins without a table registered by another window', async () => {
+	it( 'renders installed plugin cards with production component imports', async () => {
 		// A type-only import used to leave the preserved table inert,
 		// exposing its empty slot even when installed rows existed.
-		expect( customElements.get( 'os-table' ) ).toBeUndefined();
+		expect( customElements.get( 'os-table' ) ).toBeDefined();
 		const { root } = mount();
 		await Promise.resolve();
 		const card = root.querySelector( '[data-plugin-card]' )!;
@@ -767,7 +769,7 @@ describe( 'the installed plugin library', () => {
 		const box = root.querySelector( '.os-plugins__pick' )!;
 		expect( box.hasAttribute( 'hidden' ) ).toBe( false );
 		expect( box.hasAttribute( 'label' ) ).toBe( false );
-		expect( root.querySelector( '.os-plugins__library-tools os-button' ) ).toBeNull();
+		expect( root.querySelectorAll( '.os-plugins__library-tools [data-plugin-view]' ) ).toHaveLength( 2 );
 		expect( root.querySelector( '.os-plugins__selection' )?.hasAttribute( 'hidden' ) ).toBe( true );
 		await Promise.resolve();
 		expect( box.shadowRoot?.querySelector( 'input' )?.getAttribute( 'aria-label' ) ).toMatch( /^Select / );
@@ -855,5 +857,95 @@ describe( 'the installed plugin library', () => {
 		const failed = mount( {}, { installed: [], error: 'Connection lost' } );
 		expect( failed.root.querySelector( 'os-notice' )?.textContent ).toContain( 'Connection lost' );
 		expect( failed.root.querySelector( '.os-plugins__library-empty' ) ).toBeNull();
+	} );
+} );
+
+describe( 'the installed table and view preference', () => {
+	const pickView = ( root: HTMLElement, view: string ): void => root.querySelector< HTMLElement >( `[data-plugin-view="${ view }"]` )!.click();
+	const tableOf = ( root: HTMLElement ) => root.querySelector< OsTable< InstalledPlugin > >( '[data-os-plugins-table]' )!;
+
+	it( 'paints the saved table with real rows, decoded titles, and bounded text', async () => {
+		const name = 'Save &amp; Go ' + 'VeryLongPluginName'.repeat( 40 );
+		const { root } = mount( { installedView: 'table' }, { installed: [ row( { name, author: 'Author'.repeat( 80 ), version: '1.2.3'.repeat( 80 ) } ) ] } );
+		await Promise.resolve();
+		const table = tableOf( root );
+		expect( table.shadowRoot?.querySelector( 'tbody' )?.textContent ).toContain( 'Save & Go' );
+		expect( table.shadowRoot?.querySelector( 'tbody' )?.textContent ).not.toContain( '&amp;' );
+		expect( table.shadowRoot?.querySelector( '[data-plugin-title]' )?.getAttribute( 'title' ) ).toBe( stripHtml( name ) );
+		expect( root.querySelector( '[data-plugin-card]' ) ).toBeNull();
+		expect( table.shadowRoot?.querySelector( '.os-plugins__table-copy os-button' ) ).toBeNull();
+		expect( table.getAttribute( 'sticky-columns' ) ).toBe( '2' );
+		expect( table.shadowRoot?.querySelector( '[data-os-plugins-styles="installed-table"]' )?.textContent ).toContain( 'table-layout: fixed' );
+	} );
+
+	it( 'switches immediately, serializes saves, and keeps selection through a round trip between views', async () => {
+		const { root, ctx } = mount();
+		let finish!: ( value: boolean ) => void;
+		ctx.dispatch = vi.fn( () => new Promise<boolean>( ( resolve ) => {
+			finish = resolve;
+		} ) );
+		root.querySelector( '.os-plugins__pick' )!.dispatchEvent( new CustomEvent( 'os-checkbox-change', { detail: { checked: true } } ) );
+		pickView( root, 'table' );
+		expect( ctx.state.installedView ).toBe( 'table' );
+		expect( ctx.dispatch ).toHaveBeenCalledWith( 'save_view', { view: 'table' } );
+		expect( root.querySelector( '[data-plugin-view="cards"]' )?.hasAttribute( 'disabled' ) ).toBe( true );
+		expect( Array.from( tableOf( root ).selection ) ).toEqual( [ 'akismet/akismet' ] );
+		pickView( root, 'cards' );
+		expect( ctx.dispatch ).toHaveBeenCalledTimes( 1 );
+		finish( true );
+		await vi.waitFor( () => expect( root.querySelector( '[data-plugin-view="cards"]' )?.hasAttribute( 'disabled' ) ).toBe( false ) );
+		ctx.dispatch = vi.fn( async () => true );
+		pickView( root, 'cards' );
+		expect( root.querySelector( '.os-plugins__pick' )?.hasAttribute( 'checked' ) ).toBe( true );
+	} );
+
+	it( 'rolls the view back when saving fails and does not save the placeholder', async () => {
+		const { root, ctx } = mount();
+		ctx.dispatch = vi.fn( async () => false );
+		pickView( root, 'table' );
+		await vi.waitFor( () => expect( ctx.state.installedView ).toBe( 'cards' ) );
+		expect( root.querySelector( '[data-plugin-card]' ) ).not.toBeNull();
+		const pending = mount( {}, { installed: [] }, {}, {}, true );
+		pending.ctx.dispatch = vi.fn( async () => true );
+		pickView( pending.root, 'table' );
+		expect( pending.ctx.dispatch ).not.toHaveBeenCalled();
+	} );
+
+	it( 'preserves row nodes on selection and opens the inspector with correct focus restoration', async () => {
+		const { root, ctx } = mount( { installedView: 'table' } );
+		await Promise.resolve();
+		const table = tableOf( root );
+		const name = table.shadowRoot!.querySelector< HTMLElement >( '[data-plugin-title]' )!;
+		table.select( 'akismet/akismet' );
+		await Promise.resolve();
+		expect( table.shadowRoot!.querySelector( '[data-plugin-title]' ) ).toBe( name );
+		expect( root.querySelector( '.os-plugins__selection-count' )?.textContent ).toBe( '1 selected' );
+		table.shadowRoot!.querySelector< HTMLElement >( '.os-plugins__table-actions' )!.click();
+		expect( root.querySelector( '.os-plugins__inspector' ) ).toBeNull();
+		name.click();
+		await Promise.resolve();
+		expect( root.querySelector( '.os-plugins__inspector' ) ).not.toBeNull();
+		root.querySelector< HTMLElement >( '[data-plugin-back]' )!.click();
+		await Promise.resolve();
+		expect( table.shadowRoot?.activeElement ).toBe( table.shadowRoot?.querySelector( '[data-plugin-actions]' ) );
+		ctx.state.search = 'not-found';
+		ctx.repaint();
+		expect( tableOf( root ).hidden ).toBe( true );
+		expect( tableOf( root ).selection.size ).toBe( 0 );
+	} );
+
+	it( 'uses decoded, inert titles in both detail surfaces', () => {
+		const encoded = 'Save &amp; Go &lt;img src=x onerror=alert(1)&gt;';
+		const { root } = mount( {}, { installed: [ row( { name: encoded } ) ] } );
+		root.querySelector< HTMLElement >( '[data-plugin-details]' )!.click();
+		const title = root.querySelector( '.os-plugins__inspector-content' )?.shadowRoot?.querySelector( '.os-plugins__detail-title' );
+		expect( title?.textContent ).toBe( 'Save & Go <img src=x onerror=alert(1)>' );
+		expect( title?.querySelector( 'img' ) ).toBeNull();
+		const flyout = document.createElement( 'div' );
+		document.body.appendChild( flyout );
+		const host = fakeHost();
+		openDetailFlyout( flyout, 'test', { slug: 'test', name: encoded, version: '1', last_updated: '', tested: '', author: '', short_description: '', rating: 0, num_ratings: 0, active_installs: 0 }, host );
+		expect( flyout.querySelector( '.os-plugins__flyout-hero-title' )?.textContent ).toBe( 'Save & Go <img src=x onerror=alert(1)>' );
+		expect( flyout.querySelector( '.os-plugins__flyout-hero-title img' ) ).toBeNull();
 	} );
 } );

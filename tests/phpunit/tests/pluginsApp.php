@@ -108,7 +108,7 @@ class Tests_OpenStation_PluginsApp extends WP_UnitTestCase {
 		// The Plugins dock tile comes from `$menu` + the URL remap.
 		$this->assertSame( 'none', $manifest['placement'] );
 		$this->assertSame(
-			array( 'reopen', 'reload', 'activate', 'deactivate', 'delete', 'bulk' ),
+			array( 'save_view', 'reopen', 'reload', 'activate', 'deactivate', 'delete', 'bulk' ),
 			$manifest['actions']
 		);
 		$this->assertSame( array( 'reopen' ), $manifest['lifecycle'] );
@@ -128,6 +128,51 @@ class Tests_OpenStation_PluginsApp extends WP_UnitTestCase {
 		$this->assertStringEndsNotWith( '.php', $config['selfPluginFile'] );
 		$this->assertSame( 1, wp_verify_nonce( $config['ajaxNonce'], 'desktop-mode-plugins' ) );
 		$this->assertSame( 1, wp_verify_nonce( $config['updatesNonce'], 'updates' ) );
+	}
+
+	/**
+	 * @covers \OpenStation\Apps\Plugins\mount_plugins
+	 * @covers \OpenStation\Apps\Plugins\save_installed_view
+	 */
+	public function test_installed_view_is_saved_per_user_and_restored_on_mount() {
+		$this->assertSame( 'cards', $this->dispatch( 'mount' )['state']['installedView'] );
+		$saved = $this->dispatch( 'save_view', array(), array( 'view' => 'table' ) );
+		$this->assertTrue( $saved['ok'] );
+		$this->assertSame( 'table', $saved['state']['installedView'] );
+		$this->assertSame( 'table', $this->dispatch( 'mount', array( 'installedView' => 'cards' ) )['state']['installedView'] );
+		$map = get_user_meta( self::$admin_id, 'openstation_app_store', true );
+		$this->assertSame( 'table', $map['desktop-mode-plugins:installed-view'] );
+
+		$other = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		if ( is_multisite() ) {
+			grant_super_admin( $other );
+		}
+		wp_set_current_user( $other );
+		$this->assertSame( 'cards', $this->dispatch( 'mount' )['state']['installedView'] );
+		wp_set_current_user( self::$admin_id );
+		$this->dispatch( 'save_view', array(), array( 'view' => 'cards' ) );
+		$this->assertSame( 'cards', $this->dispatch( 'mount' )['state']['installedView'] );
+	}
+
+	/**
+	 * @covers \OpenStation\Apps\Plugins\save_installed_view
+	 * @covers \OpenStation\Apps\Plugins\mount_plugins
+	 */
+	public function test_view_preference_rejects_invalid_values_and_unauthorized_writes() {
+		$this->dispatch( 'save_view', array(), array( 'view' => 'table' ) );
+		foreach ( array( '', 'grid', array( 'table' ), null ) as $invalid ) {
+			$response = $this->dispatch( 'save_view', array(), array( 'view' => $invalid ) );
+			$this->assertFalse( $response['ok'] );
+			$this->assertSame( 'table', $this->dispatch( 'mount' )['state']['installedView'] );
+		}
+		wp_set_current_user( self::$editor_id );
+		$this->assertFalse( $this->dispatch( 'save_view', array(), array( 'view' => 'table' ) )['ok'] );
+		$this->assertSame( '', get_user_meta( self::$editor_id, 'openstation_app_store', true ) );
+		wp_set_current_user( 0 );
+		$this->assertFalse( $this->dispatch( 'save_view', array(), array( 'view' => 'table' ) )['ok'] );
+		wp_set_current_user( self::$admin_id );
+		update_user_meta( self::$admin_id, 'openstation_app_store', array( 'desktop-mode-plugins:installed-view' => 'invalid' ) );
+		$this->assertSame( 'cards', $this->dispatch( 'mount' )['state']['installedView'] );
 	}
 
 	/**

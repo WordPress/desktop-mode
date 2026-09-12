@@ -159,7 +159,8 @@ describe( 'Plugins', () => {
 	const view = read( 'apps/plugins/parts/installed-library.ts' );
 
 	test( 'the library scrolls independently of its pinned selection tray', () => {
-		expect( view ).not.toContain( '<os-table' );
+		expect( view ).toContain( "state.installedView === 'table'" );
+		expect( block( plugins, '.os-plugins__workspace[data-view="table"] .os-plugins__library-scroll {' ) ).toMatch( /overflow:\s*hidden/ );
 		expect( block( plugins, '.os-plugins__library-scroll {' ) ).toMatch( /overflow:\s*auto/ );
 		expect( block( plugins, '.os-plugins__library-scroll {' ) ).toMatch( /min-block-size:\s*0/ );
 		expect( block( plugins, '.os-plugins__selection {' ) ).toMatch( /flex:\s*0 0 auto/ );
