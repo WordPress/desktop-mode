@@ -3722,7 +3722,19 @@ The window and its pinned icon are **titled "WP Explorer"**. Its *root folder* i
 apply_filters( 'openstation_my_wordpress_user_can_use', bool $can ): bool
 ```
 
-Gates icon registration and window registration in one shot. Default `current_user_can( 'edit_posts' )`. Return `false` to hide the entry point for a role; return `true` to opt a role back in.
+The module's one capability gate. Default `current_user_can( 'edit_posts' )`. Return `false` to close the module for a role; return `true` to opt a role back in.
+
+**This is a server-side authorization gate, not only a visibility one** — narrowing or widening it changes what a role can reach over REST. It decides:
+
+| Surface | Where |
+|---|---|
+| Whether the non-REST post-type bridge routes register at all — `desktop-mode/v1/post-type/<slug>` | `includes/my-wordpress/rest-post-type.php` |
+| The per-comment dossier route `desktop-mode/v1/comment-stats/<id>`, which then also checks that the caller can read the comment's parent post | `includes/my-wordpress/comment-stats.php` |
+| Whether the WooCommerce integration's boot config ships, so the client can reach the order / customer / product surfaces at all — those routes still enforce their own Woo capabilities on top | `includes/my-wordpress/integrations/woocommerce.php` |
+| Whether preview-action scripts registered by plugins are enqueued | `includes/my-wordpress/preview-actions.php` |
+| Whether Station Home offers the "WP Explorer" quick action | `apps/station-home/parts/snapshot.php` |
+
+It does **not** gate WP Explorer's own window or pinned launcher. The app declares `->capabilities( 'edit_posts' )` itself, so `true` here opens the surfaces above without opening the window — filter [`openstation_app_manifest`](#openstation_app_manifest--experimental-filter) with `$id === 'my-wordpress'` to move the window too.
 
 ### Removed — the legacy explorer window's filters
 

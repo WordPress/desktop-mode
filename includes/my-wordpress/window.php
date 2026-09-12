@@ -92,14 +92,37 @@ function openstation_my_wordpress_icon_svg() {
  * Mirrors the recycle-bin gate — anyone who can edit posts can
  * browse posts and pages.
  *
+ * This is the module's one capability gate, and it is a **server-side
+ * authorization** gate, not just a visibility one. It decides:
+ *
+ *   - The non-REST post-type bridge: whether
+ *     `desktop-mode/v1/post-type/<slug>` routes register at all
+ *     (`rest-post-type.php`).
+ *   - The per-comment dossier route
+ *     `desktop-mode/v1/comment-stats/<id>` (`comment-stats.php`).
+ *   - Whether the WooCommerce integration's boot config ships, so the
+ *     client can reach the order / customer / product surfaces at all
+ *     — those routes still enforce their own Woo capabilities on top
+ *     (`integrations/woocommerce.php`).
+ *   - Whether preview-action scripts registered by plugins are
+ *     enqueued (`preview-actions.php`).
+ *   - Whether Station Home offers the "WP Explorer" quick action
+ *     (`apps/station-home/parts/snapshot.php`).
+ *
+ * It does **not** gate the app's own window or pinned launcher: WP
+ * Explorer is an App Framework app and declares
+ * `->capabilities( 'edit_posts' )` itself (`apps/my-wordpress/`).
+ * Returning `true` here opens the surfaces above without opening the
+ * window; to move the window too, filter the app's manifest.
+ *
  * @return bool
  */
 function openstation_my_wordpress_user_can_use() {
 	$can = current_user_can( 'edit_posts' );
 
 	/**
-	 * Filter whether the current user can see the My WordPress
-	 * pinned icon and window.
+	 * Filter whether the current user can reach the My WordPress
+	 * module's surfaces — its REST routes included.
 	 *
 	 * @param bool $can Default: edit_posts capability.
 	 */
