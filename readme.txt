@@ -4,7 +4,7 @@ Tags: admin, dashboard, desktop, productivity, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.7
+Stable tag: 1.1.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -169,6 +169,31 @@ The **Inkfall** game's word list (`assets/games/inkfall/words.txt`) is generated
 * **[LDNOOBW English list](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words)** (CC-BY 4.0) — used as an exclusion filter.
 
 == Changelog ==
+
+= 1.1.8 =
+* Files: add uploaded files to the Media Library, and start a post or page from an image
+* Add minimize and restore dock animations.
+* Fix native app windows restoring the wrong saved instance
+* Fix Native Users tables action icons visibility
+* Add optimistic Trash updates and Explorer previews
+* Redesign native Plugins, Posts, Pages, and Users workspaces
+* Multisite: an OpenStation network of separate installs, with one switcher on every one
+* Add the data-model page and unbreak the wiki sync
+* Network: log in on arrival, mark external sites, and keep the switcher live
+* Harden stored-file cleanup and make presence updates atomic
+* Network: opt-in through an extended option, off by default
+* Fix agent request timeouts and stale Recycle Bin contents
+* Make preloading and shared cache opt-out Extended options
+* Post Stats: draw the chart chrome in tokens instead of hardcoded black
+* Preserve preferences on theme switch
+* Os-text-field: add hide-label so a compact field can have a name without a visible label
+* Widgets: raise the frame's chrome buttons to the 24px target-size floor
+* AI Copilot: keep password-protected posts out of the search abilities
+* Agents: seal password-protected posts in the get-post ability
+* AI Copilot: gate comment search on parent-post readability
+* My WordPress: scope the term-stats endpoint to posts the caller may read
+* AI Copilot: authorize the model-named entity id before building the entity card
+* My WordPress: gate the comment dossier on the window capability and parent-post readability
 
 = 1.1.7 =
 * Files: paint a dropped folder's tile as soon as it exists
